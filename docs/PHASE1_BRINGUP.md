@@ -236,3 +236,32 @@ Phase 1C passes only if all of the following are visually true:
 7. No half of the panel is mirrored, shifted, missing, or inverted.
 
 If any condition fails, do not proceed to text rendering. Record the observed geometry and correct the mapping first.
+
+
+### 2026-09-28 — Phase 1C PASS
+
+Serial result: **PASS as expected.**
+
+Physical result: **PASS on real hardware.** The complete geometry test rendered correctly.
+
+Verified by this test:
+
+- black pixel/data polarity is correct
+- the raw 800 x 272 framebuffer transfer is correct
+- visible orientation is correct
+- both SSD1683-controlled halves render the intended geometry
+- the visible-coordinate mapping `0..395 -> raw 0..395` and `396..791 -> raw 404..799` is correct on this panel
+- the 8-pixel logical controller seam gap is correctly hidden from the 792-pixel visible coordinate space
+- graphics crossing the controller boundary remain visually continuous
+- the center seam marker, center rectangle, long horizontal line, and asymmetric corner markers all displayed normally
+
+Phase 1C therefore promotes the previously Elecrow-derived `396 + 8 + 396` mapping from a reference assumption to an **observed hardware-verified behavior on the development unit**.
+
+Still not verified:
+
+- text/font rendering in our graphics layer
+- partial refresh using the custom driver
+- fast refresh using the custom driver
+- the maintenance refresh sequence in the new driver implementation
+
+Next step: **Phase 1D — render `HELLO` using our own graphics/text path.**

@@ -18,7 +18,7 @@ This roadmap tracks the progression from a clean hardware driver to the complete
 
 **Status: In progress**
 
-**Current step: Phase 1C — black geometry + dual-controller seam mapping test**
+**Current step: Phase 1D — `HELLO` text rendering**
 
 **Goal:** Own the minimum SSD1683 display stack.
 
@@ -39,8 +39,8 @@ Hardware checkpoints:
 
 - [x] Phase 1A: reset / BUSY / SWRESET sanity check (verified on hardware, 2026-09-28)
 - [x] Phase 1B: Display all white (verified on hardware, 2026-09-28)
-- [ ] Phase 1C: Display a simple black test pattern
-- [ ] Display `HELLO`
+- [x] Phase 1C: Display a black geometry + seam mapping test (verified on hardware, 2026-09-28)
+- [ ] Phase 1D: Display `HELLO`
 - [ ] Partial-refresh a changed region
 - [ ] Confirm maintenance refresh does not create blurred follow-up text
 

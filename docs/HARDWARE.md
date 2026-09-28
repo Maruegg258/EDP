@@ -9,6 +9,7 @@
 - Physical visible resolution: 792 x 272
 - Vendor driver model: dual SSD1683 controllers
 - Vendor framebuffer/addressing width: 800 x 272, with an 8-pixel controller seam offset
+- Hardware-verified visible mapping on the development unit: 396 visible pixels + 8 logical seam pixels + 396 visible pixels = 800 controller-addressed pixels
 
 ## Board connections used by the vendor example
 
