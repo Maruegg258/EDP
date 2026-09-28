@@ -50,6 +50,16 @@ bool CrowEPD579::configureRefreshEnvironment() {
   return _bus.waitUntilIdle(BUSY_TIMEOUT_MS);
 }
 
+bool CrowEPD579::fastModeResetAndInit() {
+  // Mirrors the reset + SWRESET + fast-mode environment sequence that was
+  // previously verified on this panel.
+  if (!begin()) {
+    return false;
+  }
+
+  return configureRefreshEnvironment();
+}
+
 void CrowEPD579::setMasterWindow() {
   // Master controller: X increments while Y decrements.
   _bus.writeCommand(0x11);
@@ -160,12 +170,37 @@ bool CrowEPD579::triggerFullRefresh() {
   return _bus.waitUntilIdle(BUSY_TIMEOUT_MS);
 }
 
+bool CrowEPD579::triggerFastRefresh() {
+  _bus.writeCommand(0x22);
+  _bus.writeData(0xC7);
+  _bus.writeCommand(0x20);
+
+  return _bus.waitUntilIdle(BUSY_TIMEOUT_MS);
+}
+
 bool CrowEPD579::triggerPartialRefresh() {
   _bus.writeCommand(0x22);
   _bus.writeData(0xDC);
   _bus.writeCommand(0x20);
 
   return _bus.waitUntilIdle(BUSY_TIMEOUT_MS);
+}
+
+bool CrowEPD579::fastClearToWhite() {
+  // Known-good fast-clear preparation: current RAM white, previous RAM black.
+  setMasterWindow();
+  setMasterCursor();
+  fillControllerRam(0x24, 0xFF);
+  setMasterCursor();
+  fillControllerRam(0x26, 0x00);
+
+  setSlaveWindow();
+  setSlaveCursor();
+  fillControllerRam(0xA4, 0xFF);
+  setSlaveCursor();
+  fillControllerRam(0xA6, 0x00);
+
+  return triggerFastRefresh();
 }
 
 void CrowEPD579::writePreviousWhite() {
@@ -277,6 +312,39 @@ bool CrowEPD579::restoreFrameStateForPartial(const uint8_t* previousFrame) {
 
   writeFramePlane(0x26, 0xA6, previousFrame);
   writeFramePlane(0x24, 0xA4, previousFrame);
+
+  return true;
+}
+
+bool CrowEPD579::maintenanceRefresh(const uint8_t* newFrame) {
+  if (newFrame == nullptr) {
+    return false;
+  }
+
+  // Stage 1: fast clear the physical panel to white.
+  if (!fastModeResetAndInit()) {
+    return false;
+  }
+  if (!fastClearToWhite()) {
+    return false;
+  }
+
+  // Stage 2: reset/reinitialize again so the white physical state and RAM
+  // baseline are established deliberately before the partial transition.
+  if (!fastModeResetAndInit()) {
+    return false;
+  }
+
+  writePreviousWhite();
+  writeFramePlane(0x24, 0xA4, newFrame);
+
+  if (!triggerPartialRefresh()) {
+    return false;
+  }
+
+  // Keep the controller state coherent with the physical result, matching
+  // the synchronization model already verified in Phase 1E.
+  writeFramePlane(0x26, 0xA6, newFrame);
 
   return true;
 }

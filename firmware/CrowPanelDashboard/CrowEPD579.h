@@ -37,6 +37,11 @@ public:
   // partial update. Do not rely on controller RAM retention across reset.
   bool restoreFrameStateForPartial(const uint8_t* previousFrame);
 
+  // Phase 1F: known-good maintenance sequence reconstructed in our driver:
+  // fast clear to physical white -> re-init -> previous RAM white ->
+  // current RAM new frame -> partial refresh -> previous RAM new frame.
+  bool maintenanceRefresh(const uint8_t* newFrame);
+
   void sleep();
 
 private:
@@ -53,7 +58,10 @@ private:
   static constexpr uint32_t BUSY_TIMEOUT_MS = 5000;
 
   bool configureRefreshEnvironment();
+  bool fastModeResetAndInit();
+  bool fastClearToWhite();
   bool triggerFullRefresh();
+  bool triggerFastRefresh();
   bool triggerPartialRefresh();
 
   void setMasterWindow();

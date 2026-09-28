@@ -39,3 +39,21 @@ First boot needs a known clean baseline before partial-update state is trusted. 
 ## Rule
 
 Do not reintroduce periodic full refresh merely because it is conventional. Changes to refresh strategy must be tested on hardware and documented here.
+
+## Phase 1F custom-driver reconstruction
+
+The custom driver now contains an explicit maintenance primitive matching the previously stable physical sequence:
+
+```text
+fast-mode reset/init
+-> fast clear to physical white
+-> fast-mode reset/init
+-> previous RAM white
+-> current RAM new frame
+-> partial refresh
+-> previous RAM synchronized to new frame
+```
+
+The final synchronization step is intentionally retained so later normal updates can use the same coherent previous/current/physical-state model verified in Phase 1E.
+
+This implementation remains **pending Phase 1F real-hardware verification** until the maintenance operation and its follow-up partial updates are visually confirmed.

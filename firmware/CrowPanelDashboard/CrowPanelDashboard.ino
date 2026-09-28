@@ -99,7 +99,7 @@ static bool drawText5x7(const char* text,
   return true;
 }
 
-static bool buildPhase1EBFrame(uint16_t squareX) {
+static bool buildPhase1FFrame(uint16_t squareX) {
   graphics.clear(true);
 
   constexpr char TEXT[] = "HELLO";
@@ -126,23 +126,25 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 1E-B: partial refresh across sleep/reset cycles");
-  Serial.println("Previous frame will be restored from ESP32 RAM after each wake.");
+  Serial.println("EDP Phase 1F: maintenance refresh regression test");
+  Serial.println("Known-good fast-clear -> white -> partial sequence will be exercised.");
 
-  constexpr uint16_t SQUARE_X[] = {80, 240, 400, 560, 680};
+  constexpr uint16_t BASELINE_X = 80;
+  constexpr uint16_t PRE_MAINTENANCE_X = 240;
+  constexpr uint16_t MAINTENANCE_X = 400;
+  constexpr uint16_t POST_MAINTENANCE_X[] = {560, 680, 80};
 
-  Serial.println("Step 1/4: reset controllers and build baseline...");
+  Serial.println("Step 1/5: build and full-refresh baseline...");
   if (!display.begin()) {
     Serial.println("FAIL: baseline reset/SWRESET BUSY timeout.");
     return;
   }
 
-  if (!buildPhase1EBFrame(SQUARE_X[0])) {
+  if (!buildPhase1FFrame(BASELINE_X)) {
     Serial.println("FAIL: baseline rendering failed.");
     return;
   }
 
-  Serial.println("Step 2/4: full-refresh baseline, save snapshot, deep sleep...");
   if (!display.displayFullFrame(frameBuffer)) {
     Serial.println("FAIL: baseline full refresh timed out.");
     return;
@@ -152,46 +154,74 @@ void setup() {
   display.sleep();
   delay(3000);
 
-  Serial.println("Step 3/4: run four wake/restore/partial/sleep cycles...");
+  Serial.println("Step 2/5: one normal partial before maintenance...");
+  if (!display.begin()) {
+    Serial.println("FAIL: pre-maintenance wake reset timed out.");
+    return;
+  }
+  if (!display.restoreFrameStateForPartial(previousFrameBuffer)) {
+    Serial.println("FAIL: pre-maintenance state restore timed out.");
+    return;
+  }
+  if (!buildPhase1FFrame(PRE_MAINTENANCE_X)) {
+    Serial.println("FAIL: pre-maintenance frame rendering failed.");
+    return;
+  }
+  if (!display.displayPartialFrame(frameBuffer)) {
+    Serial.println("FAIL: pre-maintenance partial refresh timed out.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  delay(3000);
 
-  for (uint8_t update = 1; update < 5; ++update) {
-    Serial.print("Wake cycle ");
-    Serial.print(update);
-    Serial.println("/4: HW reset + SWRESET...");
+  Serial.println("Step 3/5: execute maintenance refresh...");
+  Serial.println("  Fast clear -> physical white -> re-init -> previous white -> current new -> partial");
+  if (!buildPhase1FFrame(MAINTENANCE_X)) {
+    Serial.println("FAIL: maintenance frame rendering failed.");
+    return;
+  }
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    Serial.println("FAIL: maintenance refresh timed out.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  delay(3000);
+
+  Serial.println("Step 4/5: three normal partials after maintenance...");
+  for (uint8_t update = 0; update < 3; ++update) {
+    Serial.print("Post-maintenance partial ");
+    Serial.print(update + 1);
+    Serial.println("/3...");
 
     if (!display.begin()) {
-      Serial.println("FAIL: wake reset/SWRESET BUSY timeout.");
+      Serial.println("FAIL: post-maintenance wake reset timed out.");
       return;
     }
-
-    Serial.println("  Restore previous/current RAM from ESP32 snapshot...");
     if (!display.restoreFrameStateForPartial(previousFrameBuffer)) {
-      Serial.println("FAIL: controller state restore timed out.");
+      Serial.println("FAIL: post-maintenance state restore timed out.");
       return;
     }
-
-    Serial.println("  Build next frame and partial refresh...");
-    if (!buildPhase1EBFrame(SQUARE_X[update])) {
-      Serial.println("FAIL: frame rendering failed.");
+    if (!buildPhase1FFrame(POST_MAINTENANCE_X[update])) {
+      Serial.println("FAIL: post-maintenance frame rendering failed.");
       return;
     }
-
     if (!display.displayPartialFrame(frameBuffer)) {
-      Serial.println("FAIL: partial refresh timed out.");
+      Serial.println("FAIL: post-maintenance partial refresh timed out.");
       return;
     }
 
     memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
-
-    Serial.println("  Deep sleep...");
     display.sleep();
     delay(3000);
   }
 
-  Serial.println("Step 4/4: test sequence complete.");
-  Serial.println("PASS: all four sleep/reset partial-update cycles completed.");
+  Serial.println("Step 5/5: test sequence complete.");
+  Serial.println("PASS: maintenance + three follow-up partial commands completed.");
   Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("Check that only one square remains and HELLO stays crisp.");
+  Serial.println("Compare HELLO immediately after maintenance and after each follow-up partial.");
+  Serial.println("There should be no blurred/doubled text and only one square should remain.");
 }
 void loop() {
   delay(1000);

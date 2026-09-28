@@ -545,3 +545,75 @@ Important scope limit:
 This test validates the software-restored state model used here. It does not prove that SSD1683 image RAM itself is retained or reliable across deep sleep/reset.
 
 Next step: **Phase 1F — reproduce and verify the maintenance refresh sequence in the custom driver.**
+
+
+## Phase 1F — Maintenance refresh reconstruction and regression test
+
+### Purpose
+
+Reproduce the maintenance-refresh behavior that was empirically stable before the custom driver was created, then verify that the **next ordinary partial updates remain sharp**.
+
+The maintenance sequence under test is:
+
+```text
+fast-mode reset/init
+    ->
+current RAM = white
+previous RAM = black
+    ->
+fast refresh (0x22 = 0xC7, then 0x20)
+    ->
+physical panel = white
+    ->
+fast-mode reset/init again
+    ->
+previous RAM = white
+current RAM = new frame
+    ->
+partial refresh (0x22 = 0xDC, then 0x20)
+    ->
+physical panel = new frame
+    ->
+previous RAM = new frame
+```
+
+The final previous-RAM synchronization is an explicit addition in the custom driver so the maintenance result matches the coherent state model verified in Phase 1E.
+
+### Regression sequence
+
+1. Full-refresh a baseline `HELLO` + moving square frame.
+2. Perform one ordinary sleep/reset/restore/partial cycle.
+3. Build the maintenance target frame.
+4. Execute the maintenance sequence above.
+5. Save the maintenance result as the ESP32 previous-frame snapshot and deep-sleep the controller.
+6. Perform three ordinary sleep/reset/restore/partial updates after maintenance.
+7. Compare `HELLO` immediately after maintenance and after each subsequent partial update.
+
+Square positions are:
+
+```text
+baseline             x = 80
+normal pre-maint     x = 240
+maintenance target   x = 400
+post-maint partial 1 x = 560
+post-maint partial 2 x = 680
+post-maint partial 3 x = 80
+```
+
+### Physical acceptance criteria
+
+Phase 1F passes only if:
+
+1. The maintenance fast-clear visibly brings the panel to a clean white state.
+2. The maintenance partial then renders `HELLO` and the square correctly.
+3. `HELLO` is sharp immediately after the maintenance refresh.
+4. The **first ordinary partial after maintenance** is also sharp, with no doubled or blurred strokes.
+5. The second and third ordinary partials remain as clean as the first.
+6. Old square positions disappear without obvious residual blocks.
+7. No controller-seam artifact is introduced.
+
+Serial `PASS` confirms only that the command sequence completed. The key Phase 1F criterion is the absence of the historical blurred-text regression on the follow-up partial updates.
+
+### Design rule
+
+A successful Phase 1F does **not** authorize periodic conventional Full Refresh. The maintenance path remains a separate, explicitly invoked recovery/cleanup primitive.

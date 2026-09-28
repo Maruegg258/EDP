@@ -18,7 +18,7 @@ This roadmap tracks the progression from a clean hardware driver to the complete
 
 **Status: In progress**
 
-**Current step: Phase 1F — maintenance refresh reconstruction and regression test**
+**Current step: Phase 1F — maintenance refresh + follow-up partial regression test**
 
 **Goal:** Own the minimum SSD1683 display stack.
 
