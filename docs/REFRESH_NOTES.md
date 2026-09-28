@@ -56,4 +56,8 @@ fast-mode reset/init
 
 The final synchronization step is intentionally retained so later normal updates can use the same coherent previous/current/physical-state model verified in Phase 1E.
 
-This implementation remains **pending Phase 1F real-hardware verification** until the maintenance operation and its follow-up partial updates are visually confirmed.
+### 2026-09-28 hardware verification
+
+**PASS on the development panel.** The maintenance operation completed correctly and three ordinary partial updates immediately afterward remained sharp, with no obvious blurred/doubled text or residual square artifacts.
+
+This custom-driver maintenance sequence is now the hardware-verified cleanup path for the project.

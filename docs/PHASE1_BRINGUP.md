@@ -617,3 +617,31 @@ Serial `PASS` confirms only that the command sequence completed. The key Phase 1
 ### Design rule
 
 A successful Phase 1F does **not** authorize periodic conventional Full Refresh. The maintenance path remains a separate, explicitly invoked recovery/cleanup primitive.
+
+
+### 2026-09-28 — Phase 1F PASS
+
+Serial result: **PASS as expected.**
+
+Physical result: **PASS on real hardware.** The maintenance sequence completed correctly, the panel fast-cleared to white, the maintenance target frame rendered correctly, and the three ordinary partial updates that followed remained visually clean.
+
+Verified by Phase 1F:
+
+- the custom driver's fast-refresh command path (`0x22 = 0xC7`, then `0x20`) operates correctly on the development unit
+- the maintenance sequence `fast clear -> physical white -> re-init -> previous RAM white -> current RAM new frame -> partial refresh` works in the custom driver
+- synchronizing previous RAM to the maintenance result preserves the coherent state model used by ordinary partial updates
+- the first ordinary partial after maintenance does not reproduce the previously observed blurred/doubled-text regression
+- the second and third follow-up partial updates also remain visually clean
+- old square positions do not leave obvious residual blocks
+- no new controller-seam artifact appears
+
+Phase 1 hardware bring-up is therefore complete for the tested development unit.
+
+The verified refresh policy remains:
+
+- ordinary changes: partial refresh
+- sleep/reset cycles: reconstruct previous/current RAM from the ESP32-owned previous framebuffer before the next partial update
+- maintenance cleanup: fast clear to white, rebuild the white previous-RAM baseline, then partial-refresh the new frame
+- do not add periodic conventional Full Refresh without new hardware evidence
+
+Next step: **Phase 2 — graphics foundation.**

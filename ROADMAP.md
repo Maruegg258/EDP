@@ -16,9 +16,7 @@ This roadmap tracks the progression from a clean hardware driver to the complete
 
 ## Phase 1 — E-paper hardware driver
 
-**Status: In progress**
-
-**Current step: Phase 1F — maintenance refresh + follow-up partial regression test**
+**Status: Complete**
 
 **Goal:** Own the minimum SSD1683 display stack.
 
@@ -43,9 +41,13 @@ Hardware checkpoints:
 - [x] Phase 1D: Display project-owned `HELLO` text (verified on hardware, 2026-09-28)
 - [x] Phase 1E-A: Four consecutive partial refreshes without sleep/reset (verified on hardware, 2026-09-28)
 - [x] Phase 1E-B: Partial refresh across deep-sleep / hardware-reset cycles (verified on hardware, 2026-09-28)
-- [ ] Phase 1F: Confirm maintenance refresh does not create blurred follow-up text
+- [x] Phase 1F: Confirm maintenance refresh does not create blurred follow-up text (verified on hardware, 2026-09-28)
 
 ## Phase 2 — Graphics foundation
+
+**Status: In progress**
+
+**Current step: Phase 2A — consolidate reusable graphics primitives and visible-coordinate mapping**
 
 **Goal:** Build our own compact black/white rendering layer.
 
