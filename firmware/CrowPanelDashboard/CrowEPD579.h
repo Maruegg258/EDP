@@ -15,12 +15,17 @@ public:
 
   static constexpr uint8_t PIN_PANEL_POWER = 7;
 
-  void begin();
-
-  // Controller-level operations will be implemented only after the
-  // SSD1683 command sequence is cross-checked and tested on hardware.
-  bool controllerDriverReady() const { return false; }
+  // Phase 1A only:
+  // power the panel, initialize the GPIO bus, perform hardware reset,
+  // issue SSD1683 SWRESET (0x12), and wait for BUSY to return idle.
+  //
+  // This function intentionally does not write display RAM or refresh
+  // the physical panel.
+  bool begin();
 
 private:
+  static constexpr uint8_t CMD_SW_RESET = 0x12;
+  static constexpr uint32_t BUSY_TIMEOUT_MS = 5000;
+
   EpaperBus _bus;
 };

@@ -12,8 +12,10 @@ public:
   static constexpr uint8_t PIN_BUSY  = 48;
 
   void begin();
-  void reset();
-  void waitUntilIdle();
+
+  bool hardwareReset(uint32_t timeoutMs = 5000);
+  bool waitUntilIdle(uint32_t timeoutMs = 5000) const;
+  bool isBusy() const;
 
   void writeCommand(uint8_t command);
   void writeData(uint8_t data);

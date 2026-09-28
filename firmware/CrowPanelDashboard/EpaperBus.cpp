@@ -11,21 +11,35 @@ void EpaperBus::begin() {
   digitalWrite(PIN_CS, HIGH);
   digitalWrite(PIN_SCK, HIGH);
   digitalWrite(PIN_RESET, HIGH);
+  digitalWrite(PIN_DC, HIGH);
 }
 
-void EpaperBus::reset() {
+bool EpaperBus::hardwareReset(uint32_t timeoutMs) {
   delay(10);
   digitalWrite(PIN_RESET, LOW);
   delay(10);
   digitalWrite(PIN_RESET, HIGH);
   delay(10);
-  waitUntilIdle();
+
+  return waitUntilIdle(timeoutMs);
 }
 
-void EpaperBus::waitUntilIdle() {
-  while (digitalRead(PIN_BUSY) != LOW) {
+bool EpaperBus::waitUntilIdle(uint32_t timeoutMs) const {
+  const uint32_t start = millis();
+
+  while (isBusy()) {
+    if (millis() - start >= timeoutMs) {
+      return false;
+    }
     delay(1);
   }
+
+  return true;
+}
+
+bool EpaperBus::isBusy() const {
+  // SSD1683 / Elecrow reference: BUSY is active HIGH.
+  return digitalRead(PIN_BUSY) == HIGH;
 }
 
 void EpaperBus::writeCommand(uint8_t command) {
@@ -44,7 +58,7 @@ void EpaperBus::writeByte(uint8_t value) {
 
   for (uint8_t bit = 0; bit < 8; ++bit) {
     digitalWrite(PIN_SCK, LOW);
-    digitalWrite(PIN_MOSI, (value & 0x80) ? HIGH : LOW);
+    digitalWrite(PIN_MOSI, (value & 0x80U) ? HIGH : LOW);
     digitalWrite(PIN_SCK, HIGH);
     value <<= 1;
   }

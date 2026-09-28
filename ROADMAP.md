@@ -16,6 +16,10 @@ This roadmap tracks the progression from a clean hardware driver to the complete
 
 ## Phase 1 — E-paper hardware driver
 
+**Status: In progress**
+
+**Current step: Phase 1A — reset / BUSY / command-bus sanity check**
+
 **Goal:** Own the minimum SSD1683 display stack.
 
 Planned work:

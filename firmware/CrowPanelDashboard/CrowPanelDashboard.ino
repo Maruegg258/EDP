@@ -1,27 +1,24 @@
 #include <Arduino.h>
 
 #include "CrowEPD579.h"
-#include "GraphicsBW.h"
 
 CrowEPD579 display;
-uint8_t frameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
-GraphicsBW graphics(
-    frameBuffer,
-    CrowEPD579::FRAMEBUFFER_WIDTH,
-    CrowEPD579::FRAMEBUFFER_HEIGHT
-);
 
 void setup() {
   Serial.begin(115200);
-  delay(500);
-
-  display.begin();
-  graphics.clear(true);
+  delay(1000);
 
   Serial.println();
-  Serial.println("EDP scaffold booted.");
-  Serial.println("No SSD1683 refresh commands are enabled yet.");
-  Serial.println("This build is a project skeleton, not the production firmware.");
+  Serial.println("EDP Phase 1A: SSD1683 reset bring-up");
+  Serial.println("No framebuffer write or display refresh will be performed.");
+
+  const bool resetOk = display.begin();
+
+  if (resetOk) {
+    Serial.println("PASS: hardware reset + SWRESET completed and BUSY is idle.");
+  } else {
+    Serial.println("FAIL: BUSY timeout during controller reset sequence.");
+  }
 }
 
 void loop() {
