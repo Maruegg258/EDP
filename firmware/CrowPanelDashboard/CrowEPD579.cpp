@@ -160,6 +160,14 @@ bool CrowEPD579::triggerFullRefresh() {
   return _bus.waitUntilIdle(BUSY_TIMEOUT_MS);
 }
 
+bool CrowEPD579::triggerPartialRefresh() {
+  _bus.writeCommand(0x22);
+  _bus.writeData(0xDC);
+  _bus.writeCommand(0x20);
+
+  return _bus.waitUntilIdle(BUSY_TIMEOUT_MS);
+}
+
 void CrowEPD579::writePreviousWhite() {
   setMasterWindow();
   setMasterCursor();
@@ -230,6 +238,26 @@ bool CrowEPD579::displayFullFrame(const uint8_t* frameBuffer) {
 
   // Synchronize previous RAM to the physical result so the controller has
   // a coherent baseline for later partial-refresh work.
+  writeFramePlane(0x26, 0xA6, frameBuffer);
+
+  return true;
+}
+
+bool CrowEPD579::displayPartialFrame(const uint8_t* frameBuffer) {
+  if (frameBuffer == nullptr) {
+    return false;
+  }
+
+  // At entry, previous RAM is expected to describe the current physical
+  // image. Only the new current image is written before the partial update.
+  writeFramePlane(0x24, 0xA4, frameBuffer);
+
+  if (!triggerPartialRefresh()) {
+    return false;
+  }
+
+  // After the physical panel reaches the new image, make previous RAM
+  // describe that same state before the next partial update.
   writeFramePlane(0x26, 0xA6, frameBuffer);
 
   return true;

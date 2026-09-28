@@ -27,6 +27,11 @@ public:
   // one full refresh. The caller is responsible for the 792->800 seam map.
   bool displayFullFrame(const uint8_t* frameBuffer);
 
+  // Phase 1E-A: write a complete new current frame, perform a partial
+  // waveform update, then synchronize previous RAM to the physical result.
+  // No reset or deep sleep is performed by this method.
+  bool displayPartialFrame(const uint8_t* frameBuffer);
+
   void sleep();
 
 private:
@@ -44,6 +49,7 @@ private:
 
   bool configureRefreshEnvironment();
   bool triggerFullRefresh();
+  bool triggerPartialRefresh();
 
   void setMasterWindow();
   void setMasterCursor();

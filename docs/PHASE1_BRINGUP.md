@@ -357,3 +357,63 @@ Still not verified:
 - maintenance-refresh behavior using the custom driver
 
 Next step: **Phase 1E — partial refresh and previous/current RAM synchronization.**
+
+
+## Phase 1E-A — Consecutive partial refresh without sleep/reset
+
+### Purpose
+
+Verify the custom driver's partial-refresh path while removing deep sleep and hardware reset as variables.
+
+### State model
+
+Before every partial update, the expected state is:
+
+```text
+previous RAM = physical image A
+current RAM  = physical image A
+```
+
+The test then rebuilds the complete framebuffer as image B and performs:
+
+```text
+current RAM = B
+    ->
+partial refresh (0x22 = 0xDC, then 0x20)
+    ->
+physical panel = B
+    ->
+previous RAM = B
+```
+
+The previous RAM synchronization happens only after BUSY reports that the physical partial refresh has completed.
+
+### Test sequence
+
+1. Reset/SWRESET once.
+2. Build a baseline containing `HELLO` plus one 32 x 32 black square.
+3. Perform one full refresh; `displayFullFrame()` synchronizes previous/current RAM to the baseline.
+4. Wait 3 seconds.
+5. Rebuild the entire framebuffer with the same `HELLO` and move the square.
+6. Write only the new current frame, perform partial refresh, then copy that frame to previous RAM.
+7. Repeat the move/partial/sync cycle four times total.
+8. Do **not** deep-sleep or hardware-reset the controller during the sequence.
+
+Square visible X positions are 80 (baseline), then 240, 400, 560, and 680.
+
+### Physical acceptance criteria
+
+Phase 1E-A passes only if:
+
+1. Each partial refresh moves the black square to the new position.
+2. The old square disappears cleanly after each move.
+3. Only one square is visible after every update.
+4. `HELLO`, which is unchanged in every framebuffer, remains equally sharp after all four partial updates.
+5. No new double edges, bolding, light ghost text, or controller-seam artifact appears.
+6. The fourth partial update behaves as cleanly as the first.
+
+Serial `PASS` only confirms that all refresh commands completed without BUSY timeout. Visual inspection is required before this checkpoint is accepted.
+
+### Scope
+
+This test intentionally does **not** enter deep sleep and does not hardware-reset between partial updates. If Phase 1E-A passes, Phase 1E-B will add sleep/reset to isolate whether controller reset state affects previous/current RAM behavior.

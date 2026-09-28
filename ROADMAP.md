@@ -18,7 +18,7 @@ This roadmap tracks the progression from a clean hardware driver to the complete
 
 **Status: In progress**
 
-**Current step: Phase 1E — partial refresh + previous/current RAM synchronization**
+**Current step: Phase 1E-A — consecutive partial refresh without sleep/reset**
 
 **Goal:** Own the minimum SSD1683 display stack.
 
@@ -41,7 +41,7 @@ Hardware checkpoints:
 - [x] Phase 1B: Display all white (verified on hardware, 2026-09-28)
 - [x] Phase 1C: Display a black geometry + seam mapping test (verified on hardware, 2026-09-28)
 - [x] Phase 1D: Display project-owned `HELLO` text (verified on hardware, 2026-09-28)
-- [ ] Phase 1E: Partial-refresh a changed frame and verify previous/current RAM synchronization
+- [ ] Phase 1E-A: Four consecutive partial refreshes without sleep/reset\n- [ ] Phase 1E-B: Partial refresh across deep-sleep / hardware-reset cycles
 - [ ] Confirm maintenance refresh does not create blurred follow-up text
 
 ## Phase 2 — Graphics foundation
