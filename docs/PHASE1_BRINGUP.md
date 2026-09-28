@@ -523,3 +523,25 @@ Phase 1E-B passes only if:
 A PASS verifies that software-restored controller state is sufficient for partial refresh across deep-sleep / hardware-reset cycles on the development unit.
 
 It does **not** claim that SSD1683 RAM itself survives deep sleep or hardware reset. The firmware deliberately avoids relying on that behavior.
+
+
+### 2026-09-28 — Phase 1E-B PASS
+
+Serial result: **PASS as expected.**
+
+Physical result: **PASS on real hardware.** Across all four sleep/reset/update cycles, the moving square advanced correctly, previous square positions did not leave obvious residual images, and `HELLO` remained visually normal.
+
+Verified by Phase 1E-B:
+
+- deep sleep followed by hardware reset + SWRESET can be used between dashboard update cycles
+- the refresh environment can be reinitialized after wake/reset
+- restoring both previous and current SSD1683 RAM planes from the ESP32-owned framebuffer is sufficient to re-establish a coherent partial-refresh baseline
+- subsequent partial refreshes remain visually clean across at least four sleep/reset cycles
+- unchanged text does not show obvious blur, double edges, or ghost accumulation across the tested cycles
+- the firmware does not need to rely on SSD1683 RAM retention across deep sleep or hardware reset
+
+Important scope limit:
+
+This test validates the software-restored state model used here. It does not prove that SSD1683 image RAM itself is retained or reliable across deep sleep/reset.
+
+Next step: **Phase 1F — reproduce and verify the maintenance refresh sequence in the custom driver.**
