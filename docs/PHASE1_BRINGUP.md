@@ -439,3 +439,87 @@ Important scope limit:
 This result applies only while the SSD1683 controllers remain awake and are not hardware-reset between updates. It does **not** yet prove that previous/current RAM state survives deep sleep or that our reset/reinitialization path reconstructs that state correctly.
 
 Next step: **Phase 1E-B — partial refresh across deep-sleep / hardware-reset cycles.**
+
+
+## Phase 1E-B — Partial refresh across deep-sleep / hardware-reset cycles
+
+### Purpose
+
+Verify the real dashboard-style controller cycle while avoiding any dependency on SSD1683 RAM retention.
+
+After each successful update, the ESP32 stores a second 27,200-byte copy of the framebuffer that matches the physical panel. The controller is then put into deep sleep.
+
+After wake/reset, the firmware performs hardware reset + SWRESET, reinitializes the refresh environment, and reconstructs both previous and current SSD1683 RAM planes from that ESP32-owned saved framebuffer before attempting the next partial update.
+
+### State model
+
+Before sleep:
+
+```text
+physical panel = A
+ESP32 saved frame = A
+controller previous RAM = A
+controller current RAM  = A
+```
+
+After deep sleep + hardware reset, controller RAM retention is treated as unknown.
+
+Recovery before the next partial update:
+
+```text
+HW reset + SWRESET
+    ->
+configure refresh environment
+    ->
+previous RAM <- A from ESP32
+current RAM  <- A from ESP32
+    ->
+build B
+    ->
+current RAM <- B
+    ->
+partial refresh
+    ->
+physical panel = B
+    ->
+previous RAM <- B
+ESP32 saved frame <- B
+    ->
+deep sleep
+```
+
+### Test sequence
+
+1. Build the same `HELLO` + 32 x 32 moving-square baseline used in Phase 1E-A.
+2. Full-refresh the baseline.
+3. Copy that framebuffer into the ESP32-side previous-frame buffer.
+4. Deep-sleep the controller.
+5. Wait 3 seconds.
+6. Hardware-reset + SWRESET.
+7. Reinitialize the refresh environment.
+8. Restore both controller previous/current image RAM planes from the ESP32 snapshot.
+9. Build the next frame with the square moved.
+10. Partial-refresh the new frame and synchronize previous RAM.
+11. Save the new framebuffer as the next ESP32-side previous frame.
+12. Deep-sleep again.
+13. Repeat for four wake/update cycles.
+
+Square visible X positions remain 80 (baseline), then 240, 400, 560, and 680.
+
+### Physical acceptance criteria
+
+Phase 1E-B passes only if:
+
+1. Each wake/reset cycle produces the next square position.
+2. Old square positions disappear cleanly.
+3. Only one square remains visible after each update.
+4. `HELLO` remains visually sharp after the fourth sleep/reset cycle.
+5. No new blur, double edges, ghost text, or seam artifact appears after reset.
+6. There is no unexpected full-screen refresh/flash after the initial baseline full refresh.
+7. The fourth wake/reset/partial cycle behaves as cleanly as the first.
+
+### Scope
+
+A PASS verifies that software-restored controller state is sufficient for partial refresh across deep-sleep / hardware-reset cycles on the development unit.
+
+It does **not** claim that SSD1683 RAM itself survives deep sleep or hardware reset. The firmware deliberately avoids relying on that behavior.

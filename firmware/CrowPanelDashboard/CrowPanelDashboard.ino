@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <cstring>
 
 #include "CrowEPD579.h"
 #include "Font5x7.h"
@@ -7,6 +8,7 @@
 CrowEPD579 display;
 
 uint8_t frameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
+uint8_t previousFrameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
 GraphicsBW graphics(
     frameBuffer,
     CrowEPD579::FRAMEBUFFER_WIDTH,
@@ -97,7 +99,7 @@ static bool drawText5x7(const char* text,
   return true;
 }
 
-static bool buildPhase1EAFrame(uint16_t squareX) {
+static bool buildPhase1EBFrame(uint16_t squareX) {
   graphics.clear(true);
 
   constexpr char TEXT[] = "HELLO";
@@ -124,37 +126,52 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 1E-A: consecutive partial refresh test");
-  Serial.println("No reset or deep sleep will occur between partial updates.");
-
-  Serial.println("Step 1/6: reset controllers...");
-  if (!display.begin()) {
-    Serial.println("FAIL: reset/SWRESET BUSY timeout.");
-    return;
-  }
+  Serial.println("EDP Phase 1E-B: partial refresh across sleep/reset cycles");
+  Serial.println("Previous frame will be restored from ESP32 RAM after each wake.");
 
   constexpr uint16_t SQUARE_X[] = {80, 240, 400, 560, 680};
 
-  Serial.println("Step 2/6: build baseline frame...");
-  if (!buildPhase1EAFrame(SQUARE_X[0])) {
+  Serial.println("Step 1/4: reset controllers and build baseline...");
+  if (!display.begin()) {
+    Serial.println("FAIL: baseline reset/SWRESET BUSY timeout.");
+    return;
+  }
+
+  if (!buildPhase1EBFrame(SQUARE_X[0])) {
     Serial.println("FAIL: baseline rendering failed.");
     return;
   }
 
-  Serial.println("Step 3/6: full-refresh baseline and synchronize RAM...");
+  Serial.println("Step 2/4: full-refresh baseline, save snapshot, deep sleep...");
   if (!display.displayFullFrame(frameBuffer)) {
     Serial.println("FAIL: baseline full refresh timed out.");
     return;
   }
 
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
   delay(3000);
 
-  for (uint8_t update = 1; update < 5; ++update) {
-    Serial.print("Partial update ");
-    Serial.print(update);
-    Serial.println("/4: rebuild frame, refresh, sync previous RAM...");
+  Serial.println("Step 3/4: run four wake/restore/partial/sleep cycles...");
 
-    if (!buildPhase1EAFrame(SQUARE_X[update])) {
+  for (uint8_t update = 1; update < 5; ++update) {
+    Serial.print("Wake cycle ");
+    Serial.print(update);
+    Serial.println("/4: HW reset + SWRESET...");
+
+    if (!display.begin()) {
+      Serial.println("FAIL: wake reset/SWRESET BUSY timeout.");
+      return;
+    }
+
+    Serial.println("  Restore previous/current RAM from ESP32 snapshot...");
+    if (!display.restoreFrameStateForPartial(previousFrameBuffer)) {
+      Serial.println("FAIL: controller state restore timed out.");
+      return;
+    }
+
+    Serial.println("  Build next frame and partial refresh...");
+    if (!buildPhase1EBFrame(SQUARE_X[update])) {
       Serial.println("FAIL: frame rendering failed.");
       return;
     }
@@ -164,16 +181,18 @@ void setup() {
       return;
     }
 
+    memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+
+    Serial.println("  Deep sleep...");
+    display.sleep();
     delay(3000);
   }
 
-  Serial.println("Step 6/6: test sequence complete.");
-  Serial.println("PASS: all four partial-update commands completed.");
-  Serial.println("Controller is intentionally left awake for Phase 1E-A.");
+  Serial.println("Step 4/4: test sequence complete.");
+  Serial.println("PASS: all four sleep/reset partial-update cycles completed.");
   Serial.println("Physical inspection is REQUIRED.");
   Serial.println("Check that only one square remains and HELLO stays crisp.");
 }
-
 void loop() {
   delay(1000);
 }

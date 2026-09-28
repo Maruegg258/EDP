@@ -18,7 +18,7 @@ This roadmap tracks the progression from a clean hardware driver to the complete
 
 **Status: In progress**
 
-**Current step: Phase 1E-B — partial refresh across deep-sleep / hardware-reset cycles**
+**Current step: Phase 1E-B — sleep/reset with software-restored previous/current RAM**
 
 **Goal:** Own the minimum SSD1683 display stack.
 

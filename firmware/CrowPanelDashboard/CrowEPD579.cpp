@@ -263,6 +263,24 @@ bool CrowEPD579::displayPartialFrame(const uint8_t* frameBuffer) {
   return true;
 }
 
+bool CrowEPD579::restoreFrameStateForPartial(const uint8_t* previousFrame) {
+  if (previousFrame == nullptr) {
+    return false;
+  }
+
+  // After deep sleep + HW reset/SWRESET, controller RAM contents are treated
+  // as unknown. Rebuild the refresh environment and both image planes from
+  // the ESP32-owned copy of the image still visible on the panel.
+  if (!configureRefreshEnvironment()) {
+    return false;
+  }
+
+  writeFramePlane(0x26, 0xA6, previousFrame);
+  writeFramePlane(0x24, 0xA4, previousFrame);
+
+  return true;
+}
+
 void CrowEPD579::sleep() {
   _bus.writeCommand(0x10);
   _bus.writeData(0x01);

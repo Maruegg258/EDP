@@ -32,6 +32,11 @@ public:
   // No reset or deep sleep is performed by this method.
   bool displayPartialFrame(const uint8_t* frameBuffer);
 
+  // Phase 1E-B: after deep sleep / hardware reset, rebuild both controller
+  // RAM planes from the ESP32-owned previous framebuffer before the next
+  // partial update. Do not rely on controller RAM retention across reset.
+  bool restoreFrameStateForPartial(const uint8_t* previousFrame);
+
   void sleep();
 
 private:
