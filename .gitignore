@@ -1,0 +1,14 @@
+# Local secrets
+firmware/CrowPanelCrypto/config.h
+
+# Arduino build artifacts
+build/
+*.bin
+*.elf
+*.map
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
