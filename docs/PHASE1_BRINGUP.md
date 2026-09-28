@@ -417,3 +417,25 @@ Serial `PASS` only confirms that all refresh commands completed without BUSY tim
 ### Scope
 
 This test intentionally does **not** enter deep sleep and does not hardware-reset between partial updates. If Phase 1E-A passes, Phase 1E-B will add sleep/reset to isolate whether controller reset state affects previous/current RAM behavior.
+
+
+### 2026-09-28 — Phase 1E-A PASS
+
+Serial result: **PASS as expected.**
+
+Physical result: **PASS on real hardware.** Across the four consecutive partial updates, the moving square updated correctly, prior square positions did not leave obvious residual images, and `HELLO` remained visually normal.
+
+Verified by Phase 1E-A:
+
+- the custom partial-refresh command path completes repeatedly without BUSY timeout
+- current-frame RAM can be replaced with a new full frame before each partial update
+- previous RAM synchronization after BUSY idle is sufficient for consecutive awake-state partial updates on this development unit
+- unchanged text can survive at least four consecutive partial updates without obvious blur, double edges, or visible ghost accumulation
+- old moving-object positions are cleared cleanly enough to avoid obvious residual squares
+- no controller reset or deep sleep is required between these consecutive partial updates
+
+Important scope limit:
+
+This result applies only while the SSD1683 controllers remain awake and are not hardware-reset between updates. It does **not** yet prove that previous/current RAM state survives deep sleep or that our reset/reinitialization path reconstructs that state correctly.
+
+Next step: **Phase 1E-B — partial refresh across deep-sleep / hardware-reset cycles.**
