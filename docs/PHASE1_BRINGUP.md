@@ -313,10 +313,47 @@ Phase 1D passes only if:
 
 1. The background is white.
 2. `HELLO` is clearly readable in black.
-3. Letter orientation is correct.
+3. In the chosen product-use orientation, `HELLO` is upright and readable; the glyphs are not mirrored or internally inverted.
 4. Stroke blocks are square and not garbled.
 5. Letter spacing is consistent.
 6. The word crosses the controller boundary without a visible discontinuity.
 7. No unexpected geometry from the previous Phase 1C frame remains after the full refresh.
 
 A successful Phase 1D verifies only this minimal text path. It does not yet certify the future full font system, font metrics, or partial-refresh behavior.
+
+
+### 2026-09-28 — Phase 1D PASS
+
+Serial result: **PASS as expected.**
+
+Physical result: **PASS on real hardware.** `HELLO` rendered correctly in black on a white background. The word was readable, glyph strokes and spacing were normal, and the text crossed the controller seam without visible discontinuity.
+
+Orientation note:
+
+The panel has no meaningful absolute "up" independent of how the product is mounted. For this project, orientation is defined relative to the chosen normal-use mounting direction. Rotating the complete physical panel 180 degrees naturally rotates the displayed content with it and does not indicate a framebuffer error.
+
+For Phase 1D, the relevant checks are therefore:
+
+- glyphs are not mirrored
+- glyphs are not internally upside-down relative to the chosen normal-use orientation
+- left-to-right character order is correct
+- text crosses the controller seam continuously
+
+Verified by Phase 1D:
+
+- the project-owned minimal glyph bitmap is correct for `HELLO`
+- glyph-to-pixel rendering works
+- scaled text rendering works
+- visible-coordinate mapping remains correct for text
+- text can cross the dual-controller seam without corruption
+- the previous Phase 1C geometry is fully replaced by the new full frame
+
+Still not verified:
+
+- a complete production font set
+- proportional font metrics or typography polish
+- partial refresh using the custom driver
+- fast refresh using the custom driver
+- maintenance-refresh behavior using the custom driver
+
+Next step: **Phase 1E — partial refresh and previous/current RAM synchronization.**
