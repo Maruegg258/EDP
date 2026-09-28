@@ -112,6 +112,46 @@ void CrowEPD579::fillControllerRam(uint8_t command, uint8_t value) {
   }
 }
 
+void CrowEPD579::writeFramePlane(uint8_t masterCommand,
+                                 uint8_t slaveCommand,
+                                 const uint8_t* frameBuffer) {
+  if (frameBuffer == nullptr) {
+    return;
+  }
+
+  // The dual-controller panel is fed one byte-column at a time.
+  // Master consumes raw framebuffer byte columns 0..49.
+  setMasterWindow();
+  setMasterCursor();
+  _bus.writeCommand(masterCommand);
+
+  for (uint16_t byteColumn = 0;
+       byteColumn < BYTES_PER_LINE_PER_CONTROLLER;
+       ++byteColumn) {
+    for (uint16_t y = 0; y < CONTROLLER_HEIGHT; ++y) {
+      const size_t index =
+          static_cast<size_t>(y) * FRAMEBUFFER_STRIDE + byteColumn;
+      _bus.writeData(frameBuffer[index]);
+    }
+  }
+
+  // Slave consumes raw framebuffer byte columns 50..99. Its X addressing
+  // is reversed by the slave-window setup, matching the physical cascade.
+  setSlaveWindow();
+  setSlaveCursor();
+  _bus.writeCommand(slaveCommand);
+
+  for (uint16_t byteColumn = BYTES_PER_LINE_PER_CONTROLLER;
+       byteColumn < FRAMEBUFFER_STRIDE;
+       ++byteColumn) {
+    for (uint16_t y = 0; y < CONTROLLER_HEIGHT; ++y) {
+      const size_t index =
+          static_cast<size_t>(y) * FRAMEBUFFER_STRIDE + byteColumn;
+      _bus.writeData(frameBuffer[index]);
+    }
+  }
+}
+
 bool CrowEPD579::triggerFullRefresh() {
   _bus.writeCommand(0x22);
   _bus.writeData(0xF7);
@@ -121,9 +161,11 @@ bool CrowEPD579::triggerFullRefresh() {
 }
 
 void CrowEPD579::writePreviousWhite() {
+  setMasterWindow();
   setMasterCursor();
   fillControllerRam(0x26, 0xFF);
 
+  setSlaveWindow();
   setSlaveCursor();
   fillControllerRam(0xA6, 0xFF);
 }
@@ -156,6 +198,39 @@ bool CrowEPD579::clearToWhiteFull() {
   // The physical panel is now our known white baseline. Synchronize
   // previous RAM to that physical state for the next incremental test.
   writePreviousWhite();
+
+  return true;
+}
+
+bool CrowEPD579::displayFullFrame(const uint8_t* frameBuffer) {
+  if (frameBuffer == nullptr) {
+    return false;
+  }
+
+  if (!configureRefreshEnvironment()) {
+    return false;
+  }
+
+  // Use a known previous-plane state for this full-refresh bring-up test.
+  // This mirrors the clear-cycle preparation that already passed Phase 1B.
+  setMasterWindow();
+  setMasterCursor();
+  fillControllerRam(0x26, 0x00);
+
+  setSlaveWindow();
+  setSlaveCursor();
+  fillControllerRam(0xA6, 0x00);
+
+  // Current image plane: raw 800x272 framebuffer.
+  writeFramePlane(0x24, 0xA4, frameBuffer);
+
+  if (!triggerFullRefresh()) {
+    return false;
+  }
+
+  // Synchronize previous RAM to the physical result so the controller has
+  // a coherent baseline for later partial-refresh work.
+  writeFramePlane(0x26, 0xA6, frameBuffer);
 
   return true;
 }

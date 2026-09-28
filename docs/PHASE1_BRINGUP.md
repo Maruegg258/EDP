@@ -172,3 +172,67 @@ Still not verified by this checkpoint:
 - fast refresh and maintenance-refresh behavior
 
 Next step: **Phase 1C — simple black test pattern.**
+
+
+## Phase 1C — Black geometry and seam mapping test
+
+### Purpose
+
+Verify non-uniform black/white image data across both SSD1683 controllers before introducing fonts.
+
+This checkpoint tests:
+
+- black pixel polarity
+- raw 800 x 272 framebuffer transfer
+- 792 x 272 visible-coordinate mapping
+- orientation
+- both panel halves
+- the 396 + 8 + 396 controller seam convention
+
+### Test pattern
+
+The firmware builds a white raw framebuffer and draws:
+
+- asymmetric black blocks in all four visible corners
+- one horizontal black line crossing most of the display
+- one vertical reference line on each controller half
+- a black outline rectangle crossing the center seam
+- a 4-pixel-wide vertical marker spanning visible x=394..397
+
+The visible-to-controller mapping used for this test is:
+
+```text
+visible x 0..395   -> raw x 0..395
+raw x     396..403 -> controller seam gap (not drawn)
+visible x 396..791 -> raw x 404..799
+```
+
+This mapping comes from the Elecrow reference implementation and is **not considered independently hardware-verified until this test passes visually**.
+
+### Expected serial output
+
+```text
+EDP Phase 1C: black geometry + seam mapping test
+This test performs one full refresh with a non-uniform frame.
+Step 1/4: reset controllers...
+Step 2/4: build 792x272 visible test pattern...
+Step 3/4: write dual-controller frame and refresh...
+Step 4/4: enter controller deep sleep...
+PASS: command sequence completed.
+Physical inspection is REQUIRED before Phase 1C is accepted.
+Check corners, orientation, center rectangle, and center seam.
+```
+
+### Physical acceptance criteria
+
+Phase 1C passes only if all of the following are visually true:
+
+1. Background is white and all intended test marks are black.
+2. All four corner blocks appear in their expected corners.
+3. Top/bottom and left/right orientation is correct.
+4. The long horizontal line is continuous across the center.
+5. The center rectangle crosses the controller boundary without a visible 8-pixel hole.
+6. The x=394..397 seam marker appears as one continuous narrow black bar.
+7. No half of the panel is mirrored, shifted, missing, or inverted.
+
+If any condition fails, do not proceed to text rendering. Record the observed geometry and correct the mapping first.
