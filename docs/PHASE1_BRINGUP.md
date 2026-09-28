@@ -80,3 +80,59 @@ What this does **not** yet verify:
 - fast or partial refresh behavior
 
 Next step: **Phase 1B — white-frame RAM write + physical white refresh.**
+
+
+## Phase 1B — White-frame RAM + physical white refresh
+
+### Purpose
+
+Verify the first physical display operation using our own driver implementation.
+
+The test deliberately renders no text or graphics. It establishes a known all-white baseline across both SSD1683 controllers.
+
+### Test sequence
+
+1. Run the already-verified Phase 1A reset/SWRESET path.
+2. Configure the refresh environment used by the previously verified CrowPanel sequence.
+3. Configure the master SSD1683 RAM window as 400 x 272.
+4. Write master current RAM (`0x24`) as white.
+5. Prepare the master previous plane (`0x26`) for the full clear cycle.
+6. Configure the cascaded/slave SSD1683 RAM window as 400 x 272 with reversed X addressing.
+7. Write slave current RAM (`0xA4`) as white.
+8. Prepare the slave previous plane (`0xA6`) for the full clear cycle.
+9. Trigger one full update with `0x22 = 0xF7`, followed by `0x20`.
+10. After the physical panel reaches white, write both previous RAM planes as white.
+11. Enter controller deep sleep.
+
+### Expected serial output
+
+```text
+EDP Phase 1B: dual-SSD1683 white-screen bring-up
+This test will perform one physical full refresh.
+Step 1/3: reset controllers...
+Step 2/3: write white RAM and refresh panel...
+Step 3/3: enter controller deep sleep...
+PASS: physical panel should now be uniformly white.
+Inspect the full 792x272 visible area, especially the center seam.
+```
+
+### Expected physical result
+
+The complete 792 x 272 visible panel should become uniformly white.
+
+Inspect especially:
+
+- left half
+- right half
+- the center controller seam
+- top and bottom edges
+
+A serial `PASS` only means the command sequence completed without a BUSY timeout. Phase 1B is considered hardware-verified only after the physical panel is visually confirmed to be uniformly white.
+
+### Evidence status before hardware test
+
+- SSD1683 supports 400 source x 300 gate outputs and cascade operation.
+- The panel is 792 x 272 and uses SSD1683.
+- The master/slave 400 x 272 addressing convention and secondary-controller command set are based on the Elecrow reference sequence that previously worked on this exact development unit.
+- Register behavior is being isolated behind our own driver API rather than exposing vendor-style register calls to the application layer.
+- The full-white result for this new implementation is **not yet hardware-verified**.
