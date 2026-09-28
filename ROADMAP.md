@@ -18,7 +18,7 @@ This roadmap tracks the progression from a clean hardware driver to the complete
 
 **Status: In progress**
 
-**Current step: Phase 1D — `HELLO` text rendering**
+**Current step: Phase 1D — project-owned `HELLO` text rendering**
 
 **Goal:** Own the minimum SSD1683 display stack.
 
