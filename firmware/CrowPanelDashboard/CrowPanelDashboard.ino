@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "CrowEPD579.h"
+#include "Font5x7.h"
 #include "GraphicsBW.h"
 
 CrowEPD579 display;
@@ -13,8 +14,6 @@ GraphicsBW graphics(
 );
 
 static uint16_t visibleToRawX(uint16_t x) {
-  // The panel has 396 visible pixels per controller. The controller RAM
-  // is 400 + 400 pixels wide, leaving an 8-pixel logical gap at the seam.
   return (x < CrowEPD579::VISIBLE_HALF_WIDTH)
       ? x
       : static_cast<uint16_t>(x + CrowEPD579::CONTROLLER_SEAM_GAP);
@@ -29,86 +28,94 @@ static void setVisiblePixel(uint16_t x, uint16_t y, bool black) {
   graphics.setPixel(visibleToRawX(x), y, black);
 }
 
-static void drawHorizontalLine(uint16_t x0,
-                               uint16_t x1,
-                               uint16_t y,
-                               uint8_t thickness = 1) {
-  for (uint8_t t = 0; t < thickness; ++t) {
-    const uint16_t yy = static_cast<uint16_t>(y + t);
-    if (yy >= CrowEPD579::VISIBLE_HEIGHT) {
-      break;
-    }
-
-    for (uint16_t x = x0; x <= x1; ++x) {
-      setVisiblePixel(x, yy, true);
-    }
-  }
-}
-
-static void drawVerticalLine(uint16_t x,
-                             uint16_t y0,
-                             uint16_t y1,
-                             uint8_t thickness = 1) {
-  for (uint8_t t = 0; t < thickness; ++t) {
-    const uint16_t xx = static_cast<uint16_t>(x + t);
-    if (xx >= CrowEPD579::VISIBLE_WIDTH) {
-      break;
-    }
-
-    for (uint16_t y = y0; y <= y1; ++y) {
-      setVisiblePixel(xx, y, true);
+static void drawFilledVisibleRect(uint16_t x,
+                                  uint16_t y,
+                                  uint16_t width,
+                                  uint16_t height,
+                                  bool black) {
+  for (uint16_t yy = 0; yy < height; ++yy) {
+    for (uint16_t xx = 0; xx < width; ++xx) {
+      setVisiblePixel(
+          static_cast<uint16_t>(x + xx),
+          static_cast<uint16_t>(y + yy),
+          black
+      );
     }
   }
 }
 
-static void fillVisibleRect(uint16_t x0,
-                            uint16_t y0,
-                            uint16_t x1,
-                            uint16_t y1) {
-  for (uint16_t y = y0; y <= y1; ++y) {
-    for (uint16_t x = x0; x <= x1; ++x) {
-      setVisiblePixel(x, y, true);
+static bool drawGlyph5x7(char c,
+                         uint16_t x,
+                         uint16_t y,
+                         uint8_t scale) {
+  const uint8_t* rows = Font5x7::glyph(c);
+  if (rows == nullptr || scale == 0) {
+    return false;
+  }
+
+  for (uint8_t row = 0; row < Font5x7::GLYPH_HEIGHT; ++row) {
+    for (uint8_t col = 0; col < Font5x7::GLYPH_WIDTH; ++col) {
+      const uint8_t mask = static_cast<uint8_t>(
+          1U << (Font5x7::GLYPH_WIDTH - 1U - col)
+      );
+
+      if ((rows[row] & mask) != 0U) {
+        drawFilledVisibleRect(
+            static_cast<uint16_t>(x + col * scale),
+            static_cast<uint16_t>(y + row * scale),
+            scale,
+            scale,
+            true
+        );
+      }
     }
   }
+
+  return true;
 }
 
-static void drawVisibleRect(uint16_t x0,
-                            uint16_t y0,
-                            uint16_t x1,
-                            uint16_t y1,
-                            uint8_t thickness = 2) {
-  drawHorizontalLine(x0, x1, y0, thickness);
-  drawHorizontalLine(x0, x1,
-                     static_cast<uint16_t>(y1 - thickness + 1),
-                     thickness);
-  drawVerticalLine(x0, y0, y1, thickness);
-  drawVerticalLine(static_cast<uint16_t>(x1 - thickness + 1),
-                   y0, y1, thickness);
+static bool drawText5x7(const char* text,
+                        uint16_t x,
+                        uint16_t y,
+                        uint8_t scale) {
+  if (text == nullptr || scale == 0) {
+    return false;
+  }
+
+  const uint16_t advance = static_cast<uint16_t>(
+      (Font5x7::GLYPH_WIDTH + Font5x7::GLYPH_SPACING) * scale
+  );
+
+  uint16_t cursorX = x;
+
+  while (*text != '\0') {
+    if (!drawGlyph5x7(*text, cursorX, y, scale)) {
+      return false;
+    }
+
+    cursorX = static_cast<uint16_t>(cursorX + advance);
+    ++text;
+  }
+
+  return true;
 }
 
-static void buildPhase1CTestPattern() {
+static bool buildPhase1DTextFrame() {
   graphics.clear(true);
 
-  // Four asymmetric corner blocks verify orientation and full-area reach.
-  fillVisibleRect(8, 8, 39, 39);          // top-left: 32x32
-  fillVisibleRect(744, 8, 783, 31);       // top-right: 40x24
-  fillVisibleRect(8, 232, 31, 263);       // bottom-left: 24x32
-  fillVisibleRect(752, 224, 783, 263);     // bottom-right: 32x40
+  constexpr char TEXT[] = "HELLO";
+  constexpr uint8_t SCALE = 8;
+  constexpr uint16_t TEXT_WIDTH =
+      ((Font5x7::GLYPH_WIDTH + Font5x7::GLYPH_SPACING) * 5U -
+       Font5x7::GLYPH_SPACING) * SCALE;
+  constexpr uint16_t TEXT_HEIGHT =
+      Font5x7::GLYPH_HEIGHT * SCALE;
+  constexpr uint16_t START_X =
+      (CrowEPD579::VISIBLE_WIDTH - TEXT_WIDTH) / 2U;
+  constexpr uint16_t START_Y =
+      (CrowEPD579::VISIBLE_HEIGHT - TEXT_HEIGHT) / 2U;
 
-  // A horizontal line must cross the controller seam continuously.
-  drawHorizontalLine(48, 743, 135, 3);
-
-  // Two vertical reference lines on opposite halves.
-  drawVerticalLine(96, 64, 207, 3);
-  drawVerticalLine(693, 64, 207, 3);
-
-  // Central rectangle crosses visible x=395/396, directly testing the
-  // 396 + 8 + 396 mapping used by the dual-controller panel.
-  drawVisibleRect(356, 92, 435, 179, 3);
-
-  // Adjacent seam markers. These should appear as one 4-pixel-wide
-  // vertical black bar on the physical display with no visible 8px gap.
-  drawVerticalLine(394, 104, 167, 4);
+  return drawText5x7(TEXT, START_X, START_Y, SCALE);
 }
 
 void setup() {
@@ -116,8 +123,8 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 1C: black geometry + seam mapping test");
-  Serial.println("This test performs one full refresh with a non-uniform frame.");
+  Serial.println("EDP Phase 1D: project-owned HELLO text rendering");
+  Serial.println("This test uses a minimal 5x7 font created for EDP.");
 
   Serial.println("Step 1/4: reset controllers...");
   if (!display.begin()) {
@@ -125,12 +132,15 @@ void setup() {
     return;
   }
 
-  Serial.println("Step 2/4: build 792x272 visible test pattern...");
-  buildPhase1CTestPattern();
+  Serial.println("Step 2/4: render HELLO into the 800x272 framebuffer...");
+  if (!buildPhase1DTextFrame()) {
+    Serial.println("FAIL: HELLO glyph rendering failed.");
+    return;
+  }
 
-  Serial.println("Step 3/4: write dual-controller frame and refresh...");
+  Serial.println("Step 3/4: write frame and perform full refresh...");
   if (!display.displayFullFrame(frameBuffer)) {
-    Serial.println("FAIL: timeout while writing or refreshing the test frame.");
+    Serial.println("FAIL: timeout while writing or refreshing the HELLO frame.");
     return;
   }
 
@@ -138,8 +148,8 @@ void setup() {
   display.sleep();
 
   Serial.println("PASS: command sequence completed.");
-  Serial.println("Physical inspection is REQUIRED before Phase 1C is accepted.");
-  Serial.println("Check corners, orientation, center rectangle, and center seam.");
+  Serial.println("Physical inspection is REQUIRED before Phase 1D is accepted.");
+  Serial.println("Expected result: centered black HELLO on a white background.");
 }
 
 void loop() {
