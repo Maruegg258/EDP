@@ -1,5 +1,5 @@
 # Local secrets
-firmware/CrowPanelCrypto/config.h
+firmware/CrowPanelDashboard/config.h
 
 # Arduino build artifacts
 build/
