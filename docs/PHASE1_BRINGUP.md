@@ -265,3 +265,58 @@ Still not verified:
 - the maintenance refresh sequence in the new driver implementation
 
 Next step: **Phase 1D — render `HELLO` using our own graphics/text path.**
+
+
+## Phase 1D — Project-owned `HELLO` text rendering
+
+### Purpose
+
+Verify a minimal text-rendering path without using Elecrow's `EPDfont.h`.
+
+The Phase 1D font is owned by this project and intentionally implements only the four glyphs required by `HELLO`: `H`, `E`, `L`, and `O`. Each glyph is a simple 5 x 7 bitmap. The complete font and typography system remain Phase 2 work.
+
+### Rendering path
+
+```text
+Font5x7 bitmap
+    ->
+visible-coordinate glyph renderer
+    ->
+396 + 8 + 396 seam mapping
+    ->
+800 x 272 raw framebuffer
+    ->
+dual SSD1683 full-frame writer
+    ->
+physical panel
+```
+
+The word `HELLO` is rendered at 8x scale and centered horizontally and vertically. Its rendered width crosses the center controller boundary, so successful output also confirms that text pixels remain continuous across the seam mapping verified in Phase 1C.
+
+### Expected serial output
+
+```text
+EDP Phase 1D: project-owned HELLO text rendering
+This test uses a minimal 5x7 font created for EDP.
+Step 1/4: reset controllers...
+Step 2/4: render HELLO into the 800x272 framebuffer...
+Step 3/4: write frame and perform full refresh...
+Step 4/4: enter controller deep sleep...
+PASS: command sequence completed.
+Physical inspection is REQUIRED before Phase 1D is accepted.
+Expected result: centered black HELLO on a white background.
+```
+
+### Physical acceptance criteria
+
+Phase 1D passes only if:
+
+1. The background is white.
+2. `HELLO` is clearly readable in black.
+3. Letter orientation is correct.
+4. Stroke blocks are square and not garbled.
+5. Letter spacing is consistent.
+6. The word crosses the controller boundary without a visible discontinuity.
+7. No unexpected geometry from the previous Phase 1C frame remains after the full refresh.
+
+A successful Phase 1D verifies only this minimal text path. It does not yet certify the future full font system, font metrics, or partial-refresh behavior.
