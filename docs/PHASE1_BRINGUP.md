@@ -46,3 +46,37 @@ A BUSY line that remains active for more than 5 seconds is treated as a failure 
 A PASS is only evidence that the reset / BUSY path did not time out. It is not yet proof that framebuffer addressing or refresh behavior is correct.
 
 After a real-hardware PASS, record the result before moving to Phase 1B (white-frame RAM write + physical white refresh).
+
+
+## Hardware verification log
+
+### 2026-09-28 — Phase 1A PASS
+
+Observed serial output on the development CrowPanel:
+
+```text
+EDP Phase 1A: SSD1683 reset bring-up
+No framebuffer write or display refresh will be performed.
+PASS: hardware reset + SWRESET completed and BUSY is idle.
+```
+
+Result: **PASS on real hardware.**
+
+What this verifies on the tested unit:
+
+- GPIO 7 successfully enables the E-paper power path.
+- The configured RESET and BUSY GPIOs are usable with the current board.
+- BUSY active-high handling completes without timeout.
+- Hardware reset timing is accepted by the panel/controller setup.
+- Sending SSD1683 `SWRESET (0x12)` over the current command bus path completes and BUSY returns idle.
+
+What this does **not** yet verify:
+
+- image-RAM addressing
+- master/slave controller split
+- the 8-pixel seam/address offset
+- white/black framebuffer polarity
+- physical refresh commands
+- fast or partial refresh behavior
+
+Next step: **Phase 1B — white-frame RAM write + physical white refresh.**

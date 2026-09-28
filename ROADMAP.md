@@ -18,7 +18,7 @@ This roadmap tracks the progression from a clean hardware driver to the complete
 
 **Status: In progress**
 
-**Current step: Phase 1A — reset / BUSY / command-bus sanity check**
+**Current step: Phase 1B — white-frame RAM write + physical white refresh**
 
 **Goal:** Own the minimum SSD1683 display stack.
 
@@ -37,11 +37,12 @@ Planned work:
 
 Hardware checkpoints:
 
-1. Display all white
-2. Display a simple black test pattern
-3. Display `HELLO`
-4. Partial-refresh a changed region
-5. Confirm maintenance refresh does not create blurred follow-up text
+- [x] Phase 1A: reset / BUSY / SWRESET sanity check (verified on hardware, 2026-09-28)
+- [ ] Phase 1B: Display all white
+- [ ] Display a simple black test pattern
+- [ ] Display `HELLO`
+- [ ] Partial-refresh a changed region
+- [ ] Confirm maintenance refresh does not create blurred follow-up text
 
 ## Phase 2 — Graphics foundation
 
