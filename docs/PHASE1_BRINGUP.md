@@ -136,3 +136,39 @@ A serial `PASS` only means the command sequence completed without a BUSY timeout
 - The master/slave 400 x 272 addressing convention and secondary-controller command set are based on the Elecrow reference sequence that previously worked on this exact development unit.
 - Register behavior is being isolated behind our own driver API rather than exposing vendor-style register calls to the application layer.
 - The full-white result for this new implementation is **not yet hardware-verified**.
+
+
+### 2026-09-28 — Phase 1B PASS
+
+Observed serial output on the development CrowPanel:
+
+```text
+EDP Phase 1B: dual-SSD1683 white-screen bring-up
+This test will perform one physical full refresh.
+Step 1/3: reset controllers...
+Step 2/3: write white RAM and refresh panel...
+Step 3/3: enter controller deep sleep...
+PASS: physical panel should now be uniformly white.
+Inspect the full 792x272 visible area, especially the center seam.
+```
+
+Physical result: **PASS on real hardware.** The entire visible 792 x 272 panel became uniformly white. Left/right halves, center seam, and panel edges appeared normal.
+
+What this verifies on the tested unit:
+
+- master and slave SSD1683 RAM addressing paths are both operational
+- the 400 x 272 per-controller RAM depth used by this driver reaches both halves of the panel
+- the current-frame RAM white polarity is correct for the tested clear sequence
+- the full-refresh command path completes successfully
+- the cascaded controller seam does not show an obvious alignment or refresh defect in an all-white frame
+- controller deep sleep after the refresh does not disturb the displayed white image
+
+Still not verified by this checkpoint:
+
+- black pixel/data polarity
+- non-uniform image mapping across the 800-wide logical framebuffer
+- exact visible 792-pixel mapping and 8-pixel seam offset for graphics
+- partial refresh using this custom driver
+- fast refresh and maintenance-refresh behavior
+
+Next step: **Phase 1C — simple black test pattern.**
