@@ -74,7 +74,7 @@ Hardware checkpoints:
 **Phase 2B status: Complete**
 
 - [x] Phase 2C-1: Add `Bitmap1bpp` + `GraphicsBW::drawBitmap()` and verify 33x33 multi-byte rows, seam crossing, clipping, and foreground color (verified on hardware, 2026-09-29)
-- [ ] Phase 2C-2: Add the first project-owned Wi-Fi, weather, and crypto icon assets
+- [ ] Phase 2C-2: Add the first project-owned Wi-Fi, weather, and crypto icon assets (implementation ready; hardware verification pending)
 
 See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics verification notes.
 

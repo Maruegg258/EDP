@@ -323,3 +323,43 @@ Verified points:
 Phase 2C-1 is hardware-verified. The generic `Bitmap1bpp` path is now validated for multi-byte rows, visible-coordinate seam mapping, clipping on both horizontal edges, transparent zero bits, and black/white foreground rendering.
 
 The next graphics checkpoint is Phase 2C-2: add project-owned Wi-Fi, weather, and crypto icon assets on top of the verified bitmap renderer.
+
+
+## Phase 2C-2 — Project-owned dashboard icon assets
+
+**Status: Hardware verification pending**
+
+**Implementation date:** 2026-09-29
+
+### Scope
+
+Phase 2C-2 adds the first project-owned icon asset set on top of the hardware-verified `Bitmap1bpp` renderer.
+
+The icon data is stored directly in firmware and does not depend on external BMP files or third-party graphics libraries.
+
+Initial assets:
+
+- Wi-Fi disconnected
+- Wi-Fi weak
+- Wi-Fi medium
+- Wi-Fi strong
+- Weather sun
+- Weather cloud
+- Weather rain
+- BTC
+- ETH
+- HYPE
+
+Wi-Fi assets are 24x24. Weather and crypto assets are 32x32. The crypto symbols are project-drawn monochrome dashboard representations rather than imported artwork.
+
+### Hardware test frame
+
+The static icon-sheet test renders all ten icons with text labels in three sections:
+
+1. Wi-Fi states
+2. Weather conditions
+3. Crypto symbols
+
+No network service, weather provider, or market-data service is connected at this checkpoint. No SSD1683 refresh behavior or `GraphicsBW` bitmap logic is changed.
+
+Phase 2C-2 remains pending until the icon sheet is visually verified on the physical panel.

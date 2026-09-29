@@ -3,7 +3,7 @@
 #include "CrowEPD579.h"
 #include "Font5x7.h"
 #include "GraphicsBW.h"
-#include "TestBitmaps.h"
+#include "Icons.h"
 
 CrowEPD579 display;
 
@@ -17,66 +17,88 @@ GraphicsBW graphics(
     CrowEPD579::CONTROLLER_SEAM_GAP
 );
 
-static bool buildPhase2C1Frame() {
+static bool drawCenteredLabel(const char* text,
+                              int16_t centerX,
+                              int16_t y,
+                              uint8_t scale = 1) {
+  const uint16_t width = graphics.textWidth(Font5x7::FONT, text, scale);
+  if (width == 0) {
+    return false;
+  }
+
+  const int16_t x = static_cast<int16_t>(centerX - width / 2);
+  return graphics.drawText(Font5x7::FONT, text, x, y, scale, true);
+}
+
+static bool buildPhase2C2Frame() {
   graphics.clear(true);
 
-  if (!graphics.drawText(
-          Font5x7::FONT,
-          "BITMAP1BPP TEST",
-          288,
-          8,
-          2,
-          true)) {
+  if (!drawCenteredLabel("PROJECT ICON ASSETS", 396, 6, 2)) {
     return false;
   }
 
   graphics.drawLine(24, 30, 767, 30, true);
 
-  if (!graphics.drawText(Font5x7::FONT, "NORMAL", 120, 42, 2, true) ||
-      !graphics.drawText(Font5x7::FONT, "SEAM X396", 340, 42, 2, true) ||
-      !graphics.drawText(Font5x7::FONT, "RIGHT CLIP", 620, 42, 2, true)) {
+  if (!graphics.drawText(Font5x7::FONT, "WIFI", 40, 54, 2, true)) {
     return false;
   }
 
-  if (!graphics.drawBitmap(TestBitmaps::MARKER_33, 140, 68, true)) {
+  constexpr int16_t WIFI_X[] = {210, 330, 450, 570};
+  const Bitmap1bpp* WIFI_ICONS[] = {
+    &Icons::WIFI_DISCONNECTED,
+    &Icons::WIFI_WEAK,
+    &Icons::WIFI_MEDIUM,
+    &Icons::WIFI_STRONG
+  };
+  const char* WIFI_LABELS[] = {"OFF", "WEAK", "MEDIUM", "STRONG"};
+
+  for (uint8_t i = 0; i < 4; ++i) {
+    if (!graphics.drawBitmap(*WIFI_ICONS[i], WIFI_X[i] - 12, 42, true) ||
+        !drawCenteredLabel(WIFI_LABELS[i], WIFI_X[i], 72, 1)) {
+      return false;
+    }
+  }
+
+  graphics.drawLine(24, 94, 767, 94, true);
+
+  if (!graphics.drawText(Font5x7::FONT, "WEATHER", 40, 120, 2, true)) {
     return false;
   }
 
-  constexpr int16_t SEAM_X = CrowEPD579::VISIBLE_HALF_WIDTH;
-  if (!graphics.drawBitmap(
-          TestBitmaps::MARKER_33,
-          SEAM_X - 16,
-          68,
-          true)) {
+  constexpr int16_t WEATHER_X[] = {280, 420, 560};
+  const Bitmap1bpp* WEATHER_ICONS[] = {
+    &Icons::WEATHER_SUN,
+    &Icons::WEATHER_CLOUD,
+    &Icons::WEATHER_RAIN
+  };
+  const char* WEATHER_LABELS[] = {"SUN", "CLOUD", "RAIN"};
+
+  for (uint8_t i = 0; i < 3; ++i) {
+    if (!graphics.drawBitmap(*WEATHER_ICONS[i], WEATHER_X[i] - 16, 106, true) ||
+        !drawCenteredLabel(WEATHER_LABELS[i], WEATHER_X[i], 144, 1)) {
+      return false;
+    }
+  }
+
+  graphics.drawLine(24, 166, 767, 166, true);
+
+  if (!graphics.drawText(Font5x7::FONT, "CRYPTO", 40, 198, 2, true)) {
     return false;
   }
 
-  if (!graphics.drawBitmap(
-          TestBitmaps::MARKER_33,
-          CrowEPD579::VISIBLE_WIDTH - 17,
-          68,
-          true)) {
-    return false;
-  }
+  constexpr int16_t CRYPTO_X[] = {280, 420, 560};
+  const Bitmap1bpp* CRYPTO_ICONS[] = {
+    &Icons::CRYPTO_BTC,
+    &Icons::CRYPTO_ETH,
+    &Icons::CRYPTO_HYPE
+  };
+  const char* CRYPTO_LABELS[] = {"BTC", "ETH", "HYPE"};
 
-  graphics.drawLine(24, 118, 767, 118, true);
-
-  if (!graphics.drawText(Font5x7::FONT, "33X33 5 BYTE ROWS", 72, 134, 2, true) ||
-      !graphics.drawText(Font5x7::FONT, "WHITE ON BLACK", 455, 134, 2, true)) {
-    return false;
-  }
-
-  if (!graphics.drawBitmap(TestBitmaps::MARKER_33, -16, 170, true)) {
-    return false;
-  }
-
-  graphics.fillRect(510, 164, 120, 72, true);
-  if (!graphics.drawBitmap(TestBitmaps::MARKER_33, 553, 184, false)) {
-    return false;
-  }
-
-  if (!graphics.drawText(Font5x7::FONT, "LEFT CLIP", 40, 220, 2, true)) {
-    return false;
+  for (uint8_t i = 0; i < 3; ++i) {
+    if (!graphics.drawBitmap(*CRYPTO_ICONS[i], CRYPTO_X[i] - 16, 182, true) ||
+        !drawCenteredLabel(CRYPTO_LABELS[i], CRYPTO_X[i], 222, 2)) {
+      return false;
+    }
   }
 
   return true;
@@ -87,11 +109,11 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 2C-1: generic Bitmap1bpp renderer test");
-  Serial.println("Testing 33x33 / 5-byte rows, seam mapping, clipping, and white foreground.");
+  Serial.println("EDP Phase 2C-2: project icon asset test");
+  Serial.println("Testing Wi-Fi, weather, and crypto Bitmap1bpp assets.");
 
-  if (!buildPhase2C1Frame()) {
-    Serial.println("FAIL: Phase 2C-1 bitmap rendering failed.");
+  if (!buildPhase2C2Frame()) {
+    Serial.println("FAIL: Phase 2C-2 icon frame rendering failed.");
     return;
   }
 
@@ -107,9 +129,9 @@ void setup() {
 
   display.sleep();
 
-  Serial.println("PASS: Bitmap1bpp drawing commands and refresh completed.");
+  Serial.println("PASS: project icon asset drawing commands and refresh completed.");
   Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("Check normal, seam-crossing, clipped, and white-on-black marker copies.");
+  Serial.println("Check recognizability and visual integrity of all ten icons.");
 }
 
 void loop() {
