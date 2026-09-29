@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <cstring>
 
 #include "CrowEPD579.h"
 #include "GraphicsBW.h"
@@ -7,7 +6,6 @@
 CrowEPD579 display;
 
 uint8_t frameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
-uint8_t previousFrameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
 GraphicsBW graphics(
     frameBuffer,
     CrowEPD579::FRAMEBUFFER_WIDTH,
@@ -17,25 +15,56 @@ GraphicsBW graphics(
     CrowEPD579::CONTROLLER_SEAM_GAP
 );
 
-static bool buildPhase1FFrame(uint16_t squareX) {
+static void buildPhase2A2Frame() {
   graphics.clear(true);
 
-  constexpr char TEXT[] = "HELLO";
-  constexpr uint8_t SCALE = 8;
-  const uint16_t textWidth = graphics.textWidth5x7(TEXT, SCALE);
-  const int16_t startX = static_cast<int16_t>(
-      (graphics.width() - textWidth) / 2U
+  constexpr int16_t SEAM_X = CrowEPD579::VISIBLE_HALF_WIDTH;
+  constexpr int16_t RIGHT_X = CrowEPD579::VISIBLE_WIDTH - 1;
+  constexpr int16_t BOTTOM_Y = CrowEPD579::FRAMEBUFFER_HEIGHT - 1;
+
+  // 1. Exact visible-screen border: verifies all four visible edges.
+  graphics.drawRect(
+      0,
+      0,
+      CrowEPD579::VISIBLE_WIDTH,
+      CrowEPD579::FRAMEBUFFER_HEIGHT,
+      true
   );
-  constexpr int16_t START_Y = 72;
 
-  if (!graphics.drawText5x7(TEXT, startX, START_Y, SCALE, true)) {
-    return false;
-  }
+  // 2. Adjacent vertical lines at x=395 and x=396 straddle the controller seam.
+  graphics.drawLine(SEAM_X - 1, 16, SEAM_X - 1, BOTTOM_Y - 16, true);
+  graphics.drawLine(SEAM_X, 16, SEAM_X, BOTTOM_Y - 16, true);
 
-  // The square is rebuilt from scratch at exactly one position each time.
-  // If previous/current synchronization works, the old square must disappear.
-  graphics.fillRect(static_cast<int16_t>(squareX), 208, 32, 32, true);
-  return true;
+  // 3. A long horizontal line must cross the seam without an 8-pixel gap.
+  graphics.drawLine(SEAM_X - 120, 40, SEAM_X + 120, 40, true);
+
+  // 4. An outlined rectangle centered on the seam.
+  graphics.drawRect(SEAM_X - 60, 64, 120, 56, true);
+
+  // 5. Horizontal and vertical primitives away from the seam.
+  graphics.drawLine(40, 144, 240, 144, true);
+  graphics.drawLine(120, 128, 120, 224, true);
+  graphics.drawRect(40, 168, 160, 56, true);
+
+  // 6. Two diagonals cross each other and the seam.
+  graphics.drawLine(SEAM_X - 96, 144, SEAM_X + 96, 232, true);
+  graphics.drawLine(SEAM_X - 96, 232, SEAM_X + 96, 144, true);
+
+  // 7. Right-side primitives provide a visual mirror/reference.
+  graphics.drawLine(RIGHT_X - 240, 144, RIGHT_X - 40, 144, true);
+  graphics.drawLine(RIGHT_X - 120, 128, RIGHT_X - 120, 224, true);
+  graphics.drawRect(RIGHT_X - 199, 168, 160, 56, true);
+
+  // 8. These rectangles intentionally extend beyond the visible left/right
+  // edges. Only their in-bounds portions should appear; no wraparound is valid.
+  graphics.drawRect(-12, 92, 36, 32, true);
+  graphics.drawRect(RIGHT_X - 23, 92, 36, 32, true);
+
+  // 9. A few explicit visible pixels around the seam exercise setPixel().
+  graphics.setPixel(SEAM_X - 2, 132, true);
+  graphics.setPixel(SEAM_X - 1, 132, true);
+  graphics.setPixel(SEAM_X, 132, true);
+  graphics.setPixel(SEAM_X + 1, 132, true);
 }
 
 void setup() {
@@ -43,102 +72,27 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 2A: graphics-layer extraction regression test");
-  Serial.println("Phase 1F refresh behavior is intentionally unchanged.");
+  Serial.println("EDP Phase 2A-2: graphics primitives + seam test");
+  Serial.println("SSD1683 refresh behavior is unchanged; this is a static full-frame test.");
 
-  constexpr uint16_t BASELINE_X = 80;
-  constexpr uint16_t PRE_MAINTENANCE_X = 240;
-  constexpr uint16_t MAINTENANCE_X = 400;
-  constexpr uint16_t POST_MAINTENANCE_X[] = {560, 680, 80};
+  buildPhase2A2Frame();
 
-  Serial.println("Step 1/5: build and full-refresh baseline...");
   if (!display.begin()) {
-    Serial.println("FAIL: baseline reset/SWRESET BUSY timeout.");
-    return;
-  }
-
-  if (!buildPhase1FFrame(BASELINE_X)) {
-    Serial.println("FAIL: baseline rendering failed.");
+    Serial.println("FAIL: display begin/reset timed out.");
     return;
   }
 
   if (!display.displayFullFrame(frameBuffer)) {
-    Serial.println("FAIL: baseline full refresh timed out.");
+    Serial.println("FAIL: full-frame refresh timed out.");
     return;
   }
 
-  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
   display.sleep();
-  delay(3000);
 
-  Serial.println("Step 2/5: one normal partial before maintenance...");
-  if (!display.begin()) {
-    Serial.println("FAIL: pre-maintenance wake reset timed out.");
-    return;
-  }
-  if (!display.restoreFrameStateForPartial(previousFrameBuffer)) {
-    Serial.println("FAIL: pre-maintenance state restore timed out.");
-    return;
-  }
-  if (!buildPhase1FFrame(PRE_MAINTENANCE_X)) {
-    Serial.println("FAIL: pre-maintenance frame rendering failed.");
-    return;
-  }
-  if (!display.displayPartialFrame(frameBuffer)) {
-    Serial.println("FAIL: pre-maintenance partial refresh timed out.");
-    return;
-  }
-  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
-  display.sleep();
-  delay(3000);
-
-  Serial.println("Step 3/5: execute maintenance refresh...");
-  Serial.println("  Fast clear -> physical white -> re-init -> previous white -> current new -> partial");
-  if (!buildPhase1FFrame(MAINTENANCE_X)) {
-    Serial.println("FAIL: maintenance frame rendering failed.");
-    return;
-  }
-  if (!display.maintenanceRefresh(frameBuffer)) {
-    Serial.println("FAIL: maintenance refresh timed out.");
-    return;
-  }
-  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
-  display.sleep();
-  delay(3000);
-
-  Serial.println("Step 4/5: three normal partials after maintenance...");
-  for (uint8_t update = 0; update < 3; ++update) {
-    Serial.print("Post-maintenance partial ");
-    Serial.print(update + 1);
-    Serial.println("/3...");
-
-    if (!display.begin()) {
-      Serial.println("FAIL: post-maintenance wake reset timed out.");
-      return;
-    }
-    if (!display.restoreFrameStateForPartial(previousFrameBuffer)) {
-      Serial.println("FAIL: post-maintenance state restore timed out.");
-      return;
-    }
-    if (!buildPhase1FFrame(POST_MAINTENANCE_X[update])) {
-      Serial.println("FAIL: post-maintenance frame rendering failed.");
-      return;
-    }
-    if (!display.displayPartialFrame(frameBuffer)) {
-      Serial.println("FAIL: post-maintenance partial refresh timed out.");
-      return;
-    }
-
-    memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
-    display.sleep();
-    delay(3000);
-  }
-
-  Serial.println("Step 5/5: test sequence complete.");
-  Serial.println("PASS: graphics extraction + refresh regression commands completed.");
+  Serial.println("PASS: drawing commands and full-frame refresh completed.");
   Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("HELLO and the moving square should match the Phase 1F behavior.");
-  Serial.println("There should be no blurred/doubled text and only one square should remain.");
+  Serial.println("Check border, clipped side rectangles, straight lines, rectangles,");
+  Serial.println("and especially continuity across visible x=396.");
 }
 
 void loop() {
