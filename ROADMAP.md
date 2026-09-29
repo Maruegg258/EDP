@@ -47,7 +47,7 @@ Hardware checkpoints:
 
 **Status: In progress**
 
-**Current step: Phase 2A — consolidate reusable graphics primitives and visible-coordinate mapping**
+**Current step: Phase 2A complete — reusable primitives and visible-coordinate mapping are hardware-verified**
 
 **Goal:** Build our own compact black/white rendering layer.
 
@@ -63,7 +63,9 @@ Planned work:
 Hardware checkpoints:
 
 - [x] Phase 2A-1: Extract visible-coordinate mapping, pixel/fill-rectangle, and 5x7 text rendering into `GraphicsBW` without changing the Phase 1F refresh sequence (verified on hardware, 2026-09-29)
-- [ ] Phase 2A-2: Verify `drawLine()` and `drawRect()`, including geometry that crosses the visible x=396 dual-controller seam
+- [x] Phase 2A-2: Verify `drawLine()` and `drawRect()`, including geometry that crosses the visible x=396 dual-controller seam (verified on hardware, 2026-09-29)
+
+**Phase 2A status: Complete**
 
 See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics verification notes.
 

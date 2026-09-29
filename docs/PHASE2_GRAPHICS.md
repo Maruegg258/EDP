@@ -23,7 +23,7 @@ The following rendering responsibilities were moved out of `CrowPanelDashboard.i
 - 5x7 text rendering
 - text width calculation
 
-`GraphicsBW` also gained `drawLine()` and `drawRect()`, but those primitives are not yet considered hardware-verified by this checkpoint.
+`GraphicsBW` also gained `drawLine()` and `drawRect()`, but those primitives were verified separately in Phase 2A-2.
 
 No `CrowEPD579` refresh code was changed by the extraction commit.
 
@@ -52,16 +52,48 @@ Observed behavior matched the Phase 1F regression expectations:
 
 The graphics extraction itself is hardware-verified and did not regress the known-good Phase 1 refresh behavior.
 
-This does **not** yet verify every newly added graphics primitive. A dedicated geometry test is still required for `drawLine()` and `drawRect()`, especially across the visible x=396 controller seam.
+## Phase 2A-2 — Graphics primitives and seam mapping
 
-## Next checkpoint — Phase 2A-2
+**Status: Verified on hardware**
 
-Create a graphics-primitives test frame that exercises:
+**Date:** 2026-09-29
 
-- horizontal, vertical, and diagonal lines
-- outlined rectangles
-- geometry near display edges
-- geometry crossing visible x=396
-- confirmation that the hidden raw framebuffer seam gap does not appear as an 8-pixel visual discontinuity
+**Firmware commit under test:** `cc7b2fa36a4fb83fd4095f17b6bfa3fdddfced66` — `Add Phase 2A primitives and seam hardware test`
 
-Phase 2A should remain **In progress** until this dedicated primitives/seam test passes on hardware.
+### Test frame
+
+The dedicated static full-frame test exercised:
+
+- exact visible-screen border
+- adjacent vertical lines at visible x=395 and x=396
+- a long horizontal line crossing visible x=396
+- an outlined rectangle centered across the controller seam
+- horizontal and vertical line primitives away from the seam
+- two diagonal lines crossing each other and the seam
+- mirrored left/right reference geometry
+- rectangles intentionally extending beyond the left and right visible edges
+- explicit `setPixel()` writes immediately around the seam
+
+The SSD1683 refresh sequence was not under test in this checkpoint; the frame used the already verified full-frame display path.
+
+### Hardware result
+
+User supplied a photograph of the physical panel and the rendered result matched the intended geometry.
+
+Observed verification points:
+
+- the outer border appeared complete
+- the left/right intentionally clipped rectangles clipped at the visible edges without wraparound
+- the long horizontal line crossed x=396 continuously
+- the centered outlined rectangle crossed x=396 without an 8-pixel visual gap
+- both diagonal lines crossed the controller boundary continuously
+- the adjacent x=395/x=396 vertical lines appeared as the intended thicker central vertical reference
+- normal pixel stair-stepping was visible on diagonal lines, consistent with 1-bit raster line drawing
+
+No visible seam discontinuity or coordinate-mapping regression was observed.
+
+### Conclusion
+
+`setPixel()`, `drawLine()`, `drawRect()`, visible-edge clipping, and visible-to-raw seam mapping are hardware-verified for the Phase 2A test cases.
+
+**Phase 2A is complete.**
