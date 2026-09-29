@@ -170,7 +170,8 @@ bool GraphicsBW::drawBitmap(const Bitmap1bpp& bitmap,
 
   return true;
 }
-\nconst BitmapGlyph* GraphicsBW::findGlyph(const BitmapFont& font, char c) const {
+
+const BitmapGlyph* GraphicsBW::findGlyph(const BitmapFont& font, char c) const {
   if (font.glyphs == nullptr) {
     return nullptr;
   }
