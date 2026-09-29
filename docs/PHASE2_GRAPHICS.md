@@ -268,7 +268,7 @@ The next graphics checkpoint is Phase 2C: generic bitmap/icon rendering.
 
 ## Phase 2C-1 — Generic 1-bit bitmap renderer
 
-**Status: Hardware verification pending**
+**Status: Verified on hardware**
 
 **Implementation date:** 2026-09-29
 
@@ -304,3 +304,22 @@ The same bitmap is rendered:
 - in white on a black rectangle to verify foreground color and transparent zero bits
 
 Phase 2C-1 remains pending until this frame is verified on the physical panel.
+
+
+### Hardware result
+
+User supplied a photograph of the physical CrowPanel 5.79-inch display and the Phase 2C-1 bitmap test frame matched the intended geometry.
+
+Verified points:
+
+- the normal 33x33 marker rendered with the expected border, diagonals, center cross, and asymmetric upper-left block
+- the marker centered across visible x=396 rendered continuously with no controller-seam gap
+- the right-clipped copy stopped at the visible right edge without wrapping
+- the left-clipped copy stopped at the visible left edge without wrapping
+- the white-on-black copy rendered the same marker shape in white while the bitmap's zero bits preserved the black background
+
+### Conclusion
+
+Phase 2C-1 is hardware-verified. The generic `Bitmap1bpp` path is now validated for multi-byte rows, visible-coordinate seam mapping, clipping on both horizontal edges, transparent zero bits, and black/white foreground rendering.
+
+The next graphics checkpoint is Phase 2C-2: add project-owned Wi-Fi, weather, and crypto icon assets on top of the verified bitmap renderer.
