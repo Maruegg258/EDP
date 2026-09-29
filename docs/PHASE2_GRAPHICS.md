@@ -327,7 +327,7 @@ The next graphics checkpoint is Phase 2C-2: add project-owned Wi-Fi, weather, an
 
 ## Phase 2C-2 — Project-owned dashboard icon assets
 
-**Status: Hardware verification pending**
+**Status: Verified on hardware**
 
 **Implementation date:** 2026-09-29
 
@@ -363,3 +363,25 @@ The static icon-sheet test renders all ten icons with text labels in three secti
 No network service, weather provider, or market-data service is connected at this checkpoint. No SSD1683 refresh behavior or `GraphicsBW` bitmap logic is changed.
 
 Phase 2C-2 remains pending until the icon sheet is visually verified on the physical panel.
+
+
+### Hardware result
+
+User supplied a photograph of the physical CrowPanel 5.79-inch display and the Phase 2C-2 icon sheet rendered as intended.
+
+Verified points:
+
+- Wi-Fi disconnected, weak, medium, and strong assets rendered without corruption and were visually distinguishable
+- sun, cloud, and rain weather assets rendered completely; the rain strokes remained visible
+- BTC, ETH, and HYPE crypto assets rendered without clipping, inversion, row misalignment, or missing data
+- all ten icons rendered correctly through the already verified generic `Bitmap1bpp` path
+
+The icon set is intentionally functional rather than final-polish artwork. In particular, the HYPE asset is a project-owned simplified hexagon/H representation and may be redesigned later during UI refinement.
+
+### Conclusion
+
+Phase 2C-2 is hardware-verified.
+
+**Phase 2C is complete.**
+
+The next checkpoint is Phase 2D: run a final Phase 2 integration regression and close out the graphics foundation before beginning the dashboard/widget framework.
