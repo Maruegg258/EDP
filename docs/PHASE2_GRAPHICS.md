@@ -205,7 +205,7 @@ The next font checkpoint is Phase 2B-3: exercise the generic `BitmapFont` interf
 
 ## Phase 2B-3 — Multiple fonts and multi-byte glyph rows
 
-**Status: Hardware verification pending**
+**Status: Verified on hardware**
 
 **Implementation date:** 2026-09-29
 
@@ -240,3 +240,27 @@ The dedicated hardware frame mixes both font definitions in the same framebuffer
 The test also exercises `textWidth()` through centered and right-aligned text.
 
 No SSD1683 refresh behavior is changed by this checkpoint.
+
+
+### Hardware result
+
+User supplied a photograph of the physical CrowPanel 5.79-inch display and the mixed-font test frame matched the intended content.
+
+Verified points:
+
+- `Font5x7` labels and `Font9x13` numeric content rendered correctly in the same framebuffer.
+- The native 9-pixel-wide numeric glyphs retained their rightmost column, confirming correct two-byte row handling.
+- The large `12:34` sample rendered correctly and remained centered.
+- BTC, ETH, and HYPE numeric values were right-aligned as intended.
+- `WIFI -57` and `CHANGE +12.5%` rendered correctly.
+- Punctuation `:`, `.`, `-`, `+`, `%`, and `/` rendered without corruption.
+
+The visual style of `Font9x13` is intentionally seven-segment/digital and is only a renderer-validation font, not the final dashboard typography.
+
+### Conclusion
+
+Phase 2B-3 is hardware-verified. The generic `BitmapFont` renderer is now validated with multiple font definitions, multiple native glyph sizes, centered/right-aligned text, and glyph rows spanning more than one byte.
+
+**Phase 2B is complete.**
+
+The next graphics checkpoint is Phase 2C: generic bitmap/icon rendering.
