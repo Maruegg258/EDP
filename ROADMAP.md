@@ -47,7 +47,7 @@ Hardware checkpoints:
 
 **Status: In progress**
 
-**Current step: Phase 2D-1 — static Phase 2 graphics integration frame**
+**Current step: Phase 2D-2 — mixed-content partial and maintenance refresh regression**
 
 **Goal:** Build our own compact black/white rendering layer.
 
@@ -78,7 +78,7 @@ Hardware checkpoints:
 
 **Phase 2C status: Complete**
 
-- [ ] Phase 2D-1: Verify a static dashboard-like frame combining primitives, both fonts, icons, and seam-crossing content (implementation ready; hardware verification pending)
+- [x] Phase 2D-1: Verify a static dashboard-like frame combining primitives, both fonts, icons, and seam-crossing content (verified on hardware, 2026-09-29)
 - [ ] Phase 2D-2: Re-run partial + maintenance refresh regression with mixed text/icon content
 - [ ] Phase 2D-3: Close out Phase 2 and prepare the repository for the Phase 3 dashboard/widget framework
 
