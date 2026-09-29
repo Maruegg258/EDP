@@ -389,7 +389,7 @@ The next checkpoint is Phase 2D: run a final Phase 2 integration regression and 
 
 ## Phase 2D-1 — Static graphics integration frame
 
-**Status: Hardware verification pending**
+**Status: Verified on hardware**
 
 **Implementation date:** 2026-09-29
 
@@ -425,3 +425,24 @@ The centered clock and the ETH card intentionally span the visible x=396 dual-co
 This checkpoint uses only the already verified full-frame refresh path. No SSD1683 refresh sequence is changed.
 
 Phase 2D-1 remains pending until the complete integration frame is visually verified on hardware.
+
+
+### Hardware result
+
+User supplied a photograph of the physical CrowPanel 5.79-inch display and the Phase 2D-1 integration frame matched the intended dashboard-like layout.
+
+Verified points:
+
+- the centered `12:34` clock rendered continuously across the visible x=396 controller boundary
+- the ETH card, which spans the controller boundary, rendered without a visible seam discontinuity
+- BTC, ETH, and HYPE cards rendered with their icons, labels, numeric values, PERP labels, and card borders intact
+- weather summary and Wi-Fi summary rendered correctly in the same framebuffer
+- the outer frame and horizontal separator remained continuous
+- the filled black status bar rendered correctly with white `STATIC TEST DATA` text
+- `Font5x7`, `Font9x13`, bitmap icons, outlined geometry, and filled geometry coexisted correctly in one frame
+
+### Conclusion
+
+Phase 2D-1 is hardware-verified. The Phase 2 graphics components integrate correctly in a single dashboard-like static frame.
+
+The next checkpoint is Phase 2D-2: re-run the proven partial + maintenance refresh sequence while changing mixed text and icon content.
