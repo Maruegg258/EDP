@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "BitmapFont.h"
+#include "Bitmap1bpp.h"\n#include "BitmapFont.h"
 
 class GraphicsBW {
 public:
@@ -30,6 +30,10 @@ public:
                 uint16_t width,
                 uint16_t height,
                 bool black);
+  bool drawBitmap(const Bitmap1bpp& bitmap,
+                  int16_t x,
+                  int16_t y,
+                  bool black = true);
 
   bool drawGlyph(const BitmapFont& font,
                  char c,

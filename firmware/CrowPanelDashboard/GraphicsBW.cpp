@@ -128,7 +128,49 @@ void GraphicsBW::fillRect(int16_t x,
   }
 }
 
-const BitmapGlyph* GraphicsBW::findGlyph(const BitmapFont& font, char c) const {
+
+bool GraphicsBW::drawBitmap(const Bitmap1bpp& bitmap,
+                            int16_t x,
+                            int16_t y,
+                            bool black) {
+  if (bitmap.data == nullptr || bitmap.width == 0 || bitmap.height == 0) {
+    return false;
+  }
+
+  const uint16_t rowBytes =
+      static_cast<uint16_t>((bitmap.width + 7U) / 8U);
+
+  for (uint16_t row = 0; row < bitmap.height; ++row) {
+    const int32_t targetY = static_cast<int32_t>(y) + row;
+    if (targetY < 0 || targetY >= _height) {
+      continue;
+    }
+
+    for (uint16_t col = 0; col < bitmap.width; ++col) {
+      const size_t byteIndex =
+          static_cast<size_t>(row) * rowBytes + (col / 8U);
+      const uint8_t mask = static_cast<uint8_t>(0x80U >> (col % 8U));
+
+      if ((bitmap.data[byteIndex] & mask) == 0U) {
+        continue;
+      }
+
+      const int32_t targetX = static_cast<int32_t>(x) + col;
+      if (targetX < 0 || targetX >= _visibleWidth) {
+        continue;
+      }
+
+      setPixel(
+          static_cast<int16_t>(targetX),
+          static_cast<int16_t>(targetY),
+          black
+      );
+    }
+  }
+
+  return true;
+}
+\nconst BitmapGlyph* GraphicsBW::findGlyph(const BitmapFont& font, char c) const {
   if (font.glyphs == nullptr) {
     return nullptr;
   }

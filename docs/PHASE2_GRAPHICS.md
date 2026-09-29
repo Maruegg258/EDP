@@ -264,3 +264,43 @@ Phase 2B-3 is hardware-verified. The generic `BitmapFont` renderer is now valida
 **Phase 2B is complete.**
 
 The next graphics checkpoint is Phase 2C: generic bitmap/icon rendering.
+
+
+## Phase 2C-1 — Generic 1-bit bitmap renderer
+
+**Status: Hardware verification pending**
+
+**Implementation date:** 2026-09-29
+
+### Scope
+
+Phase 2C-1 adds a generic `Bitmap1bpp` data structure and `GraphicsBW::drawBitmap()`.
+
+Bitmap format:
+
+- row-major
+- MSB-first
+- each row padded to a whole byte
+- set bits are foreground pixels
+- clear bits are transparent
+- foreground may be black or white
+
+No icon-specific knowledge is added to `GraphicsBW`, and no SSD1683 refresh behavior is changed.
+
+### Test asset
+
+A dedicated asymmetric 33x33 verification bitmap is used. At 33 pixels wide it requires five bytes per row, exercising bitmap rows substantially wider than the previously tested fonts.
+
+The marker includes a border, diagonals, center cross, and an asymmetric solid block near its upper-left corner so orientation and bit-order problems are visually obvious.
+
+### Hardware test frame
+
+The same bitmap is rendered:
+
+- normally on a white background
+- centered across visible x=396 to verify seam mapping
+- partially beyond the right edge to verify clipping
+- partially beyond the left edge to verify clipping
+- in white on a black rectangle to verify foreground color and transparent zero bits
+
+Phase 2C-1 remains pending until this frame is verified on the physical panel.

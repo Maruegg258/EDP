@@ -2,8 +2,8 @@
 
 #include "CrowEPD579.h"
 #include "Font5x7.h"
-#include "Font9x13.h"
 #include "GraphicsBW.h"
+#include "TestBitmaps.h"
 
 CrowEPD579 display;
 
@@ -17,82 +17,65 @@ GraphicsBW graphics(
     CrowEPD579::CONTROLLER_SEAM_GAP
 );
 
-static bool drawCenteredText(const BitmapFont& font,
-                             const char* text,
-                             int16_t y,
-                             uint8_t scale) {
-  const uint16_t textWidth = graphics.textWidth(font, text, scale);
-  if (textWidth == 0 || textWidth > graphics.width()) {
-    return false;
-  }
-
-  const int16_t x = static_cast<int16_t>(
-      (graphics.width() - textWidth) / 2U
-  );
-  return graphics.drawText(font, text, x, y, scale, true);
-}
-
-static bool drawRightAlignedText(const BitmapFont& font,
-                                 const char* text,
-                                 int16_t rightX,
-                                 int16_t y,
-                                 uint8_t scale) {
-  const uint16_t textWidth = graphics.textWidth(font, text, scale);
-  if (textWidth == 0 || textWidth > graphics.width() ||
-      rightX < static_cast<int16_t>(textWidth)) {
-    return false;
-  }
-
-  const int16_t x = static_cast<int16_t>(rightX - textWidth);
-  return graphics.drawText(font, text, x, y, scale, true);
-}
-
-static bool buildPhase2B3Frame() {
+static bool buildPhase2C1Frame() {
   graphics.clear(true);
 
-  if (!drawCenteredText(Font5x7::FONT, "FONT5X7 + FONT9X13", 6, 2)) {
-    return false;
-  }
-  if (!drawCenteredText(
-          Font9x13::FONT,
-          "0123456789 : . - + % /",
-          28,
-          1)) {
-    return false;
-  }
-
-  graphics.drawLine(24, 48, 767, 48, true);
-
-  if (!drawCenteredText(Font9x13::FONT, "12:34", 58, 3)) {
+  if (!graphics.drawText(
+          Font5x7::FONT,
+          "BITMAP1BPP TEST",
+          288,
+          8,
+          2,
+          true)) {
     return false;
   }
 
-  graphics.drawLine(24, 106, 767, 106, true);
+  graphics.drawLine(24, 30, 767, 30, true);
 
-  if (!graphics.drawText(Font5x7::FONT, "BTC", 48, 122, 3, true) ||
-      !drawRightAlignedText(Font9x13::FONT, "65234.50", 744, 116, 2)) {
+  if (!graphics.drawText(Font5x7::FONT, "NORMAL", 120, 42, 2, true) ||
+      !graphics.drawText(Font5x7::FONT, "SEAM X396", 340, 42, 2, true) ||
+      !graphics.drawText(Font5x7::FONT, "RIGHT CLIP", 620, 42, 2, true)) {
     return false;
   }
 
-  if (!graphics.drawText(Font5x7::FONT, "ETH", 48, 156, 3, true) ||
-      !drawRightAlignedText(Font9x13::FONT, "3921.75", 744, 150, 2)) {
+  if (!graphics.drawBitmap(TestBitmaps::MARKER_33, 140, 68, true)) {
     return false;
   }
 
-  if (!graphics.drawText(Font5x7::FONT, "HYPE", 48, 190, 3, true) ||
-      !drawRightAlignedText(Font9x13::FONT, "48.26", 744, 184, 2)) {
+  constexpr int16_t SEAM_X = CrowEPD579::VISIBLE_HALF_WIDTH;
+  if (!graphics.drawBitmap(
+          TestBitmaps::MARKER_33,
+          SEAM_X - 16,
+          68,
+          true)) {
     return false;
   }
 
-  graphics.drawLine(24, 216, 767, 216, true);
-
-  if (!graphics.drawText(Font5x7::FONT, "WIFI", 48, 236, 2, true) ||
-      !graphics.drawText(Font9x13::FONT, "-57", 154, 226, 2, true)) {
+  if (!graphics.drawBitmap(
+          TestBitmaps::MARKER_33,
+          CrowEPD579::VISIBLE_WIDTH - 17,
+          68,
+          true)) {
     return false;
   }
 
-  if (!graphics.drawText(Font5x7::FONT, "CHANGE", 350, 236, 2, true) ||
-      !graphics.drawText(Font9x13::FONT, "+12.5%", 510, 226, 2, true)) {
+  graphics.drawLine(24, 118, 767, 118, true);
+
+  if (!graphics.drawText(Font5x7::FONT, "33X33 5 BYTE ROWS", 72, 134, 2, true) ||
+      !graphics.drawText(Font5x7::FONT, "WHITE ON BLACK", 455, 134, 2, true)) {
+    return false;
+  }
+
+  if (!graphics.drawBitmap(TestBitmaps::MARKER_33, -16, 170, true)) {
+    return false;
+  }
+
+  graphics.fillRect(510, 164, 120, 72, true);
+  if (!graphics.drawBitmap(TestBitmaps::MARKER_33, 553, 184, false)) {
+    return false;
+  }
+
+  if (!graphics.drawText(Font5x7::FONT, "LEFT CLIP", 40, 220, 2, true)) {
     return false;
   }
 
@@ -104,11 +87,11 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 2B-3: mixed-font / multi-byte glyph test");
-  Serial.println("Testing Font5x7 and native Font9x13 through the same BitmapFont renderer.");
+  Serial.println("EDP Phase 2C-1: generic Bitmap1bpp renderer test");
+  Serial.println("Testing 33x33 / 5-byte rows, seam mapping, clipping, and white foreground.");
 
-  if (!buildPhase2B3Frame()) {
-    Serial.println("FAIL: mixed-font frame rendering failed.");
+  if (!buildPhase2C1Frame()) {
+    Serial.println("FAIL: Phase 2C-1 bitmap rendering failed.");
     return;
   }
 
@@ -124,9 +107,9 @@ void setup() {
 
   display.sleep();
 
-  Serial.println("PASS: mixed-font drawing commands and refresh completed.");
+  Serial.println("PASS: Bitmap1bpp drawing commands and refresh completed.");
   Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("Check 9x13 digits, punctuation, right alignment, and mixed-font rows.");
+  Serial.println("Check normal, seam-crossing, clipped, and white-on-black marker copies.");
 }
 
 void loop() {
