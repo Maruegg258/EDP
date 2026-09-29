@@ -92,6 +92,8 @@ EDP/
 │     ├─ EpaperBus.cpp
 │     ├─ CrowEPD579.h
 │     ├─ CrowEPD579.cpp
+│     ├─ BitmapFont.h
+│     ├─ Font5x7.h
 │     ├─ GraphicsBW.h
 │     └─ GraphicsBW.cpp
 └─ references/

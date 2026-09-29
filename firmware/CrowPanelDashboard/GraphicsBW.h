@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "BitmapFont.h"
+
 class GraphicsBW {
 public:
   GraphicsBW(uint8_t* buffer,
@@ -29,17 +31,21 @@ public:
                 uint16_t height,
                 bool black);
 
-  bool drawGlyph5x7(char c,
-                    int16_t x,
-                    int16_t y,
-                    uint8_t scale = 1,
-                    bool black = true);
-  bool drawText5x7(const char* text,
-                   int16_t x,
-                   int16_t y,
-                   uint8_t scale = 1,
-                   bool black = true);
-  uint16_t textWidth5x7(const char* text, uint8_t scale = 1) const;
+  bool drawGlyph(const BitmapFont& font,
+                 char c,
+                 int16_t x,
+                 int16_t y,
+                 uint8_t scale = 1,
+                 bool black = true);
+  bool drawText(const BitmapFont& font,
+                const char* text,
+                int16_t x,
+                int16_t y,
+                uint8_t scale = 1,
+                bool black = true);
+  uint16_t textWidth(const BitmapFont& font,
+                     const char* text,
+                     uint8_t scale = 1) const;
 
   uint16_t width() const { return _visibleWidth; }
   uint16_t height() const { return _height; }
@@ -50,6 +56,7 @@ public:
 private:
   uint16_t visibleToRawX(uint16_t x) const;
   void setRawPixel(uint16_t x, uint16_t y, bool black);
+  const BitmapGlyph* findGlyph(const BitmapFont& font, char c) const;
 
   uint8_t* _buffer;
   uint16_t _rawWidth;

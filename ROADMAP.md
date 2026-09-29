@@ -47,7 +47,7 @@ Hardware checkpoints:
 
 **Status: In progress**
 
-**Current step: Phase 2A complete — reusable primitives and visible-coordinate mapping are hardware-verified**
+**Current step: Phase 2B-1 — abstract 5x7-specific text rendering into a generic `BitmapFont` system**
 
 **Goal:** Build our own compact black/white rendering layer.
 
@@ -66,6 +66,8 @@ Hardware checkpoints:
 - [x] Phase 2A-2: Verify `drawLine()` and `drawRect()`, including geometry that crosses the visible x=396 dual-controller seam (verified on hardware, 2026-09-29)
 
 **Phase 2A status: Complete**
+
+- [ ] Phase 2B-1: Generic `BitmapFont` abstraction preserves the existing HELLO rendering (implementation ready; hardware verification pending)
 
 See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics verification notes.
 

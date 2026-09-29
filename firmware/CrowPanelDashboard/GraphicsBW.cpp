@@ -2,8 +2,6 @@
 
 #include <cstring>
 
-#include "Font5x7.h"
-
 GraphicsBW::GraphicsBW(uint8_t* buffer,
                        uint16_t rawWidth,
                        uint16_t visibleWidth,
@@ -130,23 +128,42 @@ void GraphicsBW::fillRect(int16_t x,
   }
 }
 
-bool GraphicsBW::drawGlyph5x7(char c,
-                              int16_t x,
-                              int16_t y,
-                              uint8_t scale,
-                              bool black) {
-  const uint8_t* rows = Font5x7::glyph(c);
-  if (rows == nullptr || scale == 0) {
+const BitmapGlyph* GraphicsBW::findGlyph(const BitmapFont& font, char c) const {
+  if (font.glyphs == nullptr) {
+    return nullptr;
+  }
+
+  for (uint16_t i = 0; i < font.glyphCount; ++i) {
+    if (font.glyphs[i].code == c) {
+      return &font.glyphs[i];
+    }
+  }
+
+  return nullptr;
+}
+
+bool GraphicsBW::drawGlyph(const BitmapFont& font,
+                           char c,
+                           int16_t x,
+                           int16_t y,
+                           uint8_t scale,
+                           bool black) {
+  const BitmapGlyph* glyph = findGlyph(font, c);
+  if (glyph == nullptr || glyph->bitmap == nullptr ||
+      glyph->width == 0 || glyph->height == 0 || scale == 0) {
     return false;
   }
 
-  for (uint8_t row = 0; row < Font5x7::GLYPH_HEIGHT; ++row) {
-    for (uint8_t col = 0; col < Font5x7::GLYPH_WIDTH; ++col) {
-      const uint8_t mask = static_cast<uint8_t>(
-          1U << (Font5x7::GLYPH_WIDTH - 1U - col)
-      );
+  const uint16_t rowBytes =
+      static_cast<uint16_t>((glyph->width + 7U) / 8U);
 
-      if ((rows[row] & mask) != 0U) {
+  for (uint8_t row = 0; row < glyph->height; ++row) {
+    for (uint8_t col = 0; col < glyph->width; ++col) {
+      const size_t byteIndex =
+          static_cast<size_t>(row) * rowBytes + (col / 8U);
+      const uint8_t mask = static_cast<uint8_t>(0x80U >> (col % 8U));
+
+      if ((glyph->bitmap[byteIndex] & mask) != 0U) {
         fillRect(
             static_cast<int16_t>(x + col * scale),
             static_cast<int16_t>(y + row * scale),
@@ -161,47 +178,55 @@ bool GraphicsBW::drawGlyph5x7(char c,
   return true;
 }
 
-bool GraphicsBW::drawText5x7(const char* text,
-                             int16_t x,
-                             int16_t y,
-                             uint8_t scale,
-                             bool black) {
+bool GraphicsBW::drawText(const BitmapFont& font,
+                          const char* text,
+                          int16_t x,
+                          int16_t y,
+                          uint8_t scale,
+                          bool black) {
   if (text == nullptr || scale == 0) {
     return false;
   }
 
-  const uint16_t advance = static_cast<uint16_t>(
-      (Font5x7::GLYPH_WIDTH + Font5x7::GLYPH_SPACING) * scale
-  );
-
   int16_t cursorX = x;
   while (*text != '\0') {
-    if (!drawGlyph5x7(*text, cursorX, y, scale, black)) {
+    const BitmapGlyph* glyph = findGlyph(font, *text);
+    if (glyph == nullptr || !drawGlyph(font, *text, cursorX, y, scale, black)) {
       return false;
     }
-    cursorX = static_cast<int16_t>(cursorX + advance);
+
+    cursorX = static_cast<int16_t>(
+        cursorX + static_cast<uint16_t>(glyph->xAdvance) * scale
+    );
     ++text;
   }
 
   return true;
 }
 
-uint16_t GraphicsBW::textWidth5x7(const char* text, uint8_t scale) const {
+uint16_t GraphicsBW::textWidth(const BitmapFont& font,
+                               const char* text,
+                               uint8_t scale) const {
   if (text == nullptr || *text == '\0' || scale == 0) {
     return 0;
   }
 
-  uint16_t glyphCount = 0;
-  while (text[glyphCount] != '\0') {
-    ++glyphCount;
+  uint32_t width = 0;
+  const BitmapGlyph* glyph = nullptr;
+
+  while (*text != '\0') {
+    glyph = findGlyph(font, *text);
+    if (glyph == nullptr) {
+      return 0;
+    }
+
+    ++text;
+    if (*text == '\0') {
+      width += static_cast<uint32_t>(glyph->width) * scale;
+    } else {
+      width += static_cast<uint32_t>(glyph->xAdvance) * scale;
+    }
   }
 
-  const uint16_t advance = static_cast<uint16_t>(
-      (Font5x7::GLYPH_WIDTH + Font5x7::GLYPH_SPACING) * scale
-  );
-  const uint16_t trailingSpacing = static_cast<uint16_t>(
-      Font5x7::GLYPH_SPACING * scale
-  );
-
-  return static_cast<uint16_t>(glyphCount * advance - trailingSpacing);
+  return (width <= 0xFFFFU) ? static_cast<uint16_t>(width) : 0;
 }
