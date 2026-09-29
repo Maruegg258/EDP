@@ -141,7 +141,7 @@ Phase 2B can now proceed to Phase 2B-2: expand the base glyph set and exercise t
 
 ## Phase 2B-2 — Base character set and dashboard typography
 
-**Status: Hardware verification pending**
+**Status: Verified on hardware**
 
 **Implementation date:** 2026-09-29
 
@@ -179,3 +179,25 @@ The hardware test renders:
 Multiple scales are intentionally used to check readability and spacing.
 
 No network data is used; all displayed values are static test content. No SSD1683 refresh behavior is changed by this checkpoint.
+
+
+### Hardware result
+
+User supplied a photograph of the physical CrowPanel 5.79-inch display and the Phase 2B-2 typography frame matched the intended content.
+
+Verified points:
+
+- A-Z rendered without missing glyphs or corruption
+- 0-9 rendered correctly
+- punctuation and spacing rendered correctly
+- the large `12:34` sample was clearly readable
+- BTC, ETH, HYPE, TEMP, and WIFI sample rows rendered without overlap or clipping
+- multiple font scales rendered correctly through the same generic `BitmapFont` path
+
+The compact 5x7 glyph designs remain intentionally utilitarian; some glyphs such as `Q`, `W`, and `%` have limited stylistic detail at this resolution, but this is a font-design limitation rather than a rendering defect.
+
+### Conclusion
+
+Phase 2B-2 is hardware-verified. The project now has a functional base uppercase/numeric/punctuation character set suitable for further dashboard layout work.
+
+The next font checkpoint is Phase 2B-3: exercise the generic `BitmapFont` interface with multiple font definitions/sizes so later UI code is not tied to one 5x7 face.
