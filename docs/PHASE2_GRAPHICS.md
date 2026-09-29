@@ -385,3 +385,43 @@ Phase 2C-2 is hardware-verified.
 **Phase 2C is complete.**
 
 The next checkpoint is Phase 2D: run a final Phase 2 integration regression and close out the graphics foundation before beginning the dashboard/widget framework.
+
+
+## Phase 2D-1 — Static graphics integration frame
+
+**Status: Hardware verification pending**
+
+**Implementation date:** 2026-09-29
+
+### Scope
+
+Phase 2D-1 does not add a new graphics primitive. It combines the already hardware-verified Phase 2 components into one dashboard-like static frame:
+
+- `drawLine()`
+- `drawRect()`
+- `fillRect()`
+- `Font5x7`
+- `Font9x13`
+- Wi-Fi bitmap
+- weather bitmap
+- BTC / ETH / HYPE bitmaps
+
+All values are static test data. No Wi-Fi connection, time service, weather provider, or market-data service is active.
+
+### Integration frame
+
+The frame contains:
+
+- sun icon and `28 C` weather summary
+- large centered `12:34` clock
+- Wi-Fi strong icon with `-57`
+- BTC card with `65234.50`
+- ETH card with `3921.75`
+- HYPE card with `48.26`
+- a black `STATIC TEST DATA` status bar with white text
+
+The centered clock and the ETH card intentionally span the visible x=396 dual-controller boundary.
+
+This checkpoint uses only the already verified full-frame refresh path. No SSD1683 refresh sequence is changed.
+
+Phase 2D-1 remains pending until the complete integration frame is visually verified on hardware.
