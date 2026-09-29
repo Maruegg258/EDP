@@ -16,29 +16,58 @@ GraphicsBW graphics(
     CrowEPD579::CONTROLLER_SEAM_GAP
 );
 
-static bool buildPhase2B1Frame() {
-  graphics.clear(true);
-
-  constexpr char TEXT[] = "HELLO";
-  constexpr uint8_t SCALE = 8;
-  const uint16_t textWidth = graphics.textWidth(Font5x7::FONT, TEXT, SCALE);
-  if (textWidth == 0) {
+static bool drawCenteredText(const char* text,
+                             int16_t y,
+                             uint8_t scale) {
+  const uint16_t textWidth = graphics.textWidth(Font5x7::FONT, text, scale);
+  if (textWidth == 0 || textWidth > graphics.width()) {
     return false;
   }
 
-  const int16_t startX = static_cast<int16_t>(
+  const int16_t x = static_cast<int16_t>(
       (graphics.width() - textWidth) / 2U
   );
-  constexpr int16_t START_Y = 72;
+  return graphics.drawText(Font5x7::FONT, text, x, y, scale, true);
+}
 
-  return graphics.drawText(
-      Font5x7::FONT,
-      TEXT,
-      startX,
-      START_Y,
-      SCALE,
-      true
-  );
+static bool buildPhase2B2Frame() {
+  graphics.clear(true);
+
+  if (!drawCenteredText("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 8, 2)) {
+    return false;
+  }
+  if (!drawCenteredText("0123456789  : . - + % / ( )", 30, 2)) {
+    return false;
+  }
+
+  graphics.drawLine(24, 53, 767, 53, true);
+
+  if (!drawCenteredText("12:34", 64, 6)) {
+    return false;
+  }
+
+  graphics.drawLine(24, 112, 767, 112, true);
+
+  if (!graphics.drawText(Font5x7::FONT, "BTC 65234.50", 48, 124, 3, true)) {
+    return false;
+  }
+  if (!graphics.drawText(Font5x7::FONT, "ETH 3921.75", 48, 154, 3, true)) {
+    return false;
+  }
+  if (!graphics.drawText(Font5x7::FONT, "HYPE 48.26", 48, 184, 3, true)) {
+    return false;
+  }
+  if (!graphics.drawText(
+          Font5x7::FONT,
+          "TEMP 28 C  WIFI -57",
+          48,
+          222,
+          3,
+          true)) {
+    return false;
+  }
+
+  return true;
 }
 
 void setup() {
@@ -46,11 +75,11 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 2B-1: generic BitmapFont regression test");
-  Serial.println("Expected visible output: the same centered HELLO used before the font refactor.");
+  Serial.println("EDP Phase 2B-2: dashboard typography test");
+  Serial.println("Testing A-Z, 0-9, dashboard punctuation, spacing, and multiple scales.");
 
-  if (!buildPhase2B1Frame()) {
-    Serial.println("FAIL: generic BitmapFont rendering failed.");
+  if (!buildPhase2B2Frame()) {
+    Serial.println("FAIL: one or more Phase 2B-2 glyphs could not be rendered.");
     return;
   }
 
@@ -66,9 +95,9 @@ void setup() {
 
   display.sleep();
 
-  Serial.println("PASS: generic BitmapFont drawing commands and refresh completed.");
+  Serial.println("PASS: typography frame drawing commands and refresh completed.");
   Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("HELLO should match the previous 5x7 rendering with no geometry change.");
+  Serial.println("Check every alphabet/digit/punctuation glyph and the dashboard sample rows.");
 }
 
 void loop() {

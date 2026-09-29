@@ -137,3 +137,45 @@ User-confirmed PASS on the physical CrowPanel 5.79-inch display:
 The generic `BitmapFont` abstraction is hardware-verified for the existing 5x7 HELLO regression case.
 
 Phase 2B can now proceed to Phase 2B-2: expand the base glyph set and exercise the generic font path with dashboard-style text and numeric content.
+
+
+## Phase 2B-2 — Base character set and dashboard typography
+
+**Status: Hardware verification pending**
+
+**Implementation date:** 2026-09-29
+
+### Scope
+
+The existing generic `BitmapFont` API is unchanged. This checkpoint only expands the project-owned `Font5x7` data and adds a dedicated typography test frame.
+
+The font now covers:
+
+- uppercase `A-Z`
+- digits `0-9`
+- space
+- `:`
+- `.`
+- `-`
+- `+`
+- `%`
+- `/`
+- `(` and `)`
+
+The previous H/E/L/O bitmaps are preserved.
+
+### Test frame
+
+The hardware test renders:
+
+- `ABCDEFGHIJKLMNOPQRSTUVWXYZ`
+- `0123456789  : . - + % / ( )`
+- a large `12:34` clock sample
+- `BTC 65234.50`
+- `ETH 3921.75`
+- `HYPE 48.26`
+- `TEMP 28 C  WIFI -57`
+
+Multiple scales are intentionally used to check readability and spacing.
+
+No network data is used; all displayed values are static test content. No SSD1683 refresh behavior is changed by this checkpoint.
