@@ -79,7 +79,7 @@ Hardware checkpoints:
 **Phase 2C status: Complete**
 
 - [x] Phase 2D-1: Verify a static dashboard-like frame combining primitives, both fonts, icons, and seam-crossing content (verified on hardware, 2026-09-29)
-- [ ] Phase 2D-2: Re-run partial + maintenance refresh regression with mixed text/icon content
+- [ ] Phase 2D-2: Re-run partial + maintenance refresh regression with mixed text/icon content (implementation ready; hardware verification pending)
 - [ ] Phase 2D-3: Close out Phase 2 and prepare the repository for the Phase 3 dashboard/widget framework
 
 See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics verification notes.

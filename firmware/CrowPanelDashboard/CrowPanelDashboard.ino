@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <cstring>
 
 #include "CrowEPD579.h"
 #include "Font5x7.h"
@@ -9,6 +10,8 @@
 CrowEPD579 display;
 
 uint8_t frameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
+uint8_t previousFrameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
+
 GraphicsBW graphics(
     frameBuffer,
     CrowEPD579::FRAMEBUFFER_WIDTH,
@@ -17,6 +20,97 @@ GraphicsBW graphics(
     CrowEPD579::VISIBLE_HALF_WIDTH,
     CrowEPD579::CONTROLLER_SEAM_GAP
 );
+
+struct DashboardState {
+  const char* time;
+  const Bitmap1bpp* weatherIcon;
+  const char* weatherLabel;
+  const char* temperature;
+  const Bitmap1bpp* wifiIcon;
+  const char* rssi;
+  const char* btcPrice;
+  const char* ethPrice;
+  const char* hypePrice;
+  const char* status;
+};
+
+static const DashboardState BASELINE = {
+  "12:34",
+  &Icons::WEATHER_SUN,
+  "SUN",
+  "28 C",
+  &Icons::WIFI_STRONG,
+  "-57",
+  "65234.50",
+  "3921.75",
+  "48.26",
+  "FULL BASELINE"
+};
+
+static const DashboardState PRE_MAINTENANCE = {
+  "12:35",
+  &Icons::WEATHER_CLOUD,
+  "CLOUD",
+  "27 C",
+  &Icons::WIFI_MEDIUM,
+  "-64",
+  "65240.10",
+  "3924.20",
+  "48.40",
+  "PARTIAL ONE"
+};
+
+static const DashboardState MAINTENANCE = {
+  "12:36",
+  &Icons::WEATHER_RAIN,
+  "RAIN",
+  "26 C",
+  &Icons::WIFI_WEAK,
+  "-76",
+  "65210.25",
+  "3918.50",
+  "48.05",
+  "MAINTENANCE"
+};
+
+static const DashboardState POST_MAINTENANCE[] = {
+  {
+    "12:37",
+    &Icons::WEATHER_CLOUD,
+    "CLOUD",
+    "26 C",
+    &Icons::WIFI_MEDIUM,
+    "-66",
+    "65218.80",
+    "3920.10",
+    "48.12",
+    "POST PARTIAL ONE"
+  },
+  {
+    "12:38",
+    &Icons::WEATHER_SUN,
+    "SUN",
+    "27 C",
+    &Icons::WIFI_STRONG,
+    "-58",
+    "65255.60",
+    "3928.40",
+    "48.55",
+    "POST PARTIAL TWO"
+  },
+  {
+    "12:39",
+    &Icons::WEATHER_RAIN,
+    "RAIN",
+    "25 C",
+    &Icons::WIFI_DISCONNECTED,
+    "-99",
+    "65205.15",
+    "3915.25",
+    "47.98",
+    "POST PARTIAL THREE"
+  }
+};
 
 static bool drawCenteredText(const BitmapFont& font,
                              const char* text,
@@ -78,25 +172,33 @@ static bool drawCryptoCard(int16_t x,
   );
 }
 
-static bool buildPhase2D1Frame() {
+static bool buildDashboardFrame(const DashboardState& state) {
   graphics.clear(true);
 
-  // Outer frame and the top separator exercise geometry across the full
-  // visible width.
   graphics.drawRect(8, 8, 776, 256, true);
   graphics.drawLine(20, 68, 772, 68, true);
 
-  // Weather summary.
-  if (!graphics.drawBitmap(Icons::WEATHER_SUN, 26, 20, true) ||
-      !graphics.drawText(Font5x7::FONT, "SUN", 72, 18, 1, true) ||
-      !graphics.drawText(Font5x7::FONT, "28 C", 72, 36, 2, true)) {
+  if (!graphics.drawBitmap(*state.weatherIcon, 26, 20, true) ||
+      !graphics.drawText(
+          Font5x7::FONT,
+          state.weatherLabel,
+          72,
+          18,
+          1,
+          true) ||
+      !graphics.drawText(
+          Font5x7::FONT,
+          state.temperature,
+          72,
+          36,
+          2,
+          true)) {
     return false;
   }
 
-  // The centered 9x13 clock intentionally spans visible x=396.
   if (!drawCenteredText(
           Font9x13::FONT,
-          "12:34",
+          state.time,
           CrowEPD579::VISIBLE_HALF_WIDTH,
           16,
           3,
@@ -104,32 +206,57 @@ static bool buildPhase2D1Frame() {
     return false;
   }
 
-  // Wi-Fi summary.
   if (!graphics.drawText(Font5x7::FONT, "WIFI", 658, 18, 1, true) ||
-      !graphics.drawText(Font9x13::FONT, "-57", 658, 34, 1, true) ||
-      !graphics.drawBitmap(Icons::WIFI_STRONG, 734, 22, true)) {
+      !graphics.drawText(Font9x13::FONT, state.rssi, 658, 34, 1, true) ||
+      !graphics.drawBitmap(*state.wifiIcon, 734, 22, true)) {
     return false;
   }
 
-  // Three dashboard cards. The ETH card crosses the x=396 controller seam.
-  if (!drawCryptoCard(24, Icons::CRYPTO_BTC, "BTC", "65234.50") ||
-      !drawCryptoCard(281, Icons::CRYPTO_ETH, "ETH", "3921.75") ||
-      !drawCryptoCard(538, Icons::CRYPTO_HYPE, "HYPE", "48.26")) {
+  if (!drawCryptoCard(24, Icons::CRYPTO_BTC, "BTC", state.btcPrice) ||
+      !drawCryptoCard(281, Icons::CRYPTO_ETH, "ETH", state.ethPrice) ||
+      !drawCryptoCard(538, Icons::CRYPTO_HYPE, "HYPE", state.hypePrice)) {
     return false;
   }
 
-  // Filled status bar exercises white text over a black primitive.
   graphics.fillRect(24, 222, 744, 30, true);
-  if (!drawCenteredText(
-          Font5x7::FONT,
-          "STATIC TEST DATA",
-          CrowEPD579::VISIBLE_HALF_WIDTH,
-          230,
-          2,
-          false)) {
+  return drawCenteredText(
+      Font5x7::FONT,
+      state.status,
+      CrowEPD579::VISIBLE_HALF_WIDTH,
+      230,
+      2,
+      false
+  );
+}
+
+static bool runNormalPartial(const DashboardState& state) {
+  if (!display.begin()) {
+    Serial.println("FAIL: partial wake/reset timed out.");
     return false;
   }
 
+  if (!display.restoreFrameStateForPartial(previousFrameBuffer)) {
+    Serial.println("FAIL: partial state restore timed out.");
+    return false;
+  }
+
+  if (!buildDashboardFrame(state)) {
+    Serial.println("FAIL: partial frame rendering failed.");
+    return false;
+  }
+
+  if (!display.displayPartialFrame(frameBuffer)) {
+    Serial.println("FAIL: partial refresh timed out.");
+    return false;
+  }
+
+  memcpy(
+      previousFrameBuffer,
+      frameBuffer,
+      CrowEPD579::FRAMEBUFFER_BYTES
+  );
+  display.sleep();
+  delay(4000);
   return true;
 }
 
@@ -138,29 +265,77 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 2D-1: Phase 2 graphics integration frame");
-  Serial.println("Static dashboard-like test; no network services or live data.");
+  Serial.println("EDP Phase 2D-2: mixed-content refresh regression");
+  Serial.println("Full baseline -> partial -> maintenance -> three partials.");
+  Serial.println("Watch text, icons, card contents, seam, and white-on-black status text.");
 
-  if (!buildPhase2D1Frame()) {
-    Serial.println("FAIL: Phase 2D-1 integration frame rendering failed.");
+  Serial.println("Step 1/6: full baseline...");
+  if (!buildDashboardFrame(BASELINE)) {
+    Serial.println("FAIL: baseline frame rendering failed.");
     return;
   }
 
   if (!display.begin()) {
-    Serial.println("FAIL: display begin/reset timed out.");
+    Serial.println("FAIL: baseline display begin/reset timed out.");
     return;
   }
 
   if (!display.displayFullFrame(frameBuffer)) {
-    Serial.println("FAIL: full-frame refresh timed out.");
+    Serial.println("FAIL: baseline full refresh timed out.");
     return;
   }
 
+  memcpy(
+      previousFrameBuffer,
+      frameBuffer,
+      CrowEPD579::FRAMEBUFFER_BYTES
+  );
   display.sleep();
+  delay(4000);
 
-  Serial.println("PASS: Phase 2D-1 frame drawing commands and refresh completed.");
+  Serial.println("Step 2/6: normal partial before maintenance...");
+  if (!runNormalPartial(PRE_MAINTENANCE)) {
+    return;
+  }
+
+  Serial.println("Step 3/6: maintenance refresh...");
+  if (!buildDashboardFrame(MAINTENANCE)) {
+    Serial.println("FAIL: maintenance frame rendering failed.");
+    return;
+  }
+
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    Serial.println("FAIL: maintenance refresh timed out.");
+    return;
+  }
+
+  memcpy(
+      previousFrameBuffer,
+      frameBuffer,
+      CrowEPD579::FRAMEBUFFER_BYTES
+  );
+  display.sleep();
+  delay(4000);
+
+  Serial.println("Step 4/6: first partial after maintenance...");
+  if (!runNormalPartial(POST_MAINTENANCE[0])) {
+    return;
+  }
+
+  Serial.println("Step 5/6: second partial after maintenance...");
+  if (!runNormalPartial(POST_MAINTENANCE[1])) {
+    return;
+  }
+
+  Serial.println("Step 6/6: third partial after maintenance...");
+  if (!runNormalPartial(POST_MAINTENANCE[2])) {
+    return;
+  }
+
+  Serial.println("PASS: Phase 2D-2 command sequence completed.");
   Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("Check clock seam continuity, all three cards, icons, text, and status bar.");
+  Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
+  Serial.println("No old text/icon should remain and no content should be blurred or doubled.");
 }
 
 void loop() {

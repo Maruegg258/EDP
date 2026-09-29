@@ -446,3 +446,70 @@ Verified points:
 Phase 2D-1 is hardware-verified. The Phase 2 graphics components integrate correctly in a single dashboard-like static frame.
 
 The next checkpoint is Phase 2D-2: re-run the proven partial + maintenance refresh sequence while changing mixed text and icon content.
+
+
+## Phase 2D-2 — Mixed-content refresh regression
+
+**Status: Hardware verification pending**
+
+**Implementation date:** 2026-09-29
+
+### Scope
+
+Phase 2D-2 reuses the already hardware-verified Phase 1 refresh APIs without changing `CrowEPD579`.
+
+The same dashboard-like integration layout is rebuilt from scratch for each state. Every state changes mixed content:
+
+- clock text
+- weather icon and label
+- temperature
+- Wi-Fi icon and RSSI text
+- BTC / ETH / HYPE numeric values
+- white text inside the filled black status bar
+
+This intentionally requires both old black pixels to disappear and new black pixels to appear, including transparent bitmap areas and white-on-black text.
+
+### Refresh sequence
+
+1. Full baseline
+   - `12:34`
+   - sun / `28 C`
+   - Wi-Fi strong / `-57`
+2. Normal partial
+   - `12:35`
+   - cloud / `27 C`
+   - Wi-Fi medium / `-64`
+3. Maintenance refresh
+   - `12:36`
+   - rain / `26 C`
+   - Wi-Fi weak / `-76`
+4. First post-maintenance partial
+   - `12:37`
+5. Second post-maintenance partial
+   - `12:38`
+6. Third post-maintenance partial
+   - `12:39`
+   - rain / `25 C`
+   - Wi-Fi disconnected / `-99`
+
+Each frame also changes all three crypto price strings and the status-bar text.
+
+The maintenance step remains the previously verified sequence:
+
+`Fast clear -> physical white -> re-init -> previous RAM white -> current RAM new frame -> Partial refresh`
+
+No new refresh mode is introduced.
+
+### Pass criteria
+
+Across all six visible states:
+
+- previous clock digits must disappear cleanly
+- old weather and Wi-Fi icon pixels must disappear cleanly
+- new icons must remain sharp
+- crypto price changes must not leave doubled/blurred digits
+- the ETH card and centered clock must remain continuous across visible x=396
+- changing white status text must not leave pale/white remnants in the black bar
+- post-maintenance partials must remain as sharp as pre-maintenance content
+
+Phase 2D-2 remains pending until the complete sequence is observed on the physical panel.
