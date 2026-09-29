@@ -60,6 +60,13 @@ Planned work:
 - Small icon set for Wi-Fi, weather, BTC, ETH, and HYPE
 - Region/dirty-state tracking where useful
 
+Hardware checkpoints:
+
+- [x] Phase 2A-1: Extract visible-coordinate mapping, pixel/fill-rectangle, and 5x7 text rendering into `GraphicsBW` without changing the Phase 1F refresh sequence (verified on hardware, 2026-09-29)
+- [ ] Phase 2A-2: Verify `drawLine()` and `drawRect()`, including geometry that crosses the visible x=396 dual-controller seam
+
+See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics verification notes.
+
 ## Phase 3 — Dashboard framework
 
 **Goal:** Separate data from presentation and refresh only what needs to change.
