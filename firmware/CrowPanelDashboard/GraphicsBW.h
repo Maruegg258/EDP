@@ -2,7 +2,8 @@
 
 #include <Arduino.h>
 
-#include "Bitmap1bpp.h"\n#include "BitmapFont.h"
+#include "Bitmap1bpp.h"
+#include "BitmapFont.h"
 
 class GraphicsBW {
 public:
