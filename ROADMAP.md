@@ -47,7 +47,7 @@ Hardware checkpoints:
 
 **Status: In progress**
 
-**Current step: Phase 2B-1 — abstract 5x7-specific text rendering into a generic `BitmapFont` system**
+**Current step: Phase 2B-2 — expand the base character set and verify dashboard-style typography**
 
 **Goal:** Build our own compact black/white rendering layer.
 
@@ -67,7 +67,8 @@ Hardware checkpoints:
 
 **Phase 2A status: Complete**
 
-- [ ] Phase 2B-1: Generic `BitmapFont` abstraction preserves the existing HELLO rendering (implementation ready; hardware verification pending)
+- [x] Phase 2B-1: Generic `BitmapFont` abstraction preserves the existing HELLO rendering (verified on hardware, 2026-09-29)
+- [ ] Phase 2B-2: Expand the base character set and verify dashboard-style typography on hardware
 
 See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics verification notes.
 

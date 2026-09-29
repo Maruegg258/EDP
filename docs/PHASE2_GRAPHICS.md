@@ -97,3 +97,43 @@ No visible seam discontinuity or coordinate-mapping regression was observed.
 `setPixel()`, `drawLine()`, `drawRect()`, visible-edge clipping, and visible-to-raw seam mapping are hardware-verified for the Phase 2A test cases.
 
 **Phase 2A is complete.**
+
+
+## Phase 2B-1 — Generic BitmapFont abstraction
+
+**Status: Verified on hardware**
+
+**Date:** 2026-09-29
+
+**Firmware commit under test:** `7f8dd4a882cdd103b168dcdf224a9e3d1d68e805` — `Add generic BitmapFont abstraction`
+
+### Change under test
+
+The text renderer was decoupled from the project-owned 5x7 font:
+
+- added generic `BitmapGlyph` and `BitmapFont` data structures
+- replaced `drawGlyph5x7()` with `drawGlyph(font, ...)`
+- replaced `drawText5x7()` with `drawText(font, ...)`
+- replaced `textWidth5x7()` with `textWidth(font, ...)`
+- converted `Font5x7` into the first font definition using the generic interface
+- retained only the existing H/E/L/O glyph set for this checkpoint
+
+No SSD1683 refresh behavior was changed.
+
+### Pre-hardware verification
+
+Before flashing, the refactored code passed syntax/warning checks and the old/new HELLO framebuffer output was compared byte-for-byte with no difference.
+
+### Hardware result
+
+User-confirmed PASS on the physical CrowPanel 5.79-inch display:
+
+- Arduino compile/upload completed normally
+- `HELLO` rendered correctly
+- no visible change in glyph shape, scale, or position compared with the pre-refactor 5x7 rendering
+
+### Conclusion
+
+The generic `BitmapFont` abstraction is hardware-verified for the existing 5x7 HELLO regression case.
+
+Phase 2B can now proceed to Phase 2B-2: expand the base glyph set and exercise the generic font path with dashboard-style text and numeric content.
