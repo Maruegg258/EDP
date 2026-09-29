@@ -47,7 +47,7 @@ Hardware checkpoints:
 
 **Status: In progress**
 
-**Current step: Phase 2B-3 — verify multiple font definitions/sizes through the generic BitmapFont interface**
+**Current step: Phase 2C — add generic bitmap/icon rendering**
 
 **Goal:** Build our own compact black/white rendering layer.
 
@@ -69,7 +69,11 @@ Hardware checkpoints:
 
 - [x] Phase 2B-1: Generic `BitmapFont` abstraction preserves the existing HELLO rendering (verified on hardware, 2026-09-29)
 - [x] Phase 2B-2: Expand the base character set and verify dashboard-style typography on hardware (verified on hardware, 2026-09-29)
-- [ ] Phase 2B-3: Verify mixed Font5x7 + native Font9x13 rendering, including 9-pixel multi-byte glyph rows and text alignment (implementation ready; hardware verification pending)
+- [x] Phase 2B-3: Verify mixed Font5x7 + native Font9x13 rendering, including 9-pixel multi-byte glyph rows and text alignment (verified on hardware, 2026-09-29)
+
+**Phase 2B status: Complete**
+
+- [ ] Phase 2C: Add and verify generic bitmap/icon rendering
 
 See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics verification notes.
 
