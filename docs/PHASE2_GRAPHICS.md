@@ -201,3 +201,42 @@ The compact 5x7 glyph designs remain intentionally utilitarian; some glyphs such
 Phase 2B-2 is hardware-verified. The project now has a functional base uppercase/numeric/punctuation character set suitable for further dashboard layout work.
 
 The next font checkpoint is Phase 2B-3: exercise the generic `BitmapFont` interface with multiple font definitions/sizes so later UI code is not tied to one 5x7 face.
+
+
+## Phase 2B-3 — Multiple fonts and multi-byte glyph rows
+
+**Status: Hardware verification pending**
+
+**Implementation date:** 2026-09-29
+
+### Scope
+
+A second project-owned font, `Font9x13`, is added without changing the generic `BitmapFont` interface or `GraphicsBW`.
+
+The new font is numeric/status focused and includes:
+
+- digits `0-9`
+- space
+- `:`
+- `.`
+- `-`
+- `+`
+- `%`
+- `/`
+
+The numeric glyphs are natively 9 pixels wide. With the existing row-major bitmap format this requires two bytes per glyph row, deliberately exercising the generic renderer beyond the one-byte rows used by `Font5x7`.
+
+### Test frame
+
+The dedicated hardware frame mixes both font definitions in the same framebuffer:
+
+- `Font5x7` for labels and headings
+- `Font9x13` for a native numeric/punctuation sample
+- large `12:34` clock text
+- right-aligned BTC, ETH, and HYPE numeric values
+- `WIFI -57`
+- `CHANGE +12.5%`
+
+The test also exercises `textWidth()` through centered and right-aligned text.
+
+No SSD1683 refresh behavior is changed by this checkpoint.

@@ -94,6 +94,7 @@ EDP/
 │     ├─ CrowEPD579.cpp
 │     ├─ BitmapFont.h
 │     ├─ Font5x7.h
+│     ├─ Font9x13.h
 │     ├─ GraphicsBW.h
 │     └─ GraphicsBW.cpp
 └─ references/
