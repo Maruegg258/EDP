@@ -98,6 +98,7 @@ EDP/
 │     ├─ Font9x13.h
 │     ├─ GraphicsBW.h
 │     ├─ GraphicsBW.cpp
+│     ├─ Icons.h
 │     └─ TestBitmaps.h
 └─ references/
    └─ README.md
