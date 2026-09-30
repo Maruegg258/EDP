@@ -68,10 +68,10 @@ CrowPanelDashboard.ino
         +-- ui/
              +-- DashboardState      (implemented)
              +-- Dashboard           (implemented)
-             +-- ClockWidget         (planned)
-             +-- WeatherWidget       (planned)
-             +-- CryptoWidget        (planned)
-             +-- WiFiWidget          (planned)
+             +-- ClockWidget         (implemented)
+             +-- WeatherWidget       (implemented)
+             +-- CryptoWidget        (implemented)
+             +-- WiFiWidget          (implemented)
 ```
 
 Display drivers must not know about Wi-Fi, HTTP, market data, or weather services. Data services must not directly control E-paper refreshes. UI code decides what changed and the display layer performs the required refresh.
@@ -100,6 +100,8 @@ Phase 3A-2 extracted the static dashboard regression content into `DashboardTest
 
 The UI source files currently remain in the Arduino sketch directory so the existing Arduino build flow continues to discover and compile them without introducing a build-system change. Their architectural ownership is the UI layer.
 
+Phase 3B-1 extracts the clock, weather, Wi-Fi, and crypto rendering blocks into dedicated widgets. BTC, ETH, and HYPE share one reusable `CryptoWidget` implementation. Hardware verification of this widget extraction is pending.
+
 Dirty-region ownership, widget change detection, and refresh coalescing remain Phase 3 responsibilities rather than GraphicsBW responsibilities.
 
 ## Current repository structure
@@ -121,6 +123,15 @@ EDP/
 │     ├─ DashboardTestStates.h
 │     ├─ Dashboard.h
 │     ├─ Dashboard.cpp
+│     ├─ UiText.h
+│     ├─ ClockWidget.h
+│     ├─ ClockWidget.cpp
+│     ├─ WeatherWidget.h
+│     ├─ WeatherWidget.cpp
+│     ├─ WiFiWidget.h
+│     ├─ WiFiWidget.cpp
+│     ├─ CryptoWidget.h
+│     ├─ CryptoWidget.cpp
 │     ├─ config.example.h
 │     ├─ EpaperBus.h
 │     ├─ EpaperBus.cpp

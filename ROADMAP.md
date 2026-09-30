@@ -105,7 +105,14 @@ Hardware checkpoints:
 
 **Phase 3A status: Complete**
 
-**Next step: Phase 3B — split dashboard composition into reusable widgets while keeping static test data and the existing verified refresh path**
+Phase 3B checkpoints:
+
+- [ ] Phase 3B-1: Extract Clock, Weather, Wi-Fi, and reusable Crypto widgets from `Dashboard` while preserving the Phase 3A layout and verified refresh sequence (implementation committed; hardware verification pending)
+- [ ] Phase 3B-2: Finalize the widget-facing composition boundary and prepare widget-local state/change detection for Phase 3C
+
+**Phase 3B status: In Progress**
+
+**Next step: Hardware-verify Phase 3B-1 with the unchanged full -> partial -> maintenance -> three partial regression sequence**
 
 ## Phase 4 — Time and Wi-Fi status
 

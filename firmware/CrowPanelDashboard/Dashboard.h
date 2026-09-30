@@ -1,11 +1,11 @@
 #pragma once
 
-#include <Arduino.h>
-
-#include "Bitmap1bpp.h"
-#include "BitmapFont.h"
+#include "ClockWidget.h"
+#include "CryptoWidget.h"
 #include "DashboardState.h"
 #include "GraphicsBW.h"
+#include "WeatherWidget.h"
+#include "WiFiWidget.h"
 
 class Dashboard {
 public:
@@ -14,17 +14,11 @@ public:
   bool render(const DashboardState& state);
 
 private:
-  bool drawCenteredText(const BitmapFont& font,
-                        const char* text,
-                        int16_t centerX,
-                        int16_t y,
-                        uint8_t scale,
-                        bool black = true);
-
-  bool drawCryptoCard(int16_t x,
-                      const Bitmap1bpp& icon,
-                      const char* symbol,
-                      const char* price);
-
   GraphicsBW& _graphics;
+  WeatherWidget _weather;
+  ClockWidget _clock;
+  WiFiWidget _wifi;
+  CryptoWidget _btc;
+  CryptoWidget _eth;
+  CryptoWidget _hype;
 };

@@ -59,9 +59,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 3A-2: application/UI boundary regression");
+  Serial.println("EDP Phase 3B-1: reusable widget extraction regression");
   Serial.println("Full baseline -> partial -> maintenance -> three partials.");
-  Serial.println("Static dashboard test content now lives outside the application sketch.");
+  Serial.println("Dashboard now composes Clock, Weather, Wi-Fi, and Crypto widgets.");
 
   Serial.println("Step 1/6: full baseline...");
   if (!dashboard.render(DashboardTestStates::BASELINE)) {
@@ -126,10 +126,10 @@ void setup() {
     return;
   }
 
-  Serial.println("PASS: Phase 3A-2 command sequence completed.");
+  Serial.println("PASS: Phase 3B-1 command sequence completed.");
   Serial.println("Physical inspection is REQUIRED.");
   Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
-  Serial.println("Layout, text, icons, refresh behavior, and image quality must match Phase 3A-1.");
+  Serial.println("Layout, text, icons, refresh behavior, and image quality must match Phase 3A-2.");
 }
 
 void loop() {
