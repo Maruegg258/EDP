@@ -101,11 +101,11 @@ Planned work:
 Hardware checkpoints:
 
 - [x] Phase 3A-1: Extract `DashboardState` and dashboard composition from the sketch into dedicated UI objects while preserving the Phase 2D layout and verified refresh sequence (verified on hardware, 2026-09-30)
-- [ ] Phase 3A-2: Extract static dashboard regression states from the sketch into a dedicated test fixture so the application layer no longer owns UI test content
+- [ ] Phase 3A-2: Extract static dashboard regression states from the sketch into a dedicated test fixture so the application layer no longer owns UI test content (implementation committed; hardware verification pending)
 
 **Phase 3A status: In Progress**
 
-**Next step: Phase 3A-2 — separate the static dashboard regression data from the application sketch while preserving the existing verified refresh path**
+**Next step: Hardware-verify Phase 3A-2 with the unchanged full -> partial -> maintenance -> three partial regression sequence**
 
 ## Phase 4 — Time and Wi-Fi status
 
