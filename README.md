@@ -50,9 +50,11 @@ CrowPanelDashboard.ino
         |    +-- ButtonManager       (planned)
         |
         +-- graphics/
-        |    +-- GraphicsBW
-        |    +-- Fonts               (planned)
-        |    +-- Icons               (planned)
+        |    +-- GraphicsBW          (implemented)
+        |    +-- BitmapFont          (implemented)
+        |    +-- Font5x7 / Font9x13  (implemented)
+        |    +-- Bitmap1bpp          (implemented)
+        |    +-- Icons               (implemented)
         |
         +-- network/
         |    +-- WiFiManager         (planned)
@@ -73,6 +75,28 @@ CrowPanelDashboard.ino
 
 Display drivers must not know about Wi-Fi, HTTP, market data, or weather services. Data services must not directly control E-paper refreshes. UI code decides what changed and the display layer performs the required refresh.
 
+
+## Phase 2 graphics baseline
+
+Phase 2 is hardware-verified and complete as of 2026-09-30.
+
+The graphics layer now owns:
+
+- visible 792x272 coordinate rendering over the raw 800x272 dual-controller framebuffer
+- pixel, line, outline rectangle, and filled rectangle primitives
+- generic bitmap-font rendering through `BitmapFont`
+- project-owned `Font5x7` and `Font9x13`
+- generic transparent 1-bit bitmap rendering through `Bitmap1bpp`
+- project-owned Wi-Fi, weather, BTC, ETH, and HYPE icon assets
+
+The display driver remains responsible only for controller/RAM/refresh behavior. The known-good maintenance sequence remains:
+
+`Fast clear -> physical white -> re-init -> previous RAM white -> current RAM new frame -> Partial refresh`
+
+The current sketch is intentionally retained as the last Phase 2 mixed-content refresh regression harness until Phase 3A replaces its dashboard composition logic with a dedicated UI layer.
+
+Dirty-region ownership, widget change detection, and refresh coalescing are Phase 3 responsibilities rather than GraphicsBW responsibilities.
+
 ## Current repository structure
 
 ```text
@@ -82,6 +106,7 @@ EDP/
 ├─ .gitignore
 ├─ docs/
 │  ├─ HARDWARE.md
+│  ├─ PHASE2_GRAPHICS.md
 │  ├─ REFRESH_NOTES.md
 │  └─ SECURITY.md
 ├─ firmware/

@@ -534,3 +534,69 @@ Observed result:
 Phase 2D-2 is hardware-verified. Mixed text, bitmap icons, black/white filled regions, and seam-crossing content remain stable across the project's verified maintenance-refresh and follow-up-partial sequence.
 
 The final Phase 2 checkpoint is Phase 2D-3: repository/documentation closeout and preparation for the Phase 3 dashboard/widget framework.
+
+
+## Phase 2D-3 — Graphics foundation closeout
+
+**Status: Complete**
+
+**Date:** 2026-09-30
+
+No new rendering or refresh behavior was introduced in this checkpoint. Phase 2D-3 records the verified baseline and defines the boundary for Phase 3.
+
+### Verified graphics baseline
+
+The following `GraphicsBW` capabilities are treated as hardware-verified Phase 2 behavior:
+
+- `clear()`
+- visible-coordinate `setPixel()`
+- `drawLine()`
+- `drawRect()`
+- `fillRect()`
+- generic `drawGlyph()`
+- generic `drawText()`
+- `textWidth()`
+- generic transparent `drawBitmap()`
+
+The visible coordinate system is 792x272. The hidden 8-pixel raw framebuffer seam is handled inside `GraphicsBW`; application/UI code should not perform its own visible-to-raw x mapping.
+
+### Verified asset baseline
+
+- `BitmapFont`
+- `Font5x7`
+- `Font9x13`
+- `Bitmap1bpp`
+- project-owned Wi-Fi icons
+- project-owned sun/cloud/rain icons
+- project-owned BTC/ETH/HYPE icons
+
+`TestBitmaps.h` is retained as a regression fixture rather than a production UI asset.
+
+### Driver boundary
+
+`CrowEPD579` remains the owner of SSD1683/controller behavior. Phase 2 did not redefine the hardware refresh model.
+
+The hardware-verified maintenance refresh sequence remains:
+
+`Fast clear -> physical white -> re-init -> previous RAM white -> current RAM new frame -> Partial refresh`
+
+Changes to this sequence require a separate hardware regression investigation.
+
+### Phase 3 boundary
+
+The following are deliberately **not** Phase 2 graphics responsibilities and move to Phase 3:
+
+- dashboard layout ownership
+- widget interfaces
+- application/dashboard state models
+- widget change detection
+- dirty-region decisions
+- coalescing multiple data changes into one display refresh
+
+The Phase 2D-2 sketch remains the last hardware-verified integration/regression harness. Phase 3A may replace its dashboard composition code, but should continue using the verified `GraphicsBW` and `CrowEPD579` boundaries rather than reimplementing them.
+
+### Conclusion
+
+**Phase 2 — Graphics foundation is complete.**
+
+The next implementation step is Phase 3A: extract dashboard composition and static dashboard state out of `CrowPanelDashboard.ino` into the UI layer without introducing live network/services yet.

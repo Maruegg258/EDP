@@ -45,9 +45,7 @@ Hardware checkpoints:
 
 ## Phase 2 — Graphics foundation
 
-**Status: In progress**
-
-**Current step: Phase 2D-3 — Phase 2 closeout and Phase 3 preparation**
+**Status: Complete**
 
 **Goal:** Build our own compact black/white rendering layer.
 
@@ -58,7 +56,7 @@ Planned work:
 - Custom font support
 - Bitmap/icon support
 - Small icon set for Wi-Fi, weather, BTC, ETH, and HYPE
-- Region/dirty-state tracking where useful
+- Region/dirty-state tracking — deferred to Phase 3, where widget change detection and refresh coalescing are introduced
 
 Hardware checkpoints:
 
@@ -80,11 +78,17 @@ Hardware checkpoints:
 
 - [x] Phase 2D-1: Verify a static dashboard-like frame combining primitives, both fonts, icons, and seam-crossing content (verified on hardware, 2026-09-29)
 - [x] Phase 2D-2: Re-run partial + maintenance refresh regression with mixed text/icon content (verified on hardware, 2026-09-30)
-- [ ] Phase 2D-3: Close out Phase 2 and prepare the repository for the Phase 3 dashboard/widget framework
+- [x] Phase 2D-3: Close out Phase 2 and prepare the repository for the Phase 3 dashboard/widget framework (completed, 2026-09-30)
+
+**Phase 2D status: Complete**
 
 See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics verification notes.
 
 ## Phase 3 — Dashboard framework
+
+**Status: Next**
+
+**Next step: Phase 3A — extract dashboard composition/state from the sketch into a UI layer while keeping static test data**
 
 **Goal:** Separate data from presentation and refresh only what needs to change.
 
