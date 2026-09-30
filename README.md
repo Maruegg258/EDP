@@ -66,7 +66,8 @@ CrowPanelDashboard.ino
         |    +-- MarketDataService   (planned)
         |
         +-- ui/
-             +-- Dashboard           (planned)
+             +-- DashboardState      (implemented)
+             +-- Dashboard           (implemented)
              +-- ClockWidget         (planned)
              +-- WeatherWidget       (planned)
              +-- CryptoWidget        (planned)
@@ -93,9 +94,11 @@ The display driver remains responsible only for controller/RAM/refresh behavior.
 
 `Fast clear -> physical white -> re-init -> previous RAM white -> current RAM new frame -> Partial refresh`
 
-The current sketch is intentionally retained as the last Phase 2 mixed-content refresh regression harness until Phase 3A replaces its dashboard composition logic with a dedicated UI layer.
+Phase 3A has extracted dashboard state and composition from the sketch into dedicated `DashboardState` and `Dashboard` objects. The Phase 2D layout and verified refresh behavior were preserved and re-verified on hardware on 2026-09-30.
 
-Dirty-region ownership, widget change detection, and refresh coalescing are Phase 3 responsibilities rather than GraphicsBW responsibilities.
+The UI source files currently remain in the Arduino sketch directory so the existing Arduino build flow continues to discover and compile them without introducing a build-system change. Their architectural ownership is the UI layer.
+
+Dirty-region ownership, widget change detection, and refresh coalescing remain Phase 3 responsibilities rather than GraphicsBW responsibilities.
 
 ## Current repository structure
 
@@ -112,6 +115,9 @@ EDP/
 ├─ firmware/
 │  └─ CrowPanelDashboard/
 │     ├─ CrowPanelDashboard.ino
+│     ├─ DashboardState.h
+│     ├─ Dashboard.h
+│     ├─ Dashboard.cpp
 │     ├─ config.example.h
 │     ├─ EpaperBus.h
 │     ├─ EpaperBus.cpp

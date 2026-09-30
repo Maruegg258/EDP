@@ -86,9 +86,7 @@ See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics veri
 
 ## Phase 3 — Dashboard framework
 
-**Status: Next**
-
-**Next step: Phase 3A — extract dashboard composition/state from the sketch into a UI layer while keeping static test data**
+**Status: In Progress**
 
 **Goal:** Separate data from presentation and refresh only what needs to change.
 
@@ -99,6 +97,14 @@ Planned work:
 - Change detection / dirty regions
 - Coalescing multiple data changes into one E-paper refresh
 - Stable positioning for clock, weather, market prices, and status icons
+
+Hardware checkpoints:
+
+- [x] Phase 3A-1: Extract `DashboardState` and dashboard composition from the sketch into dedicated UI objects while preserving the Phase 2D layout and verified refresh sequence (verified on hardware, 2026-09-30)
+
+**Phase 3A status: Complete**
+
+**Next step: Phase 3B — split dashboard composition into reusable widgets while keeping static test data and the existing verified refresh path**
 
 ## Phase 4 — Time and Wi-Fi status
 
