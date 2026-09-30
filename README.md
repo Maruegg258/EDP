@@ -96,7 +96,7 @@ The display driver remains responsible only for controller/RAM/refresh behavior.
 
 Phase 3A-1 extracted dashboard state and composition from the sketch into dedicated `DashboardState` and `Dashboard` objects. The Phase 2D layout and verified refresh behavior were preserved and re-verified on hardware on 2026-09-30.
 
-Phase 3A-2 extracts the static dashboard regression content into `DashboardTestStates.h`, leaving the application sketch responsible for sequencing rendering and display refresh rather than owning UI test values. Hardware verification of this extraction is pending.
+Phase 3A-2 extracted the static dashboard regression content into `DashboardTestStates.h`, leaving the application sketch responsible for sequencing rendering and display refresh rather than owning UI test values. The unchanged full -> partial -> maintenance -> three partial regression sequence was verified on hardware on 2026-09-30.
 
 The UI source files currently remain in the Arduino sketch directory so the existing Arduino build flow continues to discover and compile them without introducing a build-system change. Their architectural ownership is the UI layer.
 
