@@ -450,7 +450,7 @@ The next checkpoint is Phase 2D-2: re-run the proven partial + maintenance refre
 
 ## Phase 2D-2 — Mixed-content refresh regression
 
-**Status: Hardware verification pending**
+**Status: Verified on hardware**
 
 **Implementation date:** 2026-09-29
 
@@ -513,3 +513,24 @@ Across all six visible states:
 - post-maintenance partials must remain as sharp as pre-maintenance content
 
 Phase 2D-2 remains pending until the complete sequence is observed on the physical panel.
+
+
+### Hardware result
+
+User-confirmed PASS on the physical CrowPanel 5.79-inch display on 2026-09-30.
+
+Observed result:
+
+- the complete Full -> Partial -> Maintenance -> three post-maintenance Partial sequence completed normally
+- changing clock text remained clean
+- changing weather and Wi-Fi icons did not leave stale pixels
+- changing BTC, ETH, and HYPE price strings remained sharp without doubled glyphs
+- the centered clock and seam-crossing ETH card remained continuous across visible x=396
+- changing white status text on the black bar did not leave visible remnants
+- post-maintenance partial updates remained visually stable
+
+### Conclusion
+
+Phase 2D-2 is hardware-verified. Mixed text, bitmap icons, black/white filled regions, and seam-crossing content remain stable across the project's verified maintenance-refresh and follow-up-partial sequence.
+
+The final Phase 2 checkpoint is Phase 2D-3: repository/documentation closeout and preparation for the Phase 3 dashboard/widget framework.
