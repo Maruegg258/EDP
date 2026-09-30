@@ -2,8 +2,8 @@
 #include <cstring>
 
 #include "CrowEPD579.h"
-#include "Font5x7.h"
-#include "Font9x13.h"
+#include "Dashboard.h"
+#include "DashboardState.h"
 #include "GraphicsBW.h"
 #include "Icons.h"
 
@@ -21,18 +21,7 @@ GraphicsBW graphics(
     CrowEPD579::CONTROLLER_SEAM_GAP
 );
 
-struct DashboardState {
-  const char* time;
-  const Bitmap1bpp* weatherIcon;
-  const char* weatherLabel;
-  const char* temperature;
-  const Bitmap1bpp* wifiIcon;
-  const char* rssi;
-  const char* btcPrice;
-  const char* ethPrice;
-  const char* hypePrice;
-  const char* status;
-};
+Dashboard dashboard(graphics);
 
 static const DashboardState BASELINE = {
   "12:34",
@@ -112,123 +101,6 @@ static const DashboardState POST_MAINTENANCE[] = {
   }
 };
 
-static bool drawCenteredText(const BitmapFont& font,
-                             const char* text,
-                             int16_t centerX,
-                             int16_t y,
-                             uint8_t scale,
-                             bool black = true) {
-  const uint16_t width = graphics.textWidth(font, text, scale);
-  if (width == 0 || width > graphics.width()) {
-    return false;
-  }
-
-  const int16_t x = static_cast<int16_t>(centerX - width / 2);
-  return graphics.drawText(font, text, x, y, scale, black);
-}
-
-static bool drawCryptoCard(int16_t x,
-                           const Bitmap1bpp& icon,
-                           const char* symbol,
-                           const char* price) {
-  constexpr uint16_t CARD_WIDTH = 230;
-  constexpr uint16_t CARD_HEIGHT = 126;
-  constexpr int16_t CARD_Y = 82;
-  const int16_t centerX = static_cast<int16_t>(x + CARD_WIDTH / 2);
-
-  graphics.drawRect(x, CARD_Y, CARD_WIDTH, CARD_HEIGHT, true);
-
-  if (!graphics.drawBitmap(icon, centerX - 16, CARD_Y + 12, true)) {
-    return false;
-  }
-
-  if (!drawCenteredText(
-          Font5x7::FONT,
-          symbol,
-          centerX,
-          CARD_Y + 50,
-          2,
-          true)) {
-    return false;
-  }
-
-  if (!drawCenteredText(
-          Font9x13::FONT,
-          price,
-          centerX,
-          CARD_Y + 72,
-          2,
-          true)) {
-    return false;
-  }
-
-  return drawCenteredText(
-      Font5x7::FONT,
-      "PERP",
-      centerX,
-      CARD_Y + 108,
-      1,
-      true
-  );
-}
-
-static bool buildDashboardFrame(const DashboardState& state) {
-  graphics.clear(true);
-
-  graphics.drawRect(8, 8, 776, 256, true);
-  graphics.drawLine(20, 68, 772, 68, true);
-
-  if (!graphics.drawBitmap(*state.weatherIcon, 26, 20, true) ||
-      !graphics.drawText(
-          Font5x7::FONT,
-          state.weatherLabel,
-          72,
-          18,
-          1,
-          true) ||
-      !graphics.drawText(
-          Font5x7::FONT,
-          state.temperature,
-          72,
-          36,
-          2,
-          true)) {
-    return false;
-  }
-
-  if (!drawCenteredText(
-          Font9x13::FONT,
-          state.time,
-          CrowEPD579::VISIBLE_HALF_WIDTH,
-          16,
-          3,
-          true)) {
-    return false;
-  }
-
-  if (!graphics.drawText(Font5x7::FONT, "WIFI", 658, 18, 1, true) ||
-      !graphics.drawText(Font9x13::FONT, state.rssi, 658, 34, 1, true) ||
-      !graphics.drawBitmap(*state.wifiIcon, 734, 22, true)) {
-    return false;
-  }
-
-  if (!drawCryptoCard(24, Icons::CRYPTO_BTC, "BTC", state.btcPrice) ||
-      !drawCryptoCard(281, Icons::CRYPTO_ETH, "ETH", state.ethPrice) ||
-      !drawCryptoCard(538, Icons::CRYPTO_HYPE, "HYPE", state.hypePrice)) {
-    return false;
-  }
-
-  graphics.fillRect(24, 222, 744, 30, true);
-  return drawCenteredText(
-      Font5x7::FONT,
-      state.status,
-      CrowEPD579::VISIBLE_HALF_WIDTH,
-      230,
-      2,
-      false
-  );
-}
-
 static bool runNormalPartial(const DashboardState& state) {
   if (!display.begin()) {
     Serial.println("FAIL: partial wake/reset timed out.");
@@ -240,7 +112,7 @@ static bool runNormalPartial(const DashboardState& state) {
     return false;
   }
 
-  if (!buildDashboardFrame(state)) {
+  if (!dashboard.render(state)) {
     Serial.println("FAIL: partial frame rendering failed.");
     return false;
   }
@@ -265,12 +137,12 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 2D-2: mixed-content refresh regression");
+  Serial.println("EDP Phase 3A-1: dashboard UI extraction regression");
   Serial.println("Full baseline -> partial -> maintenance -> three partials.");
-  Serial.println("Watch text, icons, card contents, seam, and white-on-black status text.");
+  Serial.println("The physical frame must remain identical to the Phase 2D baseline.");
 
   Serial.println("Step 1/6: full baseline...");
-  if (!buildDashboardFrame(BASELINE)) {
+  if (!dashboard.render(BASELINE)) {
     Serial.println("FAIL: baseline frame rendering failed.");
     return;
   }
@@ -299,7 +171,7 @@ void setup() {
   }
 
   Serial.println("Step 3/6: maintenance refresh...");
-  if (!buildDashboardFrame(MAINTENANCE)) {
+  if (!dashboard.render(MAINTENANCE)) {
     Serial.println("FAIL: maintenance frame rendering failed.");
     return;
   }
@@ -332,10 +204,10 @@ void setup() {
     return;
   }
 
-  Serial.println("PASS: Phase 2D-2 command sequence completed.");
+  Serial.println("PASS: Phase 3A-1 command sequence completed.");
   Serial.println("Physical inspection is REQUIRED.");
   Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
-  Serial.println("No old text/icon should remain and no content should be blurred or doubled.");
+  Serial.println("Layout, text, icons, refresh behavior, and image quality must match Phase 2D.");
 }
 
 void loop() {
