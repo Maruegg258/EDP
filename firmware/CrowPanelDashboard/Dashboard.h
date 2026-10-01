@@ -4,6 +4,7 @@
 #include "CryptoWidget.h"
 #include "DashboardState.h"
 #include "GraphicsBW.h"
+#include "StatusWidget.h"
 #include "WeatherWidget.h"
 #include "WiFiWidget.h"
 
@@ -21,4 +22,5 @@ private:
   CryptoWidget _btc;
   CryptoWidget _eth;
   CryptoWidget _hype;
+  StatusWidget _status;
 };

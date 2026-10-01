@@ -1,8 +1,6 @@
 #include "Dashboard.h"
 
-#include "Font5x7.h"
 #include "Icons.h"
-#include "UiText.h"
 
 namespace {
 
@@ -21,7 +19,8 @@ Dashboard::Dashboard(GraphicsBW& graphics)
       _wifi(graphics, 658, 18),
       _btc(graphics, 24, 82, Icons::CRYPTO_BTC, "BTC"),
       _eth(graphics, 281, 82, Icons::CRYPTO_ETH, "ETH"),
-      _hype(graphics, 538, 82, Icons::CRYPTO_HYPE, "HYPE") {
+      _hype(graphics, 538, 82, Icons::CRYPTO_HYPE, "HYPE"),
+      _status(graphics, 24, 222, 744, 30) {
 }
 
 bool Dashboard::render(const DashboardState& state) {
@@ -36,26 +35,11 @@ bool Dashboard::render(const DashboardState& state) {
   );
   _graphics.drawLine(20, 68, 772, 68, true);
 
-  if (!_weather.render(
-          *state.weatherIcon,
-          state.weatherLabel,
-          state.temperature) ||
-      !_clock.render(state.time) ||
-      !_wifi.render(*state.wifiIcon, state.rssi) ||
-      !_btc.render(state.btcPrice) ||
-      !_eth.render(state.ethPrice) ||
-      !_hype.render(state.hypePrice)) {
-    return false;
-  }
-
-  _graphics.fillRect(24, 222, 744, 30, true);
-  return UiText::drawCentered(
-      _graphics,
-      Font5x7::FONT,
-      state.status,
-      static_cast<int16_t>(_graphics.width() / 2),
-      230,
-      2,
-      false
-  );
+  return _weather.render(state.weather) &&
+         _clock.render(state.clock) &&
+         _wifi.render(state.wifi) &&
+         _btc.render(state.btc) &&
+         _eth.render(state.eth) &&
+         _hype.render(state.hype) &&
+         _status.render(state.status);
 }

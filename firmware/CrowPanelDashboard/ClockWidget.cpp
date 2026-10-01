@@ -11,11 +11,11 @@ ClockWidget::ClockWidget(GraphicsBW& graphics,
       _y(y) {
 }
 
-bool ClockWidget::render(const char* time) {
+bool ClockWidget::render(const ClockWidgetState& state) {
   return UiText::drawCentered(
       _graphics,
       Font9x13::FONT,
-      time,
+      state.time,
       _centerX,
       _y,
       3,

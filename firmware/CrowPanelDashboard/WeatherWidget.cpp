@@ -10,20 +10,18 @@ WeatherWidget::WeatherWidget(GraphicsBW& graphics,
       _y(y) {
 }
 
-bool WeatherWidget::render(const Bitmap1bpp& icon,
-                           const char* label,
-                           const char* temperature) {
-  return _graphics.drawBitmap(icon, _x, _y + 2, true) &&
+bool WeatherWidget::render(const WeatherWidgetState& state) {
+  return _graphics.drawBitmap(*state.icon, _x, _y + 2, true) &&
          _graphics.drawText(
              Font5x7::FONT,
-             label,
+             state.label,
              _x + 46,
              _y,
              1,
              true) &&
          _graphics.drawText(
              Font5x7::FONT,
-             temperature,
+             state.temperature,
              _x + 46,
              _y + 18,
              2,

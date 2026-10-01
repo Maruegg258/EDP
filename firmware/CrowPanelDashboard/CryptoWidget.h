@@ -4,6 +4,7 @@
 
 #include "Bitmap1bpp.h"
 #include "GraphicsBW.h"
+#include "WidgetStates.h"
 
 class CryptoWidget {
 public:
@@ -13,7 +14,7 @@ public:
                const Bitmap1bpp& icon,
                const char* symbol);
 
-  bool render(const char* price);
+  bool render(const CryptoWidgetState& state);
 
 private:
   GraphicsBW& _graphics;

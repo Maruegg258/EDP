@@ -11,7 +11,7 @@ WiFiWidget::WiFiWidget(GraphicsBW& graphics,
       _y(y) {
 }
 
-bool WiFiWidget::render(const Bitmap1bpp& icon, const char* rssi) {
+bool WiFiWidget::render(const WiFiWidgetState& state) {
   return _graphics.drawText(
              Font5x7::FONT,
              "WIFI",
@@ -21,13 +21,13 @@ bool WiFiWidget::render(const Bitmap1bpp& icon, const char* rssi) {
              true) &&
          _graphics.drawText(
              Font9x13::FONT,
-             rssi,
+             state.rssi,
              _x,
              _y + 16,
              1,
              true) &&
          _graphics.drawBitmap(
-             icon,
+             *state.icon,
              _x + 76,
              _y + 4,
              true);

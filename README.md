@@ -66,12 +66,14 @@ CrowPanelDashboard.ino
         |    +-- MarketDataService   (planned)
         |
         +-- ui/
+             +-- WidgetStates        (implemented)
              +-- DashboardState      (implemented)
              +-- Dashboard           (implemented)
              +-- ClockWidget         (implemented)
              +-- WeatherWidget       (implemented)
              +-- CryptoWidget        (implemented)
              +-- WiFiWidget          (implemented)
+             +-- StatusWidget        (implemented)
 ```
 
 Display drivers must not know about Wi-Fi, HTTP, market data, or weather services. Data services must not directly control E-paper refreshes. UI code decides what changed and the display layer performs the required refresh.
@@ -102,6 +104,8 @@ The UI source files currently remain in the Arduino sketch directory so the exis
 
 Phase 3B-1 extracted the clock, weather, Wi-Fi, and crypto rendering blocks into dedicated widgets. BTC, ETH, and HYPE share one reusable `CryptoWidget` implementation. The unchanged full -> partial -> maintenance -> three partial regression sequence was verified on hardware on 2026-10-01.
 
+Phase 3B-2 introduces widget-specific state objects through `WidgetStates.h` and moves the dynamic bottom status bar into a dedicated `StatusWidget`. `DashboardState` now composes widget states, while `Dashboard` only owns static frame chrome and widget composition. This is the boundary Phase 3C will use for widget-local change detection. Hardware verification is pending.
+
 Dirty-region ownership, widget change detection, and refresh coalescing remain Phase 3 responsibilities rather than GraphicsBW responsibilities.
 
 ## Current repository structure
@@ -119,6 +123,7 @@ EDP/
 ├─ firmware/
 │  └─ CrowPanelDashboard/
 │     ├─ CrowPanelDashboard.ino
+│     ├─ WidgetStates.h
 │     ├─ DashboardState.h
 │     ├─ DashboardTestStates.h
 │     ├─ Dashboard.h
@@ -132,6 +137,8 @@ EDP/
 │     ├─ WiFiWidget.cpp
 │     ├─ CryptoWidget.h
 │     ├─ CryptoWidget.cpp
+│     ├─ StatusWidget.h
+│     ├─ StatusWidget.cpp
 │     ├─ config.example.h
 │     ├─ EpaperBus.h
 │     ├─ EpaperBus.cpp

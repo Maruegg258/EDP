@@ -2,14 +2,14 @@
 
 #include <Arduino.h>
 
-#include "Bitmap1bpp.h"
 #include "GraphicsBW.h"
+#include "WidgetStates.h"
 
 class WiFiWidget {
 public:
   WiFiWidget(GraphicsBW& graphics, int16_t x, int16_t y);
 
-  bool render(const Bitmap1bpp& icon, const char* rssi);
+  bool render(const WiFiWidgetState& state);
 
 private:
   GraphicsBW& _graphics;

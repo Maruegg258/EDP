@@ -23,7 +23,7 @@ CryptoWidget::CryptoWidget(GraphicsBW& graphics,
       _symbol(symbol) {
 }
 
-bool CryptoWidget::render(const char* price) {
+bool CryptoWidget::render(const CryptoWidgetState& state) {
   const int16_t centerX =
       static_cast<int16_t>(_x + CARD_WIDTH / 2);
 
@@ -57,7 +57,7 @@ bool CryptoWidget::render(const char* price) {
   if (!UiText::drawCentered(
           _graphics,
           Font9x13::FONT,
-          price,
+          state.price,
           centerX,
           _y + 72,
           2,
