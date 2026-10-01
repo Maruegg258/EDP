@@ -109,7 +109,7 @@ Phase 3B-1 extracted the clock, weather, Wi-Fi, and crypto rendering blocks into
 
 Phase 3B-2 introduces widget-specific state objects through `WidgetStates.h` and moves the dynamic bottom status bar into a dedicated `StatusWidget`. `DashboardState` now composes widget states, while `Dashboard` only owns static frame chrome and widget composition. This boundary was verified on hardware on 2026-10-01 with the unchanged full -> partial -> maintenance -> three partial regression sequence and is the basis for Phase 3C widget-local change detection.
 
-Phase 3C-1 adds content-based widget-state comparison and a logical dashboard dirty bitmask for clock, weather, Wi-Fi, BTC, ETH, HYPE, and status. Text values are compared by content rather than pointer address; project-owned weather/Wi-Fi bitmap assets are compared by object identity. This phase does not yet skip refreshes or perform physical dirty-region updates. Hardware verification is pending.
+Phase 3C-1 adds content-based widget-state comparison and a logical dashboard dirty bitmask for clock, weather, Wi-Fi, BTC, ETH, HYPE, and status. Text values are compared by content rather than pointer address; project-owned weather/Wi-Fi bitmap assets are compared by object identity. The Serial dirty self-check and the unchanged full -> partial -> maintenance -> three partial display regression were verified on hardware on 2026-10-01. This phase does not yet skip refreshes or perform physical dirty-region updates.
 
 Physical dirty-region refresh, durable previous-state ownership, skip-refresh behavior, and refresh coalescing remain later Phase 3 responsibilities rather than GraphicsBW responsibilities.
 
