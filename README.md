@@ -104,7 +104,7 @@ The UI source files currently remain in the Arduino sketch directory so the exis
 
 Phase 3B-1 extracted the clock, weather, Wi-Fi, and crypto rendering blocks into dedicated widgets. BTC, ETH, and HYPE share one reusable `CryptoWidget` implementation. The unchanged full -> partial -> maintenance -> three partial regression sequence was verified on hardware on 2026-10-01.
 
-Phase 3B-2 introduces widget-specific state objects through `WidgetStates.h` and moves the dynamic bottom status bar into a dedicated `StatusWidget`. `DashboardState` now composes widget states, while `Dashboard` only owns static frame chrome and widget composition. This is the boundary Phase 3C will use for widget-local change detection. Hardware verification is pending.
+Phase 3B-2 introduces widget-specific state objects through `WidgetStates.h` and moves the dynamic bottom status bar into a dedicated `StatusWidget`. `DashboardState` now composes widget states, while `Dashboard` only owns static frame chrome and widget composition. This boundary was verified on hardware on 2026-10-01 with the unchanged full -> partial -> maintenance -> three partial regression sequence and is the basis for Phase 3C widget-local change detection.
 
 Dirty-region ownership, widget change detection, and refresh coalescing remain Phase 3 responsibilities rather than GraphicsBW responsibilities.
 
