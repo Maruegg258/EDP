@@ -116,11 +116,18 @@ Phase 3C checkpoints:
 
 - [x] Phase 3C-1: Add widget-state comparison and a logical dashboard dirty bitmask without changing rendering or physical refresh behavior (verified on hardware, 2026-10-01)
 - [x] Phase 3C-2: Add a durable previous-state snapshot that owns copied text values instead of retaining live data pointers (verified on hardware, 2026-10-01)
-- [ ] Phase 3C-3: Use dirty results in the application flow to skip refresh when nothing changed, while preserving full-frame composition and the verified partial-refresh path (implementation committed; hardware verification pending)
+- [x] Phase 3C-3: Use dirty results in the application flow to skip refresh when nothing changed, while preserving full-frame composition and the verified partial-refresh path (verified on hardware, 2026-10-01)
 
-**Phase 3C status: In Progress**
+**Phase 3C status: Complete**
 
-**Next step: Hardware-verify Phase 3C-3; unchanged-state steps must skip rendering/display wake/refresh while changed-state steps preserve the verified full-frame partial-refresh path**
+Phase 3D checkpoints:
+
+- [ ] Phase 3D-1: Introduce refresh coalescing so multiple logical data changes can be merged into one pending dashboard update before a single physical refresh
+- [ ] Phase 3D-2: Verify coalesced updates preserve dirty information, durable snapshot ownership, skip-unchanged behavior, and the existing verified refresh path
+
+**Phase 3D status: Not Started**
+
+**Next step: Phase 3D-1 — add refresh coalescing without introducing physical dirty-window refresh**
 
 ## Phase 4 — Time and Wi-Fi status
 

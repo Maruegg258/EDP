@@ -114,9 +114,11 @@ Phase 3C-1 adds content-based widget-state comparison and a logical dashboard di
 
 Phase 3C-2 adds `DashboardStateSnapshot`, which owns fixed-size copies of every dynamic text field while retaining project-owned weather/Wi-Fi bitmap references. Snapshot capture validates capacity before copying, so a failed capture does not partially replace the previous logical state. A Serial self-check mutates the original live buffers after capture to verify that dirty detection still compares against the preserved previous values. The snapshot self-check and unchanged six-stage display regression were verified on hardware on 2026-10-01.
 
-Phase 3C-3 applies the logical dirty result to the application flow. When the incoming state matches the durable previous-state snapshot, the firmware skips framebuffer rendering, display wake/reset, RAM restore, and physical refresh. Changed states still compose the full framebuffer and use the already verified full-screen partial or maintenance refresh path. The regression intentionally repeats unchanged states around baseline, partial, maintenance, and final frames so the skip behavior can be observed on hardware. Hardware verification is pending.
+Phase 3C-3 applies the logical dirty result to the application flow. When the incoming state matches the durable previous-state snapshot, the firmware skips framebuffer rendering, display wake/reset, RAM restore, and physical refresh. Changed states still compose the full framebuffer and use the already verified full-screen partial or maintenance refresh path. The regression intentionally repeats unchanged states around baseline, partial, maintenance, and final frames so the skip behavior can be observed on hardware. The skip behavior and changed-state refresh path were verified on hardware on 2026-10-01.
 
-Physical dirty-region refresh and refresh coalescing remain later Phase 3 responsibilities rather than GraphicsBW responsibilities.
+Phase 3C is therefore complete: the UI can identify which widgets changed, preserve a durable previous logical state, and avoid unnecessary E-paper activity when the incoming dashboard state is unchanged.
+
+Physical dirty-region refresh remains deferred. Phase 3D will add refresh coalescing while continuing to use full-frame composition and the verified refresh path.
 
 ## Current repository structure
 
