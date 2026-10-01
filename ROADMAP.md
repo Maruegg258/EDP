@@ -107,12 +107,12 @@ Hardware checkpoints:
 
 Phase 3B checkpoints:
 
-- [ ] Phase 3B-1: Extract Clock, Weather, Wi-Fi, and reusable Crypto widgets from `Dashboard` while preserving the Phase 3A layout and verified refresh sequence (implementation committed; hardware verification pending)
+- [x] Phase 3B-1: Extract Clock, Weather, Wi-Fi, and reusable Crypto widgets from `Dashboard` while preserving the Phase 3A layout and verified refresh sequence (verified on hardware, 2026-10-01)
 - [ ] Phase 3B-2: Finalize the widget-facing composition boundary and prepare widget-local state/change detection for Phase 3C
 
 **Phase 3B status: In Progress**
 
-**Next step: Hardware-verify Phase 3B-1 with the unchanged full -> partial -> maintenance -> three partial regression sequence**
+**Next step: Phase 3B-2 — finalize the widget-facing composition boundary and prepare widget-local state/change detection for Phase 3C**
 
 ## Phase 4 — Time and Wi-Fi status
 
