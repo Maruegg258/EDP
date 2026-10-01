@@ -86,7 +86,7 @@ See [docs/PHASE2_GRAPHICS.md](docs/PHASE2_GRAPHICS.md) for Phase 2 graphics veri
 
 ## Phase 3 — Dashboard framework
 
-**Status: In Progress**
+**Status: Complete**
 
 **Goal:** Separate data from presentation and refresh only what needs to change.
 
@@ -123,15 +123,26 @@ Phase 3C checkpoints:
 Phase 3D checkpoints:
 
 - [x] Phase 3D-1: Introduce refresh coalescing so multiple logical data changes can be merged into one pending dashboard update before a single physical refresh (verified on hardware, 2026-10-01)
-- [ ] Phase 3D-2: Verify coalesced updates preserve dirty information, durable snapshot ownership, skip-unchanged behavior, and the existing verified refresh path (integration regression committed; hardware verification pending)
+- [x] Phase 3D-2: Verify coalesced updates preserve dirty information, durable snapshot ownership, skip-unchanged behavior, and the existing verified refresh path (verified on hardware, 2026-10-01)
 
-**Phase 3D status: In Progress**
+**Phase 3D status: Complete**
 
-**Next step: Hardware-verify Phase 3D-2; ownership/discard self-checks must pass, reverted pending changes must skip refresh, and changed states must preserve the verified refresh path**
+Phase 3 is complete. The dashboard framework now has modular widgets, content-based change detection, durable state snapshots, skip-unchanged behavior, and refresh coalescing while preserving the verified full-frame partial/maintenance refresh paths.
 
 ## Phase 4 — Time and Wi-Fi status
 
+**Status: Not Started**
+
 **Goal:** Add the first live system data without external content APIs.
+
+Phase 4 checkpoints:
+
+- [ ] Phase 4A-1: Add a Wi-Fi connection manager with local credentials kept outside Git, connection-state reporting, and no additional network services
+- [ ] Phase 4A-2: Feed live Wi-Fi RSSI / connection state into the existing Wi-Fi widget through the Phase 3 coalescing path
+- [ ] Phase 4B-1: Add NTP-based time synchronization with explicit local timezone handling
+- [ ] Phase 4B-2: Feed minute-level live time into the Clock widget and verify coalesced clock + Wi-Fi updates
+
+**Next step: Phase 4A-1 — add the Wi-Fi connection manager without changing the display driver or refresh sequence**
 
 Planned work:
 

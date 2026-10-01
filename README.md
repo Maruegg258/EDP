@@ -121,9 +121,11 @@ Phase 3C is therefore complete: the UI can identify which widgets changed, prese
 
 Phase 3D-1 adds `DashboardUpdateCoalescer`. It owns durable displayed and pending snapshots, accepts either a complete dashboard state or widget-specific Clock/Weather/Wi-Fi/BTC/ETH/HYPE/Status updates, and recomputes the pending dirty mask against the last physically displayed state. Multiple widget updates can therefore accumulate in one pending state and be committed only after one successful physical refresh. If staged changes revert back to the displayed value before flush, their dirty bits disappear and the refresh can still be skipped. The coalescer self-check, seven-widget single-refresh behavior, unchanged-state skips, and existing refresh quality were verified on hardware on 2026-10-01.
 
-Phase 3D-2 adds an integration regression around the existing coalescer rather than expanding its API. The new checks verify that staged pending data owns copied text even if source buffers mutate, discarding pending work leaves the displayed snapshot unchanged, committing advances the displayed snapshot only after a successful flush, and dirty bits can accumulate and then cancel back to NONE before any display activity. The physical regression retains the verified full-frame partial/maintenance paths. Hardware verification is pending.
+Phase 3D-2 adds an integration regression around the existing coalescer rather than expanding its API. The checks verify that staged pending data owns copied text even if source buffers mutate, discarding pending work leaves the displayed snapshot unchanged, committing advances the displayed snapshot only after a successful flush, and dirty bits can accumulate and then cancel back to NONE before any display activity. The ownership/discard checks, dirty-cancel skip behavior, coalesced refresh behavior, and existing full-frame partial/maintenance paths were verified on hardware on 2026-10-01.
 
-Physical dirty-region refresh remains deferred. Phase 3D continues to use full-frame composition and the verified full-screen partial/maintenance refresh paths.
+Phase 3 is complete as of 2026-10-01. The dashboard framework now provides modular widgets, logical dirty tracking, durable displayed/pending state ownership, skip-unchanged behavior, and refresh coalescing. Physical dirty-region refresh remains deliberately deferred; the project continues to use full-frame composition and the verified full-screen partial/maintenance refresh paths.
+
+Phase 4 will introduce the first live system data: Wi-Fi connection/RSSI and NTP-synchronized local time, routed through the existing Phase 3 state/coalescing architecture rather than directly controlling the display.
 
 ## Current repository structure
 
