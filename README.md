@@ -121,6 +121,8 @@ Phase 3C is therefore complete: the UI can identify which widgets changed, prese
 
 Phase 3D-1 adds `DashboardUpdateCoalescer`. It owns durable displayed and pending snapshots, accepts either a complete dashboard state or widget-specific Clock/Weather/Wi-Fi/BTC/ETH/HYPE/Status updates, and recomputes the pending dirty mask against the last physically displayed state. Multiple widget updates can therefore accumulate in one pending state and be committed only after one successful physical refresh. If staged changes revert back to the displayed value before flush, their dirty bits disappear and the refresh can still be skipped. The coalescer self-check, seven-widget single-refresh behavior, unchanged-state skips, and existing refresh quality were verified on hardware on 2026-10-01.
 
+Phase 3D-2 adds an integration regression around the existing coalescer rather than expanding its API. The new checks verify that staged pending data owns copied text even if source buffers mutate, discarding pending work leaves the displayed snapshot unchanged, committing advances the displayed snapshot only after a successful flush, and dirty bits can accumulate and then cancel back to NONE before any display activity. The physical regression retains the verified full-frame partial/maintenance paths. Hardware verification is pending.
+
 Physical dirty-region refresh remains deferred. Phase 3D continues to use full-frame composition and the verified full-screen partial/maintenance refresh paths.
 
 ## Current repository structure

@@ -123,11 +123,11 @@ Phase 3C checkpoints:
 Phase 3D checkpoints:
 
 - [x] Phase 3D-1: Introduce refresh coalescing so multiple logical data changes can be merged into one pending dashboard update before a single physical refresh (verified on hardware, 2026-10-01)
-- [ ] Phase 3D-2: Verify coalesced updates preserve dirty information, durable snapshot ownership, skip-unchanged behavior, and the existing verified refresh path
+- [ ] Phase 3D-2: Verify coalesced updates preserve dirty information, durable snapshot ownership, skip-unchanged behavior, and the existing verified refresh path (integration regression committed; hardware verification pending)
 
 **Phase 3D status: In Progress**
 
-**Next step: Phase 3D-2 — verify coalescing preserves dirty information, durable snapshot ownership, skip-unchanged behavior, and the existing verified refresh path**
+**Next step: Hardware-verify Phase 3D-2; ownership/discard self-checks must pass, reverted pending changes must skip refresh, and changed states must preserve the verified refresh path**
 
 ## Phase 4 — Time and Wi-Fi status
 

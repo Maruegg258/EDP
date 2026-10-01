@@ -316,6 +316,82 @@ static bool runCoalescerSelfCheck() {
   );
 }
 
+static bool runCoalescerOwnershipSelfCheck() {
+  DashboardUpdateCoalescer coalescer;
+  const DashboardState& baseline = DashboardTestStates::BASELINE;
+  const DashboardState& target = DashboardTestStates::PRE_MAINTENANCE;
+
+  if (!coalescer.establishDisplayed(baseline)) {
+    Serial.println("FAIL: ownership check baseline setup failed.");
+    return false;
+  }
+
+  char timeBuffer[8] = "12:35";
+  char btcBuffer[24] = "65240.10";
+  char statusBuffer[48] = "PARTIAL ONE";
+
+  DashboardState liveTarget = target;
+  liveTarget.clock.time = timeBuffer;
+  liveTarget.btc.price = btcBuffer;
+  liveTarget.status.text = statusBuffer;
+
+  if (!coalescer.stage(liveTarget)) {
+    Serial.println("FAIL: ownership check stage failed.");
+    return false;
+  }
+
+  strcpy(timeBuffer, "19:19");
+  strcpy(btcBuffer, "99999.99");
+  strcpy(statusBuffer, "MUTATED");
+
+  if (!expectDirty(
+          "coalescer pending owns staged values",
+          coalescer.pendingState(),
+          target,
+          DashboardDirty::NONE)) {
+    return false;
+  }
+
+  if (!expectDirty(
+          "mutated live source differs from pending",
+          coalescer.pendingState(),
+          liveTarget,
+          DashboardDirty::CLOCK |
+              DashboardDirty::BTC |
+              DashboardDirty::STATUS)) {
+    return false;
+  }
+
+  coalescer.discardPending();
+
+  if (coalescer.hasPendingUpdate() ||
+      coalescer.pendingDirty() != DashboardDirty::NONE) {
+    Serial.println("FAIL: discard did not clear pending state.");
+    return false;
+  }
+
+  if (!expectDirty(
+          "discard preserves displayed state",
+          coalescer.displayedState(),
+          baseline,
+          DashboardDirty::NONE)) {
+    return false;
+  }
+
+  if (!coalescer.stage(target) ||
+      !coalescer.commitPending()) {
+    Serial.println("FAIL: ownership check commit failed.");
+    return false;
+  }
+
+  return expectDirty(
+      "commit advances displayed state",
+      coalescer.displayedState(),
+      target,
+      DashboardDirty::NONE
+  );
+}
+
 static bool stageAndReport(
     const char* label,
     bool staged) {
@@ -498,8 +574,8 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 3D-1: refresh coalescing regression");
-  Serial.println("Multiple widget events are staged before one physical refresh.");
+  Serial.println("EDP Phase 3D-2: coalescing integration regression");
+  Serial.println("Verify dirty, durable ownership, discard/commit, skip, and refresh path.");
 
   if (!runDirtySelfCheck()) {
     Serial.println("FAIL: dirty comparison self-check failed.");
@@ -522,12 +598,19 @@ void setup() {
 
   Serial.println("PASS: refresh coalescer self-check.");
 
-  Serial.println("Step 1/9: establish full baseline...");
+  if (!runCoalescerOwnershipSelfCheck()) {
+    Serial.println("FAIL: coalescer ownership/discard self-check failed.");
+    return;
+  }
+
+  Serial.println("PASS: coalescer ownership/discard self-check.");
+
+  Serial.println("Step 1/10: establish full baseline...");
   if (!establishBaseline(DashboardTestStates::BASELINE)) {
     return;
   }
 
-  Serial.println("Step 2/9: stage seven PRE_MAINTENANCE widget events; then one partial...");
+  Serial.println("Step 2/10: stage seven PRE_MAINTENANCE widget events; one partial...");
   if (!stageStateAsWidgetEvents(DashboardTestStates::PRE_MAINTENANCE) ||
       !expectPendingDirty(
           "pre-maintenance final pending",
@@ -540,7 +623,7 @@ void setup() {
     return;
   }
 
-  Serial.println("Step 3/9: stage identical PRE_MAINTENANCE state; MUST SKIP...");
+  Serial.println("Step 3/10: identical PRE_MAINTENANCE; MUST SKIP...");
   if (!updateCoalescer.stage(DashboardTestStates::PRE_MAINTENANCE) ||
       !expectUpdateResult(
           "identical pre-maintenance",
@@ -549,7 +632,7 @@ void setup() {
     return;
   }
 
-  Serial.println("Step 4/9: stage seven MAINTENANCE widget events; then one maintenance refresh...");
+  Serial.println("Step 4/10: stage seven MAINTENANCE widget events; one maintenance refresh...");
   if (!stageStateAsWidgetEvents(DashboardTestStates::MAINTENANCE) ||
       !expectPendingDirty(
           "maintenance final pending",
@@ -562,7 +645,27 @@ void setup() {
     return;
   }
 
-  Serial.println("Step 5/9: stage identical MAINTENANCE state; MUST SKIP...");
+  Serial.println("Step 5/10: stage temporary changes then revert all before flush; MUST SKIP...");
+  if (!updateCoalescer.stageClock(DashboardTestStates::POST_MAINTENANCE[0].clock) ||
+      !updateCoalescer.stageBtc(DashboardTestStates::POST_MAINTENANCE[0].btc) ||
+      !expectPendingDirty(
+          "temporary clock+btc",
+          updateCoalescer,
+          DashboardDirty::CLOCK | DashboardDirty::BTC) ||
+      !updateCoalescer.stageClock(DashboardTestStates::MAINTENANCE.clock) ||
+      !updateCoalescer.stageBtc(DashboardTestStates::MAINTENANCE.btc) ||
+      !expectPendingDirty(
+          "temporary changes reverted",
+          updateCoalescer,
+          DashboardDirty::NONE) ||
+      !expectUpdateResult(
+          "reverted before flush",
+          flushPendingPartial(),
+          UpdateResult::SKIPPED)) {
+    return;
+  }
+
+  Serial.println("Step 6/10: identical MAINTENANCE state; MUST SKIP...");
   if (!updateCoalescer.stage(DashboardTestStates::MAINTENANCE) ||
       !expectUpdateResult(
           "identical maintenance",
@@ -571,7 +674,7 @@ void setup() {
     return;
   }
 
-  Serial.println("Step 6/9: stage first post-maintenance state; one partial...");
+  Serial.println("Step 7/10: first post-maintenance state; one partial...");
   if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[0]) ||
       !expectUpdateResult(
           "post partial one",
@@ -580,7 +683,7 @@ void setup() {
     return;
   }
 
-  Serial.println("Step 7/9: stage second post-maintenance state; one partial...");
+  Serial.println("Step 8/10: second post-maintenance state; one partial...");
   if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[1]) ||
       !expectUpdateResult(
           "post partial two",
@@ -589,7 +692,7 @@ void setup() {
     return;
   }
 
-  Serial.println("Step 8/9: stage third post-maintenance state; one partial...");
+  Serial.println("Step 9/10: third post-maintenance state; one partial...");
   if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[2]) ||
       !expectUpdateResult(
           "post partial three",
@@ -598,7 +701,7 @@ void setup() {
     return;
   }
 
-  Serial.println("Step 9/9: stage identical final state; MUST SKIP...");
+  Serial.println("Step 10/10: identical final state; MUST SKIP...");
   if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[2]) ||
       !expectUpdateResult(
           "identical final",
@@ -607,12 +710,13 @@ void setup() {
     return;
   }
 
-  Serial.println("PASS: Phase 3D-1 refresh coalescing regression completed.");
+  Serial.println("PASS: Phase 3D-2 coalescing integration regression completed.");
   Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("Steps 2 and 4 stage seven logical widget changes but must refresh only once.");
-  Serial.println("Steps 3, 5, and 9 must cause NO E-paper refresh activity.");
+  Serial.println("Steps 2 and 4 must each perform only one physical refresh.");
+  Serial.println("Steps 3, 5, 6, and 10 must cause NO E-paper refresh activity.");
+  Serial.println("Step 5 specifically proves dirty changes can cancel before flush.");
   Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
-  Serial.println("Changed-state refresh quality must match Phase 3C.");
+  Serial.println("Changed-state refresh quality must remain identical to Phase 3D-1.");
 }
 
 void loop() {
