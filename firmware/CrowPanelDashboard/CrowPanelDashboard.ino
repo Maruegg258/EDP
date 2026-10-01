@@ -26,6 +26,13 @@ GraphicsBW graphics(
 );
 
 Dashboard dashboard(graphics);
+DashboardStateSnapshot previousStateSnapshot;
+
+enum class UpdateResult {
+  FAILED,
+  SKIPPED,
+  REFRESHED
+};
 
 static void printDirtyMask(DashboardDirtyMask dirty) {
   Serial.print("0x");
@@ -209,24 +216,141 @@ static bool runSnapshotSelfCheck() {
   );
 }
 
-static bool runNormalPartial(const DashboardState& state) {
+static DashboardDirtyMask dirtyAgainstPrevious(
+    const DashboardState& state) {
+  if (!previousStateSnapshot.valid()) {
+    return DashboardDirty::ALL;
+  }
+
+  return detectDashboardDirty(
+      previousStateSnapshot.state(),
+      state
+  );
+}
+
+static bool capturePreviousState(const DashboardState& state) {
+  if (!previousStateSnapshot.capture(state)) {
+    Serial.println("FAIL: previous-state snapshot capture failed.");
+    return false;
+  }
+
+  return true;
+}
+
+static UpdateResult runPartialIfChanged(const DashboardState& state) {
+  const DashboardDirtyMask dirty = dirtyAgainstPrevious(state);
+
+  Serial.print("Partial candidate dirty: ");
+  printDirtyMask(dirty);
+
+  if (dirty == DashboardDirty::NONE) {
+    Serial.println("SKIP: state unchanged; display remains asleep.");
+    delay(4000);
+    return UpdateResult::SKIPPED;
+  }
+
   if (!display.begin()) {
     Serial.println("FAIL: partial wake/reset timed out.");
-    return false;
+    return UpdateResult::FAILED;
   }
 
   if (!display.restoreFrameStateForPartial(previousFrameBuffer)) {
     Serial.println("FAIL: partial state restore timed out.");
-    return false;
+    return UpdateResult::FAILED;
   }
 
   if (!dashboard.render(state)) {
     Serial.println("FAIL: partial frame rendering failed.");
-    return false;
+    return UpdateResult::FAILED;
   }
 
   if (!display.displayPartialFrame(frameBuffer)) {
     Serial.println("FAIL: partial refresh timed out.");
+    return UpdateResult::FAILED;
+  }
+
+  memcpy(
+      previousFrameBuffer,
+      frameBuffer,
+      CrowEPD579::FRAMEBUFFER_BYTES
+  );
+
+  const bool snapshotCaptured = capturePreviousState(state);
+  display.sleep();
+
+  if (!snapshotCaptured) {
+    return UpdateResult::FAILED;
+  }
+
+  delay(4000);
+  return UpdateResult::REFRESHED;
+}
+
+static UpdateResult runMaintenanceIfChanged(
+    const DashboardState& state) {
+  const DashboardDirtyMask dirty = dirtyAgainstPrevious(state);
+
+  Serial.print("Maintenance candidate dirty: ");
+  printDirtyMask(dirty);
+
+  if (dirty == DashboardDirty::NONE) {
+    Serial.println("SKIP: state unchanged; maintenance refresh not required.");
+    delay(4000);
+    return UpdateResult::SKIPPED;
+  }
+
+  if (!dashboard.render(state)) {
+    Serial.println("FAIL: maintenance frame rendering failed.");
+    return UpdateResult::FAILED;
+  }
+
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    Serial.println("FAIL: maintenance refresh timed out.");
+    return UpdateResult::FAILED;
+  }
+
+  memcpy(
+      previousFrameBuffer,
+      frameBuffer,
+      CrowEPD579::FRAMEBUFFER_BYTES
+  );
+
+  const bool snapshotCaptured = capturePreviousState(state);
+  display.sleep();
+
+  if (!snapshotCaptured) {
+    return UpdateResult::FAILED;
+  }
+
+  delay(4000);
+  return UpdateResult::REFRESHED;
+}
+
+static bool expectUpdateResult(const char* label,
+                               UpdateResult actual,
+                               UpdateResult expected) {
+  if (actual == expected) {
+    return true;
+  }
+
+  Serial.print("FAIL: unexpected update result for ");
+  Serial.println(label);
+  return false;
+}
+
+static bool establishBaseline(const DashboardState& state) {
+  if (!dashboard.render(state)) {
+    Serial.println("FAIL: baseline frame rendering failed.");
+    return false;
+  }
+
+  if (!display.begin()) {
+    Serial.println("FAIL: baseline display begin/reset timed out.");
+    return false;
+  }
+
+  if (!display.displayFullFrame(frameBuffer)) {
+    Serial.println("FAIL: baseline full refresh timed out.");
     return false;
   }
 
@@ -235,7 +359,14 @@ static bool runNormalPartial(const DashboardState& state) {
       frameBuffer,
       CrowEPD579::FRAMEBUFFER_BYTES
   );
+
+  const bool snapshotCaptured = capturePreviousState(state);
   display.sleep();
+
+  if (!snapshotCaptured) {
+    return false;
+  }
+
   delay(4000);
   return true;
 }
@@ -245,8 +376,8 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 3C-2: durable state snapshot regression");
-  Serial.println("Snapshot owns copied text; physical refresh behavior is unchanged.");
+  Serial.println("EDP Phase 3C-3: skip unchanged dashboard refreshes");
+  Serial.println("Dirty NONE skips rendering and all display wake/refresh work.");
 
   if (!runDirtySelfCheck()) {
     Serial.println("FAIL: dirty comparison self-check failed.");
@@ -256,80 +387,95 @@ void setup() {
   Serial.println("PASS: dirty comparison self-check.");
 
   if (!runSnapshotSelfCheck()) {
-    Serial.println("FAIL: Phase 3C-2 snapshot self-check failed.");
+    Serial.println("FAIL: snapshot self-check failed.");
     return;
   }
 
   Serial.println("PASS: durable snapshot self-check.");
-  Serial.println("Full baseline -> partial -> maintenance -> three partials.");
+  Serial.println("Regression includes unchanged-state SKIP checks.");
 
-  Serial.println("Step 1/6: full baseline...");
-  if (!dashboard.render(DashboardTestStates::BASELINE)) {
-    Serial.println("FAIL: baseline frame rendering failed.");
+  Serial.println("Step 1/10: establish full baseline...");
+  if (!establishBaseline(DashboardTestStates::BASELINE)) {
     return;
   }
 
-  if (!display.begin()) {
-    Serial.println("FAIL: baseline display begin/reset timed out.");
+  Serial.println("Step 2/10: repeat baseline; MUST SKIP...");
+  if (!expectUpdateResult(
+          "repeat baseline",
+          runPartialIfChanged(DashboardTestStates::BASELINE),
+          UpdateResult::SKIPPED)) {
     return;
   }
 
-  if (!display.displayFullFrame(frameBuffer)) {
-    Serial.println("FAIL: baseline full refresh timed out.");
+  Serial.println("Step 3/10: changed state; normal partial...");
+  if (!expectUpdateResult(
+          "pre-maintenance partial",
+          runPartialIfChanged(DashboardTestStates::PRE_MAINTENANCE),
+          UpdateResult::REFRESHED)) {
     return;
   }
 
-  memcpy(
-      previousFrameBuffer,
-      frameBuffer,
-      CrowEPD579::FRAMEBUFFER_BYTES
-  );
-  display.sleep();
-  delay(4000);
-
-  Serial.println("Step 2/6: normal partial before maintenance...");
-  if (!runNormalPartial(DashboardTestStates::PRE_MAINTENANCE)) {
+  Serial.println("Step 4/10: repeat partial state; MUST SKIP...");
+  if (!expectUpdateResult(
+          "repeat pre-maintenance",
+          runPartialIfChanged(DashboardTestStates::PRE_MAINTENANCE),
+          UpdateResult::SKIPPED)) {
     return;
   }
 
-  Serial.println("Step 3/6: maintenance refresh...");
-  if (!dashboard.render(DashboardTestStates::MAINTENANCE)) {
-    Serial.println("FAIL: maintenance frame rendering failed.");
+  Serial.println("Step 5/10: changed state; maintenance refresh...");
+  if (!expectUpdateResult(
+          "maintenance",
+          runMaintenanceIfChanged(DashboardTestStates::MAINTENANCE),
+          UpdateResult::REFRESHED)) {
     return;
   }
 
-  if (!display.maintenanceRefresh(frameBuffer)) {
-    Serial.println("FAIL: maintenance refresh timed out.");
+  Serial.println("Step 6/10: repeat maintenance state; MUST SKIP...");
+  if (!expectUpdateResult(
+          "repeat maintenance",
+          runMaintenanceIfChanged(DashboardTestStates::MAINTENANCE),
+          UpdateResult::SKIPPED)) {
     return;
   }
 
-  memcpy(
-      previousFrameBuffer,
-      frameBuffer,
-      CrowEPD579::FRAMEBUFFER_BYTES
-  );
-  display.sleep();
-  delay(4000);
-
-  Serial.println("Step 4/6: first partial after maintenance...");
-  if (!runNormalPartial(DashboardTestStates::POST_MAINTENANCE[0])) {
+  Serial.println("Step 7/10: first partial after maintenance...");
+  if (!expectUpdateResult(
+          "post partial one",
+          runPartialIfChanged(DashboardTestStates::POST_MAINTENANCE[0]),
+          UpdateResult::REFRESHED)) {
     return;
   }
 
-  Serial.println("Step 5/6: second partial after maintenance...");
-  if (!runNormalPartial(DashboardTestStates::POST_MAINTENANCE[1])) {
+  Serial.println("Step 8/10: second partial after maintenance...");
+  if (!expectUpdateResult(
+          "post partial two",
+          runPartialIfChanged(DashboardTestStates::POST_MAINTENANCE[1]),
+          UpdateResult::REFRESHED)) {
     return;
   }
 
-  Serial.println("Step 6/6: third partial after maintenance...");
-  if (!runNormalPartial(DashboardTestStates::POST_MAINTENANCE[2])) {
+  Serial.println("Step 9/10: third partial after maintenance...");
+  if (!expectUpdateResult(
+          "post partial three",
+          runPartialIfChanged(DashboardTestStates::POST_MAINTENANCE[2]),
+          UpdateResult::REFRESHED)) {
     return;
   }
 
-  Serial.println("PASS: Phase 3C-2 command sequence completed.");
+  Serial.println("Step 10/10: repeat final state; MUST SKIP...");
+  if (!expectUpdateResult(
+          "repeat final",
+          runPartialIfChanged(DashboardTestStates::POST_MAINTENANCE[2]),
+          UpdateResult::SKIPPED)) {
+    return;
+  }
+
+  Serial.println("PASS: Phase 3C-3 application dirty-gate regression completed.");
   Serial.println("Physical inspection is REQUIRED.");
+  Serial.println("Steps 2, 4, 6, and 10 must cause NO E-paper refresh activity.");
   Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
-  Serial.println("Layout, text, icons, refresh behavior, and image quality must match Phase 3C-1.");
+  Serial.println("Changed-state refresh quality must match Phase 3C-2.");
 }
 
 void loop() {
