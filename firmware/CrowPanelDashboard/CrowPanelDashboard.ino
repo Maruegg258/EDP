@@ -8,6 +8,7 @@
 #include "DashboardStateCompare.h"
 #include "DashboardStateSnapshot.h"
 #include "DashboardTestStates.h"
+#include "DashboardUpdateCoalescer.h"
 #include "GraphicsBW.h"
 #include "Icons.h"
 
@@ -26,7 +27,7 @@ GraphicsBW graphics(
 );
 
 Dashboard dashboard(graphics);
-DashboardStateSnapshot previousStateSnapshot;
+DashboardUpdateCoalescer updateCoalescer;
 
 enum class UpdateResult {
   FAILED,
@@ -216,38 +217,157 @@ static bool runSnapshotSelfCheck() {
   );
 }
 
-static DashboardDirtyMask dirtyAgainstPrevious(
-    const DashboardState& state) {
-  if (!previousStateSnapshot.valid()) {
-    return DashboardDirty::ALL;
-  }
+static bool expectPendingDirty(
+    const char* label,
+    const DashboardUpdateCoalescer& coalescer,
+    DashboardDirtyMask expected) {
+  const DashboardDirtyMask actual = coalescer.pendingDirty();
 
-  return detectDashboardDirty(
-      previousStateSnapshot.state(),
-      state
-  );
-}
+  Serial.print("Coalescer ");
+  Serial.print(label);
+  Serial.print(": ");
+  printDirtyMask(actual);
 
-static bool capturePreviousState(const DashboardState& state) {
-  if (!previousStateSnapshot.capture(state)) {
-    Serial.println("FAIL: previous-state snapshot capture failed.");
+  if (actual != expected) {
+    Serial.print("FAIL: expected ");
+    printDirtyMask(expected);
     return false;
   }
 
   return true;
 }
 
-static UpdateResult runPartialIfChanged(const DashboardState& state) {
-  const DashboardDirtyMask dirty = dirtyAgainstPrevious(state);
+static bool runCoalescerSelfCheck() {
+  DashboardUpdateCoalescer coalescer;
+  const DashboardState& baseline = DashboardTestStates::BASELINE;
+  const DashboardState& target = DashboardTestStates::PRE_MAINTENANCE;
 
-  Serial.print("Partial candidate dirty: ");
-  printDirtyMask(dirty);
+  if (!coalescer.establishDisplayed(baseline)) {
+    Serial.println("FAIL: coalescer baseline setup failed.");
+    return false;
+  }
 
-  if (dirty == DashboardDirty::NONE) {
-    Serial.println("SKIP: state unchanged; display remains asleep.");
+  if (!coalescer.stageClock(target.clock) ||
+      !expectPendingDirty(
+          "clock",
+          coalescer,
+          DashboardDirty::CLOCK)) {
+    return false;
+  }
+
+  if (!coalescer.stageBtc(target.btc) ||
+      !expectPendingDirty(
+          "clock+btc",
+          coalescer,
+          DashboardDirty::CLOCK | DashboardDirty::BTC)) {
+    return false;
+  }
+
+  if (!coalescer.stageWiFi(target.wifi) ||
+      !expectPendingDirty(
+          "clock+wifi+btc",
+          coalescer,
+          DashboardDirty::CLOCK |
+              DashboardDirty::WIFI |
+              DashboardDirty::BTC)) {
+    return false;
+  }
+
+  if (!coalescer.stageClock(baseline.clock) ||
+      !expectPendingDirty(
+          "clock reverted",
+          coalescer,
+          DashboardDirty::WIFI | DashboardDirty::BTC)) {
+    return false;
+  }
+
+  if (!coalescer.stageWiFi(baseline.wifi) ||
+      !coalescer.stageBtc(baseline.btc) ||
+      !expectPendingDirty(
+          "all reverted",
+          coalescer,
+          DashboardDirty::NONE) ||
+      coalescer.hasPendingUpdate()) {
+    Serial.println("FAIL: reverted coalescer should have no pending update.");
+    return false;
+  }
+
+  if (!coalescer.stage(target) ||
+      !expectPendingDirty(
+          "full target",
+          coalescer,
+          DashboardDirty::ALL) ||
+      !coalescer.hasPendingUpdate()) {
+    return false;
+  }
+
+  if (!coalescer.commitPending() ||
+      coalescer.hasPendingUpdate() ||
+      coalescer.pendingDirty() != DashboardDirty::NONE) {
+    Serial.println("FAIL: coalescer commit did not clear pending state.");
+    return false;
+  }
+
+  return expectDirty(
+      "coalescer committed target",
+      coalescer.displayedState(),
+      target,
+      DashboardDirty::NONE
+  );
+}
+
+static bool stageAndReport(
+    const char* label,
+    bool staged) {
+  if (!staged) {
+    Serial.print("FAIL: could not stage ");
+    Serial.println(label);
+    return false;
+  }
+
+  Serial.print("Staged ");
+  Serial.print(label);
+  Serial.print("; pending dirty: ");
+  printDirtyMask(updateCoalescer.pendingDirty());
+  return true;
+}
+
+static bool stageStateAsWidgetEvents(
+    const DashboardState& target) {
+  return stageAndReport(
+             "clock",
+             updateCoalescer.stageClock(target.clock)) &&
+         stageAndReport(
+             "weather",
+             updateCoalescer.stageWeather(target.weather)) &&
+         stageAndReport(
+             "wifi",
+             updateCoalescer.stageWiFi(target.wifi)) &&
+         stageAndReport(
+             "btc",
+             updateCoalescer.stageBtc(target.btc)) &&
+         stageAndReport(
+             "eth",
+             updateCoalescer.stageEth(target.eth)) &&
+         stageAndReport(
+             "hype",
+             updateCoalescer.stageHype(target.hype)) &&
+         stageAndReport(
+             "status",
+             updateCoalescer.stageStatus(target.status));
+}
+
+static UpdateResult flushPendingPartial() {
+  Serial.print("Partial flush pending dirty: ");
+  printDirtyMask(updateCoalescer.pendingDirty());
+
+  if (!updateCoalescer.hasPendingUpdate()) {
+    Serial.println("SKIP: no coalesced dashboard changes to refresh.");
     delay(4000);
     return UpdateResult::SKIPPED;
   }
+
+  const DashboardState& state = updateCoalescer.pendingState();
 
   if (!display.begin()) {
     Serial.println("FAIL: partial wake/reset timed out.");
@@ -275,10 +395,11 @@ static UpdateResult runPartialIfChanged(const DashboardState& state) {
       CrowEPD579::FRAMEBUFFER_BYTES
   );
 
-  const bool snapshotCaptured = capturePreviousState(state);
+  const bool committed = updateCoalescer.commitPending();
   display.sleep();
 
-  if (!snapshotCaptured) {
+  if (!committed) {
+    Serial.println("FAIL: coalesced state commit failed.");
     return UpdateResult::FAILED;
   }
 
@@ -286,18 +407,17 @@ static UpdateResult runPartialIfChanged(const DashboardState& state) {
   return UpdateResult::REFRESHED;
 }
 
-static UpdateResult runMaintenanceIfChanged(
-    const DashboardState& state) {
-  const DashboardDirtyMask dirty = dirtyAgainstPrevious(state);
+static UpdateResult flushPendingMaintenance() {
+  Serial.print("Maintenance flush pending dirty: ");
+  printDirtyMask(updateCoalescer.pendingDirty());
 
-  Serial.print("Maintenance candidate dirty: ");
-  printDirtyMask(dirty);
-
-  if (dirty == DashboardDirty::NONE) {
-    Serial.println("SKIP: state unchanged; maintenance refresh not required.");
+  if (!updateCoalescer.hasPendingUpdate()) {
+    Serial.println("SKIP: no coalesced dashboard changes; maintenance not required.");
     delay(4000);
     return UpdateResult::SKIPPED;
   }
+
+  const DashboardState& state = updateCoalescer.pendingState();
 
   if (!dashboard.render(state)) {
     Serial.println("FAIL: maintenance frame rendering failed.");
@@ -315,10 +435,11 @@ static UpdateResult runMaintenanceIfChanged(
       CrowEPD579::FRAMEBUFFER_BYTES
   );
 
-  const bool snapshotCaptured = capturePreviousState(state);
+  const bool committed = updateCoalescer.commitPending();
   display.sleep();
 
-  if (!snapshotCaptured) {
+  if (!committed) {
+    Serial.println("FAIL: coalesced maintenance state commit failed.");
     return UpdateResult::FAILED;
   }
 
@@ -360,10 +481,11 @@ static bool establishBaseline(const DashboardState& state) {
       CrowEPD579::FRAMEBUFFER_BYTES
   );
 
-  const bool snapshotCaptured = capturePreviousState(state);
+  const bool established = updateCoalescer.establishDisplayed(state);
   display.sleep();
 
-  if (!snapshotCaptured) {
+  if (!established) {
+    Serial.println("FAIL: coalescer baseline state capture failed.");
     return false;
   }
 
@@ -376,8 +498,8 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 3C-3: skip unchanged dashboard refreshes");
-  Serial.println("Dirty NONE skips rendering and all display wake/refresh work.");
+  Serial.println("EDP Phase 3D-1: refresh coalescing regression");
+  Serial.println("Multiple widget events are staged before one physical refresh.");
 
   if (!runDirtySelfCheck()) {
     Serial.println("FAIL: dirty comparison self-check failed.");
@@ -392,90 +514,105 @@ void setup() {
   }
 
   Serial.println("PASS: durable snapshot self-check.");
-  Serial.println("Regression includes unchanged-state SKIP checks.");
 
-  Serial.println("Step 1/10: establish full baseline...");
+  if (!runCoalescerSelfCheck()) {
+    Serial.println("FAIL: coalescer self-check failed.");
+    return;
+  }
+
+  Serial.println("PASS: refresh coalescer self-check.");
+
+  Serial.println("Step 1/9: establish full baseline...");
   if (!establishBaseline(DashboardTestStates::BASELINE)) {
     return;
   }
 
-  Serial.println("Step 2/10: repeat baseline; MUST SKIP...");
-  if (!expectUpdateResult(
-          "repeat baseline",
-          runPartialIfChanged(DashboardTestStates::BASELINE),
-          UpdateResult::SKIPPED)) {
-    return;
-  }
-
-  Serial.println("Step 3/10: changed state; normal partial...");
-  if (!expectUpdateResult(
-          "pre-maintenance partial",
-          runPartialIfChanged(DashboardTestStates::PRE_MAINTENANCE),
+  Serial.println("Step 2/9: stage seven PRE_MAINTENANCE widget events; then one partial...");
+  if (!stageStateAsWidgetEvents(DashboardTestStates::PRE_MAINTENANCE) ||
+      !expectPendingDirty(
+          "pre-maintenance final pending",
+          updateCoalescer,
+          DashboardDirty::ALL) ||
+      !expectUpdateResult(
+          "coalesced pre-maintenance partial",
+          flushPendingPartial(),
           UpdateResult::REFRESHED)) {
     return;
   }
 
-  Serial.println("Step 4/10: repeat partial state; MUST SKIP...");
-  if (!expectUpdateResult(
-          "repeat pre-maintenance",
-          runPartialIfChanged(DashboardTestStates::PRE_MAINTENANCE),
+  Serial.println("Step 3/9: stage identical PRE_MAINTENANCE state; MUST SKIP...");
+  if (!updateCoalescer.stage(DashboardTestStates::PRE_MAINTENANCE) ||
+      !expectUpdateResult(
+          "identical pre-maintenance",
+          flushPendingPartial(),
           UpdateResult::SKIPPED)) {
     return;
   }
 
-  Serial.println("Step 5/10: changed state; maintenance refresh...");
-  if (!expectUpdateResult(
-          "maintenance",
-          runMaintenanceIfChanged(DashboardTestStates::MAINTENANCE),
+  Serial.println("Step 4/9: stage seven MAINTENANCE widget events; then one maintenance refresh...");
+  if (!stageStateAsWidgetEvents(DashboardTestStates::MAINTENANCE) ||
+      !expectPendingDirty(
+          "maintenance final pending",
+          updateCoalescer,
+          DashboardDirty::ALL) ||
+      !expectUpdateResult(
+          "coalesced maintenance",
+          flushPendingMaintenance(),
           UpdateResult::REFRESHED)) {
     return;
   }
 
-  Serial.println("Step 6/10: repeat maintenance state; MUST SKIP...");
-  if (!expectUpdateResult(
-          "repeat maintenance",
-          runMaintenanceIfChanged(DashboardTestStates::MAINTENANCE),
+  Serial.println("Step 5/9: stage identical MAINTENANCE state; MUST SKIP...");
+  if (!updateCoalescer.stage(DashboardTestStates::MAINTENANCE) ||
+      !expectUpdateResult(
+          "identical maintenance",
+          flushPendingMaintenance(),
           UpdateResult::SKIPPED)) {
     return;
   }
 
-  Serial.println("Step 7/10: first partial after maintenance...");
-  if (!expectUpdateResult(
+  Serial.println("Step 6/9: stage first post-maintenance state; one partial...");
+  if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[0]) ||
+      !expectUpdateResult(
           "post partial one",
-          runPartialIfChanged(DashboardTestStates::POST_MAINTENANCE[0]),
+          flushPendingPartial(),
           UpdateResult::REFRESHED)) {
     return;
   }
 
-  Serial.println("Step 8/10: second partial after maintenance...");
-  if (!expectUpdateResult(
+  Serial.println("Step 7/9: stage second post-maintenance state; one partial...");
+  if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[1]) ||
+      !expectUpdateResult(
           "post partial two",
-          runPartialIfChanged(DashboardTestStates::POST_MAINTENANCE[1]),
+          flushPendingPartial(),
           UpdateResult::REFRESHED)) {
     return;
   }
 
-  Serial.println("Step 9/10: third partial after maintenance...");
-  if (!expectUpdateResult(
+  Serial.println("Step 8/9: stage third post-maintenance state; one partial...");
+  if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[2]) ||
+      !expectUpdateResult(
           "post partial three",
-          runPartialIfChanged(DashboardTestStates::POST_MAINTENANCE[2]),
+          flushPendingPartial(),
           UpdateResult::REFRESHED)) {
     return;
   }
 
-  Serial.println("Step 10/10: repeat final state; MUST SKIP...");
-  if (!expectUpdateResult(
-          "repeat final",
-          runPartialIfChanged(DashboardTestStates::POST_MAINTENANCE[2]),
+  Serial.println("Step 9/9: stage identical final state; MUST SKIP...");
+  if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[2]) ||
+      !expectUpdateResult(
+          "identical final",
+          flushPendingPartial(),
           UpdateResult::SKIPPED)) {
     return;
   }
 
-  Serial.println("PASS: Phase 3C-3 application dirty-gate regression completed.");
+  Serial.println("PASS: Phase 3D-1 refresh coalescing regression completed.");
   Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("Steps 2, 4, 6, and 10 must cause NO E-paper refresh activity.");
+  Serial.println("Steps 2 and 4 stage seven logical widget changes but must refresh only once.");
+  Serial.println("Steps 3, 5, and 9 must cause NO E-paper refresh activity.");
   Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
-  Serial.println("Changed-state refresh quality must match Phase 3C-2.");
+  Serial.println("Changed-state refresh quality must match Phase 3C.");
 }
 
 void loop() {

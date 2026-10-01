@@ -122,12 +122,12 @@ Phase 3C checkpoints:
 
 Phase 3D checkpoints:
 
-- [ ] Phase 3D-1: Introduce refresh coalescing so multiple logical data changes can be merged into one pending dashboard update before a single physical refresh
+- [ ] Phase 3D-1: Introduce refresh coalescing so multiple logical data changes can be merged into one pending dashboard update before a single physical refresh (implementation committed; hardware verification pending)
 - [ ] Phase 3D-2: Verify coalesced updates preserve dirty information, durable snapshot ownership, skip-unchanged behavior, and the existing verified refresh path
 
-**Phase 3D status: Not Started**
+**Phase 3D status: In Progress**
 
-**Next step: Phase 3D-1 — add refresh coalescing without introducing physical dirty-window refresh**
+**Next step: Hardware-verify Phase 3D-1; seven staged widget events must produce one physical refresh, while identical staged states must still skip refresh**
 
 ## Phase 4 — Time and Wi-Fi status
 
