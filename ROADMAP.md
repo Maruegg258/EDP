@@ -112,7 +112,15 @@ Phase 3B checkpoints:
 
 **Phase 3B status: Complete**
 
-**Next step: Phase 3C — add widget-local change detection / logical dirty state while keeping the existing verified full-frame composition and partial-refresh path**
+Phase 3C checkpoints:
+
+- [ ] Phase 3C-1: Add widget-state comparison and a logical dashboard dirty bitmask without changing rendering or physical refresh behavior (implementation committed; hardware verification pending)
+- [ ] Phase 3C-2: Add a durable previous-state snapshot that owns copied text values instead of retaining live data pointers
+- [ ] Phase 3C-3: Use dirty results in the application flow to skip refresh when nothing changed, while preserving full-frame composition and the verified partial-refresh path
+
+**Phase 3C status: In Progress**
+
+**Next step: Hardware-verify Phase 3C-1 and confirm the Serial dirty self-check passes before the unchanged six-stage display regression**
 
 ## Phase 4 — Time and Wi-Fi status
 

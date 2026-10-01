@@ -3,9 +3,12 @@
 
 #include "CrowEPD579.h"
 #include "Dashboard.h"
+#include "DashboardDirty.h"
 #include "DashboardState.h"
+#include "DashboardStateCompare.h"
 #include "DashboardTestStates.h"
 #include "GraphicsBW.h"
+#include "Icons.h"
 
 CrowEPD579 display;
 
@@ -22,6 +25,144 @@ GraphicsBW graphics(
 );
 
 Dashboard dashboard(graphics);
+
+static void printDirtyMask(DashboardDirtyMask dirty) {
+  Serial.print("0x");
+  Serial.print(static_cast<unsigned int>(dirty), HEX);
+  Serial.print(" [");
+
+  if (dirty == DashboardDirty::NONE) {
+    Serial.print("NONE");
+  } else {
+    bool first = true;
+
+    struct DirtyName {
+      DashboardDirtyMask bit;
+      const char* name;
+    };
+
+    static const DirtyName NAMES[] = {
+      { DashboardDirty::CLOCK, "CLOCK" },
+      { DashboardDirty::WEATHER, "WEATHER" },
+      { DashboardDirty::WIFI, "WIFI" },
+      { DashboardDirty::BTC, "BTC" },
+      { DashboardDirty::ETH, "ETH" },
+      { DashboardDirty::HYPE, "HYPE" },
+      { DashboardDirty::STATUS, "STATUS" }
+    };
+
+    for (const DirtyName& entry : NAMES) {
+      if ((dirty & entry.bit) == 0) {
+        continue;
+      }
+
+      if (!first) {
+        Serial.print("|");
+      }
+
+      Serial.print(entry.name);
+      first = false;
+    }
+  }
+
+  Serial.println("]");
+}
+
+static bool expectDirty(const char* label,
+                        const DashboardState& previous,
+                        const DashboardState& current,
+                        DashboardDirtyMask expected) {
+  const DashboardDirtyMask actual =
+      detectDashboardDirty(previous, current);
+
+  Serial.print("Dirty check ");
+  Serial.print(label);
+  Serial.print(": ");
+  printDirtyMask(actual);
+
+  if (actual != expected) {
+    Serial.print("FAIL: expected ");
+    printDirtyMask(expected);
+    return false;
+  }
+
+  return true;
+}
+
+static bool runDirtySelfCheck() {
+  const DashboardState& baseline = DashboardTestStates::BASELINE;
+
+  DashboardState clockOnly = baseline;
+  clockOnly.clock.time = "12:35";
+
+  DashboardState weatherOnly = baseline;
+  weatherOnly.weather.icon = &Icons::WEATHER_CLOUD;
+
+  DashboardState wifiOnly = baseline;
+  wifiOnly.wifi.rssi = "-58";
+
+  DashboardState btcOnly = baseline;
+  btcOnly.btc.price = "65235.00";
+
+  DashboardState ethOnly = baseline;
+  ethOnly.eth.price = "3922.00";
+
+  DashboardState hypeOnly = baseline;
+  hypeOnly.hype.price = "48.27";
+
+  DashboardState statusOnly = baseline;
+  statusOnly.status.text = "DIRTY TEST";
+
+  DashboardState weatherAndWifi = baseline;
+  weatherAndWifi.weather.temperature = "27 C";
+  weatherAndWifi.wifi.icon = &Icons::WIFI_MEDIUM;
+
+  return expectDirty(
+             "same",
+             baseline,
+             baseline,
+             DashboardDirty::NONE) &&
+         expectDirty(
+             "clock",
+             baseline,
+             clockOnly,
+             DashboardDirty::CLOCK) &&
+         expectDirty(
+             "weather",
+             baseline,
+             weatherOnly,
+             DashboardDirty::WEATHER) &&
+         expectDirty(
+             "wifi",
+             baseline,
+             wifiOnly,
+             DashboardDirty::WIFI) &&
+         expectDirty(
+             "btc",
+             baseline,
+             btcOnly,
+             DashboardDirty::BTC) &&
+         expectDirty(
+             "eth",
+             baseline,
+             ethOnly,
+             DashboardDirty::ETH) &&
+         expectDirty(
+             "hype",
+             baseline,
+             hypeOnly,
+             DashboardDirty::HYPE) &&
+         expectDirty(
+             "status",
+             baseline,
+             statusOnly,
+             DashboardDirty::STATUS) &&
+         expectDirty(
+             "weather+wifi",
+             baseline,
+             weatherAndWifi,
+             DashboardDirty::WEATHER | DashboardDirty::WIFI);
+}
 
 static bool runNormalPartial(const DashboardState& state) {
   if (!display.begin()) {
@@ -59,9 +200,16 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 3B-2: widget state boundary regression");
+  Serial.println("EDP Phase 3C-1: widget change detection regression");
+  Serial.println("Logical dirty detection only; refresh behavior is unchanged.");
+
+  if (!runDirtySelfCheck()) {
+    Serial.println("FAIL: Phase 3C-1 dirty comparison self-check failed.");
+    return;
+  }
+
+  Serial.println("PASS: dirty comparison self-check.");
   Serial.println("Full baseline -> partial -> maintenance -> three partials.");
-  Serial.println("Each widget now receives only its own state object.");
 
   Serial.println("Step 1/6: full baseline...");
   if (!dashboard.render(DashboardTestStates::BASELINE)) {
@@ -126,10 +274,10 @@ void setup() {
     return;
   }
 
-  Serial.println("PASS: Phase 3B-2 command sequence completed.");
+  Serial.println("PASS: Phase 3C-1 command sequence completed.");
   Serial.println("Physical inspection is REQUIRED.");
   Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
-  Serial.println("Layout, text, icons, refresh behavior, and image quality must match Phase 3B-1.");
+  Serial.println("Layout, text, icons, refresh behavior, and image quality must match Phase 3B-2.");
 }
 
 void loop() {
