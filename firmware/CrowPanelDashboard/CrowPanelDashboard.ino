@@ -6,6 +6,7 @@
 #include "DashboardDirty.h"
 #include "DashboardState.h"
 #include "DashboardStateCompare.h"
+#include "DashboardStateSnapshot.h"
 #include "DashboardTestStates.h"
 #include "GraphicsBW.h"
 #include "Icons.h"
@@ -164,6 +165,50 @@ static bool runDirtySelfCheck() {
              DashboardDirty::WEATHER | DashboardDirty::WIFI);
 }
 
+static bool runSnapshotSelfCheck() {
+  char timeBuffer[8] = "12:34";
+  char btcBuffer[24] = "65234.50";
+  char statusBuffer[48] = "FULL BASELINE";
+
+  DashboardState liveState = DashboardTestStates::BASELINE;
+  liveState.clock.time = timeBuffer;
+  liveState.btc.price = btcBuffer;
+  liveState.status.text = statusBuffer;
+
+  DashboardStateSnapshot snapshot;
+
+  if (!snapshot.capture(liveState) || !snapshot.valid()) {
+    Serial.println("FAIL: initial snapshot capture failed.");
+    return false;
+  }
+
+  strcpy(timeBuffer, "12:35");
+  strcpy(btcBuffer, "65240.10");
+  strcpy(statusBuffer, "UPDATED");
+
+  if (!expectDirty(
+          "snapshot/live-buffer mutation",
+          snapshot.state(),
+          liveState,
+          DashboardDirty::CLOCK |
+              DashboardDirty::BTC |
+              DashboardDirty::STATUS)) {
+    return false;
+  }
+
+  if (!snapshot.capture(liveState)) {
+    Serial.println("FAIL: snapshot recapture failed.");
+    return false;
+  }
+
+  return expectDirty(
+      "snapshot recapture",
+      snapshot.state(),
+      liveState,
+      DashboardDirty::NONE
+  );
+}
+
 static bool runNormalPartial(const DashboardState& state) {
   if (!display.begin()) {
     Serial.println("FAIL: partial wake/reset timed out.");
@@ -200,15 +245,22 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 3C-1: widget change detection regression");
-  Serial.println("Logical dirty detection only; refresh behavior is unchanged.");
+  Serial.println("EDP Phase 3C-2: durable state snapshot regression");
+  Serial.println("Snapshot owns copied text; physical refresh behavior is unchanged.");
 
   if (!runDirtySelfCheck()) {
-    Serial.println("FAIL: Phase 3C-1 dirty comparison self-check failed.");
+    Serial.println("FAIL: dirty comparison self-check failed.");
     return;
   }
 
   Serial.println("PASS: dirty comparison self-check.");
+
+  if (!runSnapshotSelfCheck()) {
+    Serial.println("FAIL: Phase 3C-2 snapshot self-check failed.");
+    return;
+  }
+
+  Serial.println("PASS: durable snapshot self-check.");
   Serial.println("Full baseline -> partial -> maintenance -> three partials.");
 
   Serial.println("Step 1/6: full baseline...");
@@ -274,10 +326,10 @@ void setup() {
     return;
   }
 
-  Serial.println("PASS: Phase 3C-1 command sequence completed.");
+  Serial.println("PASS: Phase 3C-2 command sequence completed.");
   Serial.println("Physical inspection is REQUIRED.");
   Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
-  Serial.println("Layout, text, icons, refresh behavior, and image quality must match Phase 3B-2.");
+  Serial.println("Layout, text, icons, refresh behavior, and image quality must match Phase 3C-1.");
 }
 
 void loop() {
