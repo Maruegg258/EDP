@@ -58,7 +58,8 @@ CrowPanelDashboard.ino
         |
         +-- network/
         |    +-- WiFiManager         (implemented; Phase 4A-1 hardware verified)
-        |    +-- SecureHttpClient    (planned)
+        |    +-- SecureHttpClient    (implemented; Phase 5A-1 hardware verification pending)
+        |    +-- TlsTrustAnchors     (implemented; DigiCert Global Root G2 baseline)
         |
         +-- services/
         |    +-- TimeService         (implemented; Phase 4 hardware verified)
@@ -133,6 +134,8 @@ Phase 4B-2 connects synchronized minute-level local time to the existing Clock w
 
 Phase 4 is complete as of 2026-10-03. The firmware now has hardware-verified non-blocking Wi-Fi management, icon-only signal status, NTP-synchronized Taiwan local time, continued clock progression during temporary network loss, and application-level Clock/Wi-Fi refresh coalescing.
 
+Phase 5A-1 introduces a project-owned `SecureHttpClient` and a public `DigiCert Global Root G2` trust anchor. The application waits for both Wi-Fi and synchronized system time, then performs one certificate-validating HTTPS GET to the Binance USDⓈ-M Futures BTC ticker endpoint and reports the result through Serial only. No market value is staged into the dashboard in this checkpoint, and no `setInsecure()` fallback exists. Implementation is committed; real-hardware verification is still pending.
+
 ## Current repository structure
 
 ```text
@@ -174,6 +177,9 @@ EDP/
 │     ├─ WiFiManager.cpp
 │     ├─ TimeService.h
 │     ├─ TimeService.cpp
+│     ├─ SecureHttpClient.h
+│     ├─ SecureHttpClient.cpp
+│     ├─ TlsTrustAnchors.h
 │     ├─ CryptoWidget.h
 │     ├─ CryptoWidget.cpp
 │     ├─ StatusWidget.h

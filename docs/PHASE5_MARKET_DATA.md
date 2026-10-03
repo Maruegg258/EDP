@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Design baseline approved; implementation not started.
+**Status:** Phase 5A-1 implemented; hardware verification pending.
 
 **Reviewed:** 2026-10-04
 
@@ -216,6 +216,43 @@ The display driver must not know about Binance, HTTPS, JSON, symbols, or polling
 
 Those items belong to Phase 5 implementation and hardware checkpoints.
 
+## Phase 5A-1 implementation
+
+**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+
+Phase 5A-1 adds:
+
+- `SecureHttpClient.h/.cpp` as a network-layer HTTPS wrapper
+- `TlsTrustAnchors.h` containing the public DigiCert Global Root G2 PEM trust anchor
+- `NetworkClientSecure::setCACert(...)` certificate validation
+- explicit HTTP connect/read timeouts
+- one BTC test URL: `https://fapi.binance.com/fapi/v2/ticker/price?symbol=BTCUSDT`
+- a one-shot application probe that runs only after Wi-Fi is connected and `TimeService` reports synchronized time
+- Serial-only reporting; BTC/ETH/HYPE widget state is not changed by this checkpoint
+
+The existing Phase 4 Clock/Wi-Fi UI flow remains active. The HTTPS probe is deliberately not a market-data service yet.
+
+Expected successful Serial sequence includes:
+
+```text
+Phase 5A-1 HTTPS probe starting...
+TLS mode: DigiCert Global Root G2 validation
+HTTP status: 200
+Response body:
+{"symbol":"BTCUSDT","price":"...","time":...}
+PASS: certificate-validating HTTPS request completed successfully.
+Phase 5A-1 does not stage market data into the dashboard.
+```
+
+Acceptance criteria before Phase 5A-1 can be marked complete:
+
+1. Firmware compiles and uploads on the development CrowPanel.
+2. NTP reaches `SYNCHRONIZED` before the HTTPS probe starts.
+3. The probe returns HTTP 200 from the configured Binance Futures endpoint.
+4. The response body contains the expected BTC ticker payload.
+5. Existing minute Clock and Wi-Fi behavior remain normal.
+6. No `setInsecure()` is present or used.
+
 ## Next checkpoint
 
-**Phase 5A-1:** introduce the smallest certificate-validating HTTPS path to `fapi.binance.com`, gated on synchronized time, and verify connectivity/response handling through Serial only before connecting live market data to the dashboard UI.
+After Phase 5A-1 passes real-hardware verification, proceed to the next incremental market-data step rather than connecting all three assets and UI behavior at once.

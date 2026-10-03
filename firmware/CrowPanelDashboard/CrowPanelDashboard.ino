@@ -11,7 +11,9 @@
 #include "DashboardUpdateCoalescer.h"
 #include "GraphicsBW.h"
 #include "Icons.h"
+#include "SecureHttpClient.h"
 #include "TimeService.h"
+#include "TlsTrustAnchors.h"
 #include "WiFiManager.h"
 #include "config.h"
 
@@ -33,6 +35,9 @@ Dashboard dashboard(graphics);
 DashboardUpdateCoalescer updateCoalescer;
 WiFiManager wifiManager;
 TimeService timeService;
+SecureHttpClient secureHttpClient(
+    TlsTrustAnchors::DIGICERT_GLOBAL_ROOT_G2
+);
 
 enum class UpdateResult {
   FAILED,
@@ -717,6 +722,10 @@ static constexpr char NTP_SERVER_PRIMARY[] = "time.cloudflare.com";
 static constexpr char NTP_SERVER_SECONDARY[] = "pool.ntp.org";
 static constexpr uint32_t TIME_REPORT_INTERVAL_MS = 10000;
 
+static constexpr char PHASE5A1_HTTPS_TEST_URL[] =
+    "https://fapi.binance.com/fapi/v2/ticker/price?symbol=BTCUSDT";
+static bool phase5A1HttpsProbeAttempted = false;
+
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
 static TimeSyncState lastReportedTimeState =
@@ -800,6 +809,56 @@ static void reportTimeServiceStatus() {
   );
 }
 
+static void runPhase5A1HttpsProbeIfReady() {
+  if (phase5A1HttpsProbeAttempted ||
+      !wifiManager.isConnected() ||
+      !timeService.isSynchronized()) {
+    return;
+  }
+
+  phase5A1HttpsProbeAttempted = true;
+
+  Serial.println();
+  Serial.println("Phase 5A-1 HTTPS probe starting...");
+  Serial.print("URL: ");
+  Serial.println(PHASE5A1_HTTPS_TEST_URL);
+  Serial.println("TLS mode: DigiCert Global Root G2 validation");
+
+  SecureHttpResponse response;
+  const bool success =
+      secureHttpClient.get(PHASE5A1_HTTPS_TEST_URL, response);
+
+  Serial.print("HTTP status: ");
+  Serial.println(response.statusCode);
+
+  if (!success) {
+    Serial.print("FAIL: certificate-validating HTTPS request failed: ");
+    Serial.println(response.error);
+
+    if (response.body.length() > 0) {
+      Serial.println("Response body:");
+      Serial.println(response.body);
+    }
+
+    return;
+  }
+
+  if (response.body.length() == 0) {
+    Serial.println("FAIL: HTTPS request succeeded but response body is empty.");
+    return;
+  }
+
+  Serial.println("Response body:");
+  Serial.println(response.body);
+  Serial.println(
+      "PASS: certificate-validating HTTPS request completed successfully."
+  );
+  Serial.println(
+      "Phase 5A-1 does not stage market data into the dashboard."
+  );
+  Serial.println();
+}
+
 static bool stageLiveClockIfMinuteChanged(bool& minuteChanged) {
   minuteChanged = false;
 
@@ -858,9 +917,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 4B-2: live minute clock + Wi-Fi coalescing");
-  Serial.println("Clock uses synchronized Taipei local time.");
-  Serial.println("Minute changes and Wi-Fi samples are staged before one refresh.");
+  Serial.println("EDP Phase 5A-1: certificate-validating HTTPS probe");
+  Serial.println("Phase 4 Clock/Wi-Fi behavior remains active.");
+  Serial.println("Market-data test output is Serial-only; UI prices are unchanged.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -899,6 +958,7 @@ void loop() {
   }
 
   reportTimeServiceStatus();
+  runPhase5A1HttpsProbeIfReady();
 
   bool minuteChanged = false;
 

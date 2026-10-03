@@ -158,9 +158,13 @@ Planned work:
 
 ## Phase 5 — Secure market data
 
-**Status: Not Started**
+**Status: In Progress**
 
 **Goal:** Display BTC, ETH, and HYPE perpetual-futures prices.
+
+Phase 5A checkpoints:
+
+- [ ] Phase 5A-1: Add a minimal certificate-validating HTTPS GET to `fapi.binance.com`, gated on synchronized system time and reported through Serial only. Implementation committed 2026-10-04; hardware verification pending.
 
 Planned work:
 
