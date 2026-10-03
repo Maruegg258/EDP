@@ -139,10 +139,10 @@ Phase 4 checkpoints:
 
 - [x] Phase 4A-1: Add a Wi-Fi connection manager with local credentials kept outside Git, connection-state reporting, and no additional network services (verified on hardware, 2026-10-03)
 - [x] Phase 4A-2: Feed live Wi-Fi RSSI / connection state into the existing Wi-Fi widget through the Phase 3 coalescing path (verified on hardware, 2026-10-03)
-- [ ] Phase 4B-1: Add NTP-based time synchronization with explicit local timezone handling
+- [ ] Phase 4B-1: Add NTP-based time synchronization with explicit local timezone handling (implementation committed; hardware verification pending)
 - [ ] Phase 4B-2: Feed minute-level live time into the Clock widget and verify coalesced clock + Wi-Fi updates
 
-**Next step: Phase 4B-1 — add NTP-based time synchronization with explicit local timezone handling without coupling time service code to the display layer**
+**Next step: Hardware-verify Phase 4B-1 — confirm NTP synchronization, Taipei UTC+8 local time, continued clock progression during Wi-Fi loss, and no E-paper activity**
 
 Planned work:
 

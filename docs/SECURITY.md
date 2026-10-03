@@ -16,6 +16,7 @@ Use `config.h` locally. It is excluded by `.gitignore`. Commit only `config.exam
 The intended production firmware should have the smallest practical network surface:
 
 - outbound Wi-Fi client only
+- outbound NTP/SNTP requests only to explicitly configured time servers for clock synchronization
 - outbound HTTPS requests only to explicitly configured market-data endpoints
 - TLS certificate validation enabled
 - no `setInsecure()` in production
@@ -28,7 +29,7 @@ The intended production firmware should have the smallest practical network surf
 
 ## Driver isolation
 
-The E-paper driver must not depend on Wi-Fi, HTTP, TLS, NVS, OTA, or cloud libraries.
+The E-paper driver must not depend on Wi-Fi, NTP/SNTP, HTTP, TLS, NVS, OTA, or cloud libraries.
 
 The display stack should only handle:
 

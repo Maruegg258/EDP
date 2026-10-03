@@ -11,6 +11,7 @@
 #include "DashboardUpdateCoalescer.h"
 #include "GraphicsBW.h"
 #include "Icons.h"
+#include "TimeService.h"
 #include "WiFiManager.h"
 #include "config.h"
 
@@ -31,6 +32,7 @@ GraphicsBW graphics(
 Dashboard dashboard(graphics);
 DashboardUpdateCoalescer updateCoalescer;
 WiFiManager wifiManager;
+TimeService timeService;
 
 enum class UpdateResult {
   FAILED,
@@ -707,32 +709,112 @@ static bool updateLiveWiFiWidget() {
   return flushPendingPartial() == UpdateResult::REFRESHED;
 }
 
+static const char* timeSyncStateName(TimeSyncState state) {
+  switch (state) {
+    case TimeSyncState::NOT_STARTED:
+      return "NOT_STARTED";
+    case TimeSyncState::WAITING_FOR_SYNC:
+      return "WAITING_FOR_SYNC";
+    case TimeSyncState::SYNCHRONIZED:
+      return "SYNCHRONIZED";
+  }
+
+  return "UNKNOWN";
+}
+
+static constexpr char TAIPEI_TIMEZONE[] = "CST-8";
+static constexpr char NTP_SERVER_PRIMARY[] = "time.cloudflare.com";
+static constexpr char NTP_SERVER_SECONDARY[] = "pool.ntp.org";
+static constexpr uint32_t TIME_REPORT_INTERVAL_MS = 10000;
+
+static bool timeServiceStartAttempted = false;
+static bool hasReportedTimeState = false;
+static TimeSyncState lastReportedTimeState =
+    TimeSyncState::NOT_STARTED;
+static uint32_t lastTimeReportMs = 0;
+
+static bool startTimeServiceWhenConnected() {
+  if (timeServiceStartAttempted || !wifiManager.isConnected()) {
+    return true;
+  }
+
+  timeServiceStartAttempted = true;
+
+  Serial.println("Starting NTP time synchronization...");
+  Serial.println("Timezone: Asia/Taipei equivalent (UTC+8, no DST)");
+  Serial.print("Primary NTP server: ");
+  Serial.println(NTP_SERVER_PRIMARY);
+  Serial.print("Secondary NTP server: ");
+  Serial.println(NTP_SERVER_SECONDARY);
+
+  if (!timeService.begin(
+          TAIPEI_TIMEZONE,
+          NTP_SERVER_PRIMARY,
+          NTP_SERVER_SECONDARY)) {
+    Serial.println("FAIL: TimeService could not start.");
+    return false;
+  }
+
+  return true;
+}
+
+static void reportTimeServiceStatus() {
+  if (!timeService.started()) {
+    return;
+  }
+
+  timeService.tick();
+
+  const TimeSyncState currentState = timeService.state();
+
+  if (!hasReportedTimeState ||
+      currentState != lastReportedTimeState) {
+    Serial.print("Time sync state: ");
+    Serial.println(timeSyncStateName(currentState));
+
+    lastReportedTimeState = currentState;
+    hasReportedTimeState = true;
+  }
+
+  const uint32_t nowMs = millis();
+
+  if (nowMs - lastTimeReportMs < TIME_REPORT_INTERVAL_MS) {
+    return;
+  }
+
+  lastTimeReportMs = nowMs;
+
+  if (!timeService.isSynchronized()) {
+    Serial.println("Local time: waiting for NTP synchronization...");
+    return;
+  }
+
+  char localTime[32];
+
+  if (!timeService.formatLocalTime(
+          localTime,
+          sizeof(localTime),
+          "%Y-%m-%d %H:%M:%S")) {
+    Serial.println("FAIL: synchronized clock could not be formatted.");
+    return;
+  }
+
+  Serial.print("Local time: ");
+  Serial.print(localTime);
+  Serial.print(" UTC+8 | Wi-Fi: ");
+  Serial.println(
+      wifiManager.isConnected() ? "CONNECTED" : "DISCONNECTED"
+  );
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 4A-2: live Wi-Fi dashboard integration");
-  Serial.println("Display shows icon only; numeric RSSI remains Serial/debug data.");
-  Serial.println("RSSI UI bands: >=-60 strong, >=-70 medium, >=-80 weak, <-80 very weak.");
-
-  if (!runDirtySelfCheck() ||
-      !runSnapshotSelfCheck() ||
-      !runCoalescerSelfCheck() ||
-      !runCoalescerOwnershipSelfCheck()) {
-    Serial.println("FAIL: Phase 3 state/coalescing regression self-check failed.");
-    return;
-  }
-
-  Serial.println("PASS: Phase 3 state/coalescing regression self-checks.");
-
-  DashboardState initialState = DashboardTestStates::BASELINE;
-  initialState.wifi.icon = &Icons::WIFI_DISCONNECTED;
-
-  Serial.println("Establishing Phase 4A-2 dashboard baseline...");
-  if (!establishBaseline(initialState)) {
-    return;
-  }
+  Serial.println("EDP Phase 4B-1: NTP + Taipei local-time hardware test");
+  Serial.println("Clock data is Serial-only in this phase.");
+  Serial.println("E-paper display is intentionally untouched.");
 
   if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
     Serial.println("FAIL: Wi-Fi manager could not start. Check config.h.");
@@ -740,39 +822,17 @@ void setup() {
   }
 
   reportWiFiManagerStatus();
-
-  lastUiWiFiState = wifiManager.state();
-  hasUiWiFiState = true;
-  lastWiFiUiSampleMs = millis();
-
-  if (!updateLiveWiFiWidget()) {
-    return;
-  }
 }
 
 void loop() {
   wifiManager.tick();
   reportWiFiManagerStatus();
 
-  const uint32_t now = millis();
-  const WiFiConnectionState currentState = wifiManager.state();
-
-  const bool stateChanged =
-      !hasUiWiFiState || currentState != lastUiWiFiState;
-
-  const bool periodicSignalSample =
-      currentState == WiFiConnectionState::CONNECTED &&
-      now - lastWiFiUiSampleMs >= WIFI_UI_SAMPLE_INTERVAL_MS;
-
-  if (stateChanged || periodicSignalSample) {
-    lastUiWiFiState = currentState;
-    hasUiWiFiState = true;
-    lastWiFiUiSampleMs = now;
-
-    if (!updateLiveWiFiWidget()) {
-      Serial.println("FAIL: live Wi-Fi dashboard update failed.");
-    }
+  if (!startTimeServiceWhenConnected()) {
+    delay(1000);
+    return;
   }
 
+  reportTimeServiceStatus();
   delay(20);
 }

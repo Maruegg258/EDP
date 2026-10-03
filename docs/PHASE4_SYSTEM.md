@@ -54,3 +54,30 @@ Implementation:
 - Display-driver and refresh-sequence code are unchanged
 
 Hardware verification confirmed the icon-only Wi-Fi presentation and live integration behave correctly on the panel. The bar-style icon is clear and readable in the current upper-right position. Final position/spacing polish is deferred to Phase 8 UI refinement.
+
+## Phase 4B-1 — NTP synchronization and local time
+
+**Status: Implementation committed; hardware verification pending**
+
+Implementation:
+
+- Project-owned `TimeService` in the service/data layer
+- Uses the ESP32 system clock and SNTP configuration; it does not poll NTP once per displayed minute
+- Primary NTP server: `time.cloudflare.com`
+- Secondary NTP server: `pool.ntp.org`
+- Explicit Taiwan timezone rule: `CST-8` (UTC+8, no daylight-saving transition)
+- TimeService has no dependency on `WiFiManager`, Dashboard, widgets, graphics, or the E-paper driver
+- The application starts TimeService only after Wi-Fi is connected
+- Synchronization is detected from a plausible system epoch without a blocking wait loop
+- Once synchronized, local time comes from the ESP32 system clock and should continue advancing during a temporary Wi-Fi outage
+- The Phase 4B-1 hardware-test entry point is Serial-only and intentionally invokes no E-paper refresh
+- Phase 4A-2 live Wi-Fi integration code remains in the repository for reuse in Phase 4B-2
+- Security policy now explicitly permits outbound NTP/SNTP only to configured time servers
+
+Hardware verification should confirm:
+
+- NTP reaches `SYNCHRONIZED`
+- Printed local time matches Taiwan local time (UTC+8)
+- Seconds continue advancing after Wi-Fi/AP is temporarily disabled
+- Wi-Fi reconnect still works
+- E-paper performs no refresh during the Phase 4B-1 test
