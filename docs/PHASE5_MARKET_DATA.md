@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A complete; Phase 5B-1 implemented and awaiting hardware verification.
+**Status:** Phase 5A and Phase 5B-1 hardware verified; Phase 5 in progress.
 
 **Reviewed:** 2026-10-04
 
@@ -229,13 +229,22 @@ The display driver must not know about Binance, HTTPS, JSON, symbols, or polling
 - crypto widgets remain unchanged during the Serial-only service tests
 - no insecure TLS fallback is used
 
+**Hardware-verified live UI integration (2026-10-04):**
+
+- validated BTC/ETH/HYPE prices stage into the matching Crypto widget state through `DashboardUpdateCoalescer`
+- startup placeholders are replaced by live perpetual prices after the first successful market poll
+- live Crypto updates use the existing verified partial-refresh path
+- Clock/Wi-Fi behavior and display clarity remain normal with market data enabled
+- market polling remains separate from direct display-driver control
+
 **Not yet hardware-verified:**
 
-- an intentionally induced per-symbol failure during the three-symbol polling flow
-- live BTC/ETH/HYPE integration into `DashboardUpdateCoalescer` and Crypto widgets
-- end-to-end stale-data presentation behavior after a prolonged market-data outage
+- an explicitly unchanged market price producing a no-dirty/no-refresh outcome
+- an intentionally induced market-data failure while live prices are displayed
+- recovery behavior after the induced failure
+- end-to-end stale-data/status behavior after a prolonged market-data outage
 
-Those items remain for later Phase 5 checkpoints.
+Those items remain for Phase 5B-2 and later reliability hardening.
 
 ## Phase 5A-1 implementation
 
@@ -429,7 +438,7 @@ Phase 5A-3 is therefore complete.
 
 ## Phase 5B-1 implementation
 
-**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+**Status:** PASS on real hardware (2026-10-04).
 
 Phase 5B-1 keeps the verified network/service layers unchanged and adds only the application-to-UI integration:
 
@@ -531,19 +540,27 @@ No display refresh is triggered directly by MarketDataService.
 
 The next application loop should then report a live-dashboard flush containing the accumulated Crypto dirty bits and the panel should replace the three `--` placeholders with live perpetual prices.
 
-Acceptance criteria before Phase 5B-1 can be marked complete:
+Hardware verification confirmed:
 
 1. Firmware compiles and uploads.
-2. Startup displays `--` for BTC, ETH, and HYPE before valid market data arrives.
+2. Startup shows `--` for BTC, ETH, and HYPE before the first valid market update.
 3. The first successful poll stages and displays live BTC/ETH/HYPE perpetual prices.
-4. The displayed values match the successfully parsed Serial values.
-5. Crypto updates pass through `DashboardUpdateCoalescer`; MarketDataService performs no display operation.
-6. A market fetch failure does not stage zero/empty/error text over a previously valid displayed price.
-7. Content-identical price values do not create a new Crypto dirty bit.
-8. Multiple changed Crypto values accumulate in the pending dirty mask before one physical refresh.
-9. Existing Clock/Wi-Fi behavior and refresh quality remain normal.
-10. The 60-second market polling cadence remains independent of whether a physical refresh is ultimately needed.
+4. The displayed prices match the validated market values reported through Serial.
+5. Crypto updates pass through `DashboardUpdateCoalescer`; `MarketDataService` performs no display operation.
+6. Multiple live Crypto changes accumulate through the existing dirty/coalescing path and are rendered through the verified partial-refresh flow.
+7. Existing Clock/Wi-Fi behavior remains normal.
+8. Text remains clear with no observed refresh-quality regression.
+9. The 60-second market polling cadence remains in place independently of the display driver.
+
+The normal live-data path is therefore hardware-verified and Phase 5B-1 is complete.
+
+The following behaviors are deliberately left for the next checkpoint rather than being inferred from a successful normal run:
+
+- an explicitly unchanged market price producing no Crypto dirty bit / no unnecessary physical refresh
+- an intentionally induced fetch failure while live values are already displayed
+- recovery after that failure
+- whether a stale-data/status indicator is necessary for prolonged outages
 
 ## Next checkpoint
 
-After Phase 5B-1 hardware verification, validate the live-market integration under unchanged-price and failure/recovery conditions, then decide whether a dedicated stale-data/status indication is needed before Phase 5 is closed.
+**Phase 5B-2:** explicitly verify unchanged-price skip behavior plus live market-data failure/recovery while preserving the displayed last-valid BTC/ETH/HYPE values. Use those results to decide whether the dashboard needs a dedicated stale-data/status indication before Phase 5 is closed.
