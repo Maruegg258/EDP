@@ -18,15 +18,29 @@ struct MarketPriceValue {
 
 class MarketDataService {
 public:
+  static constexpr size_t TRACKED_SYMBOL_COUNT = 3;
+
   explicit MarketDataService(SecureHttpClient& httpClient);
 
   bool fetchLatest(const char* symbol);
 
-  bool hasValidValue() const;
-  const MarketPriceValue& lastValidValue() const;
-  const char* lastError() const;
+  size_t trackedSymbolCount() const;
+  const char* trackedSymbol(size_t index) const;
+
+  bool hasValidValue(const char* symbol) const;
+  const MarketPriceValue* lastValidValue(const char* symbol) const;
+  const char* lastError(const char* symbol) const;
 
 private:
+  struct MarketSlot {
+    const char* symbol;
+    MarketPriceValue lastValid;
+    bool hasValidValue;
+    char lastError[128];
+  };
+
+  int findSlotIndex(const char* symbol) const;
+
   bool parseTickerPayload(const String& body,
                           const char* requestedSymbol,
                           MarketPriceValue& parsed);
@@ -40,11 +54,12 @@ private:
                                  bool& present) const;
   bool validatePositivePrice(const char* price) const;
 
-  void setError(const char* message);
-  void setError(const String& message);
+  void setRequestError(const char* message);
+  void setRequestError(const String& message);
+  void setSlotError(size_t index, const char* message);
+  void setSlotError(size_t index, const String& message);
 
   SecureHttpClient& _httpClient;
-  MarketPriceValue _lastValid;
-  bool _hasValidValue;
-  char _lastError[128];
+  MarketSlot _slots[TRACKED_SYMBOL_COUNT];
+  char _requestError[128];
 };

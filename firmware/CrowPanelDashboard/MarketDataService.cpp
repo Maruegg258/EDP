@@ -9,6 +9,13 @@ namespace {
 constexpr char BINANCE_FUTURES_TICKER_PREFIX[] =
     "https://fapi.binance.com/fapi/v2/ticker/price?symbol=";
 
+constexpr char TRACKED_SYMBOLS[MarketDataService::TRACKED_SYMBOL_COUNT][
+    MarketPriceValue::SYMBOL_CAPACITY] = {
+  "BTCUSDT",
+  "ETHUSDT",
+  "HYPEUSDT"
+};
+
 bool isJsonWhitespace(char value) {
   return value == ' ' ||
          value == '\t' ||
@@ -37,29 +44,45 @@ bool isValidMarketSymbol(const char* symbol) {
 }  // namespace
 
 MarketDataService::MarketDataService(SecureHttpClient& httpClient)
-    : _httpClient(httpClient),
-      _hasValidValue(false) {
-  memset(&_lastValid, 0, sizeof(_lastValid));
-  _lastError[0] = '\0';
+    : _httpClient(httpClient) {
+  memset(_slots, 0, sizeof(_slots));
+  _requestError[0] = '\0';
+
+  for (size_t index = 0;
+       index < TRACKED_SYMBOL_COUNT;
+       ++index) {
+    _slots[index].symbol = TRACKED_SYMBOLS[index];
+    _slots[index].lastError[0] = '\0';
+  }
 }
 
 bool MarketDataService::fetchLatest(const char* symbol) {
-  _lastError[0] = '\0';
+  _requestError[0] = '\0';
 
   if (symbol == nullptr || symbol[0] == '\0') {
-    setError("market symbol is empty");
+    setRequestError("market symbol is empty");
     return false;
   }
 
   if (strlen(symbol) >= MarketPriceValue::SYMBOL_CAPACITY) {
-    setError("market symbol exceeds service capacity");
+    setRequestError("market symbol exceeds service capacity");
     return false;
   }
 
   if (!isValidMarketSymbol(symbol)) {
-    setError("market symbol contains unsupported characters");
+    setRequestError("market symbol contains unsupported characters");
     return false;
   }
+
+  const int slotIndex = findSlotIndex(symbol);
+
+  if (slotIndex < 0) {
+    setRequestError("market symbol is not configured");
+    return false;
+  }
+
+  const size_t index = static_cast<size_t>(slotIndex);
+  _slots[index].lastError[0] = '\0';
 
   String url(BINANCE_FUTURES_TICKER_PREFIX);
   url += symbol;
@@ -74,31 +97,82 @@ bool MarketDataService::fetchLatest(const char* symbol) {
       error += response.error;
     }
 
-    setError(error);
+    setRequestError(error);
+    setSlotError(index, error);
     return false;
   }
 
   MarketPriceValue parsed = {};
 
   if (!parseTickerPayload(response.body, symbol, parsed)) {
+    setSlotError(index, _requestError);
     return false;
   }
 
-  _lastValid = parsed;
-  _hasValidValue = true;
+  _slots[index].lastValid = parsed;
+  _slots[index].hasValidValue = true;
+  _slots[index].lastError[0] = '\0';
   return true;
 }
 
-bool MarketDataService::hasValidValue() const {
-  return _hasValidValue;
+size_t MarketDataService::trackedSymbolCount() const {
+  return TRACKED_SYMBOL_COUNT;
 }
 
-const MarketPriceValue& MarketDataService::lastValidValue() const {
-  return _lastValid;
+const char* MarketDataService::trackedSymbol(size_t index) const {
+  if (index >= TRACKED_SYMBOL_COUNT) {
+    return nullptr;
+  }
+
+  return _slots[index].symbol;
 }
 
-const char* MarketDataService::lastError() const {
-  return _lastError;
+bool MarketDataService::hasValidValue(const char* symbol) const {
+  const int slotIndex = findSlotIndex(symbol);
+
+  if (slotIndex < 0) {
+    return false;
+  }
+
+  return _slots[slotIndex].hasValidValue;
+}
+
+const MarketPriceValue* MarketDataService::lastValidValue(
+    const char* symbol) const {
+  const int slotIndex = findSlotIndex(symbol);
+
+  if (slotIndex < 0 ||
+      !_slots[slotIndex].hasValidValue) {
+    return nullptr;
+  }
+
+  return &_slots[slotIndex].lastValid;
+}
+
+const char* MarketDataService::lastError(const char* symbol) const {
+  const int slotIndex = findSlotIndex(symbol);
+
+  if (slotIndex < 0) {
+    return _requestError;
+  }
+
+  return _slots[slotIndex].lastError;
+}
+
+int MarketDataService::findSlotIndex(const char* symbol) const {
+  if (symbol == nullptr) {
+    return -1;
+  }
+
+  for (size_t index = 0;
+       index < TRACKED_SYMBOL_COUNT;
+       ++index) {
+    if (strcmp(_slots[index].symbol, symbol) == 0) {
+      return static_cast<int>(index);
+    }
+  }
+
+  return -1;
 }
 
 bool MarketDataService::parseTickerPayload(
@@ -106,7 +180,7 @@ bool MarketDataService::parseTickerPayload(
     const char* requestedSymbol,
     MarketPriceValue& parsed) {
   if (body.length() == 0) {
-    setError("ticker response body is empty");
+    setRequestError("ticker response body is empty");
     return false;
   }
 
@@ -115,12 +189,12 @@ bool MarketDataService::parseTickerPayload(
           "symbol",
           parsed.symbol,
           sizeof(parsed.symbol))) {
-    setError("ticker response has invalid or missing symbol");
+    setRequestError("ticker response has invalid or missing symbol");
     return false;
   }
 
   if (strcmp(parsed.symbol, requestedSymbol) != 0) {
-    setError("ticker response symbol does not match request");
+    setRequestError("ticker response symbol does not match request");
     return false;
   }
 
@@ -129,12 +203,12 @@ bool MarketDataService::parseTickerPayload(
           "price",
           parsed.price,
           sizeof(parsed.price))) {
-    setError("ticker response has invalid or missing price");
+    setRequestError("ticker response has invalid or missing price");
     return false;
   }
 
   if (!validatePositivePrice(parsed.price)) {
-    setError("ticker price is not a finite positive number");
+    setRequestError("ticker price is not a finite positive number");
     return false;
   }
 
@@ -143,7 +217,7 @@ bool MarketDataService::parseTickerPayload(
           "time",
           parsed.sourceTime,
           parsed.hasSourceTime)) {
-    setError("ticker response time field is invalid");
+    setRequestError("ticker response time field is invalid");
     return false;
   }
 
@@ -297,16 +371,48 @@ bool MarketDataService::validatePositivePrice(
   return std::isfinite(parsed) && parsed > 0.0;
 }
 
-void MarketDataService::setError(const char* message) {
+void MarketDataService::setRequestError(const char* message) {
   if (message == nullptr) {
-    _lastError[0] = '\0';
+    _requestError[0] = '\0';
     return;
   }
 
-  strncpy(_lastError, message, sizeof(_lastError) - 1);
-  _lastError[sizeof(_lastError) - 1] = '\0';
+  strncpy(
+      _requestError,
+      message,
+      sizeof(_requestError) - 1
+  );
+  _requestError[sizeof(_requestError) - 1] = '\0';
 }
 
-void MarketDataService::setError(const String& message) {
-  setError(message.c_str());
+void MarketDataService::setRequestError(const String& message) {
+  setRequestError(message.c_str());
+}
+
+void MarketDataService::setSlotError(
+    size_t index,
+    const char* message) {
+  if (index >= TRACKED_SYMBOL_COUNT) {
+    return;
+  }
+
+  if (message == nullptr) {
+    _slots[index].lastError[0] = '\0';
+    return;
+  }
+
+  strncpy(
+      _slots[index].lastError,
+      message,
+      sizeof(_slots[index].lastError) - 1
+  );
+  _slots[index].lastError[
+      sizeof(_slots[index].lastError) - 1
+  ] = '\0';
+}
+
+void MarketDataService::setSlotError(
+    size_t index,
+    const String& message) {
+  setSlotError(index, message.c_str());
 }

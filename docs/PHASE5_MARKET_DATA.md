@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A-1 and Phase 5A-2 hardware verified; Phase 5 in progress.
+**Status:** Phase 5A-1 and Phase 5A-2 hardware verified; Phase 5A-3 implemented and awaiting hardware verification.
 
 **Reviewed:** 2026-10-04
 
@@ -350,6 +350,80 @@ Hardware verification confirmed:
 
 Phase 5A-2 is therefore complete.
 
+## Phase 5A-3 implementation
+
+**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+
+Phase 5A-3 expands `MarketDataService` to three independent configured market slots:
+
+```text
+BTCUSDT
+ETHUSDT
+HYPEUSDT
+```
+
+Each slot owns:
+
+- its configured symbol
+- its own last-valid `MarketPriceValue`
+- a valid/not-valid flag
+- its most recent fetch/validation error
+
+A successful fetch commits only to the matching symbol slot. A failed fetch leaves that slot's previous valid value untouched and cannot overwrite another symbol's state.
+
+The application introduces a first real polling cadence:
+
+```text
+60 seconds
+```
+
+This is inside the project's initial 1-5 minute market-data guideline. The poll runs only while Wi-Fi is connected and system time is synchronized.
+
+The market poll is deliberately invoked after the existing Clock/Wi-Fi dashboard flush. The goal is to prevent a slow HTTPS request from taking priority over an already-due minute display update.
+
+Each polling cycle:
+
+1. fetches `BTCUSDT`
+2. fetches `ETHUSDT`
+3. fetches `HYPEUSDT`
+4. prints each successful parsed value through Serial
+5. prints a per-symbol error on failure
+6. prints the preserved last-valid value for a failed symbol when one exists
+7. reports how many of the three symbols updated successfully
+8. verifies whether all three independent slots contain valid data
+
+No crypto widget is updated in Phase 5A-3.
+
+Expected healthy Serial output includes:
+
+```text
+Phase 5A-3 three-symbol market poll starting...
+Fetching BTCUSDT...
+Updated symbol: BTCUSDT
+Updated price: ...
+Fetching ETHUSDT...
+Updated symbol: ETHUSDT
+Updated price: ...
+Fetching HYPEUSDT...
+Updated symbol: HYPEUSDT
+Updated price: ...
+Market poll result: 3/3 symbols updated.
+PASS: BTC/ETH/HYPE have independent last-valid market slots.
+Phase 5A-3 remains Serial-only; dashboard crypto widgets are unchanged.
+```
+
+Acceptance criteria before Phase 5A-3 can be marked complete:
+
+1. Firmware compiles and uploads.
+2. The first market cycle starts only after Wi-Fi and NTP synchronization.
+3. `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` all parse into their own slots.
+4. Serial reports valid positive prices for all three.
+5. Repeated polling occurs at approximately 60-second application intervals.
+6. Fetching one symbol does not overwrite the other symbols' last-valid values.
+7. If a transient per-symbol failure occurs, an existing last-valid value is preserved and reported.
+8. Existing Clock/Wi-Fi display behavior remains normal.
+9. Crypto widgets remain unchanged.
+
 ## Next checkpoint
 
-**Phase 5A-3:** extend the service test to all three configured perpetual symbols — `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` — and introduce the first three-symbol fetch/polling flow. Keep the result Serial-only so per-symbol success/failure and retained last-valid values can be verified before any market value is connected to `DashboardUpdateCoalescer`.
+After Phase 5A-3 hardware verification, the next incremental step is to connect validated market values to the existing BTC/ETH/HYPE widget states through `DashboardUpdateCoalescer`, while keeping market polling cadence separate from physical display refresh decisions.

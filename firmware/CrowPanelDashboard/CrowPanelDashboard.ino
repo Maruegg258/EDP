@@ -724,9 +724,10 @@ static constexpr char NTP_SERVER_PRIMARY[] = "time.cloudflare.com";
 static constexpr char NTP_SERVER_SECONDARY[] = "pool.ntp.org";
 static constexpr uint32_t TIME_REPORT_INTERVAL_MS = 10000;
 
-static constexpr char PHASE5A2_TEST_SYMBOL[] = "BTCUSDT";
-static constexpr char PHASE5A2_INVALID_SYMBOL[] = "EDPINVALIDUSDT";
-static bool phase5A2MarketProbeAttempted = false;
+static constexpr uint32_t MARKET_POLL_INTERVAL_MS = 60000;
+
+static bool hasRunMarketPoll = false;
+static uint32_t lastMarketPollMs = 0;
 
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
@@ -817,6 +818,7 @@ static void printMarketValue(
   Serial.print(label);
   Serial.print(" symbol: ");
   Serial.println(value.symbol);
+
   Serial.print(label);
   Serial.print(" price: ");
   Serial.println(value.price);
@@ -834,81 +836,111 @@ static void printMarketValue(
   }
 }
 
-static bool sameMarketValue(
-    const MarketPriceValue& left,
-    const MarketPriceValue& right) {
-  return strcmp(left.symbol, right.symbol) == 0 &&
-         strcmp(left.price, right.price) == 0 &&
-         left.sourceTime == right.sourceTime &&
-         left.hasSourceTime == right.hasSourceTime;
-}
-
-static void runPhase5A2MarketProbeIfReady() {
-  if (phase5A2MarketProbeAttempted ||
-      !wifiManager.isConnected() ||
+static void runPhase5A3MarketPollIfDue() {
+  if (!wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
     return;
   }
 
-  phase5A2MarketProbeAttempted = true;
+  const uint32_t now = millis();
+
+  if (hasRunMarketPoll &&
+      now - lastMarketPollMs < MARKET_POLL_INTERVAL_MS) {
+    return;
+  }
+
+  hasRunMarketPoll = true;
+  lastMarketPollMs = now;
 
   Serial.println();
-  Serial.println("Phase 5A-2 MarketDataService probe starting...");
-  Serial.print("Requested symbol: ");
-  Serial.println(PHASE5A2_TEST_SYMBOL);
+  Serial.println("Phase 5A-3 three-symbol market poll starting...");
 
-  if (!marketDataService.fetchLatest(PHASE5A2_TEST_SYMBOL)) {
-    Serial.print("FAIL: BTC market-data fetch/validation failed: ");
-    Serial.println(marketDataService.lastError());
-    return;
+  size_t successCount = 0;
+
+  for (size_t index = 0;
+       index < marketDataService.trackedSymbolCount();
+       ++index) {
+    const char* symbol =
+        marketDataService.trackedSymbol(index);
+
+    if (symbol == nullptr) {
+      Serial.println("FAIL: configured market symbol is null.");
+      continue;
+    }
+
+    Serial.print("Fetching ");
+    Serial.print(symbol);
+    Serial.println("...");
+
+    if (!marketDataService.fetchLatest(symbol)) {
+      Serial.print("FAIL ");
+      Serial.print(symbol);
+      Serial.print(": ");
+      Serial.println(marketDataService.lastError(symbol));
+
+      const MarketPriceValue* preserved =
+          marketDataService.lastValidValue(symbol);
+
+      if (preserved != nullptr) {
+        printMarketValue("Preserved", *preserved);
+      } else {
+        Serial.println(
+            "No last-valid value exists for this symbol yet."
+        );
+      }
+
+      continue;
+    }
+
+    const MarketPriceValue* value =
+        marketDataService.lastValidValue(symbol);
+
+    if (value == nullptr) {
+      Serial.print("FAIL: ");
+      Serial.print(symbol);
+      Serial.println(
+          " fetch succeeded but no last-valid value is stored."
+      );
+      continue;
+    }
+
+    printMarketValue("Updated", *value);
+    ++successCount;
   }
 
-  if (!marketDataService.hasValidValue()) {
+  Serial.print("Market poll result: ");
+  Serial.print(successCount);
+  Serial.print("/");
+  Serial.print(marketDataService.trackedSymbolCount());
+  Serial.println(" symbols updated.");
+
+  bool allSlotsValid = true;
+
+  for (size_t index = 0;
+       index < marketDataService.trackedSymbolCount();
+       ++index) {
+    const char* symbol =
+        marketDataService.trackedSymbol(index);
+
+    if (symbol == nullptr ||
+        !marketDataService.hasValidValue(symbol)) {
+      allSlotsValid = false;
+      break;
+    }
+  }
+
+  if (allSlotsValid) {
     Serial.println(
-        "FAIL: successful market-data fetch did not produce a valid value."
+        "PASS: BTC/ETH/HYPE have independent last-valid market slots."
     );
-    return;
+  } else {
+    Serial.println(
+        "INFO: at least one market slot still has no valid value."
+    );
   }
-
-  const MarketPriceValue validValue =
-      marketDataService.lastValidValue();
-
-  printMarketValue("Parsed BTC", validValue);
 
   Serial.println(
-      "Testing last-valid preservation with an intentional invalid-symbol request..."
-  );
-
-  if (marketDataService.fetchLatest(PHASE5A2_INVALID_SYMBOL)) {
-    Serial.println(
-        "FAIL: intentional invalid-symbol request unexpectedly succeeded."
-    );
-    return;
-  }
-
-  Serial.print("Expected failure: ");
-  Serial.println(marketDataService.lastError());
-
-  if (!marketDataService.hasValidValue() ||
-      !sameMarketValue(
-          validValue,
-          marketDataService.lastValidValue())) {
-    Serial.println(
-        "FAIL: failed request changed or cleared the last valid market value."
-    );
-    return;
-  }
-
-  printMarketValue(
-      "Preserved BTC",
-      marketDataService.lastValidValue()
-  );
-
-  Serial.println(
-      "PASS: MarketDataService parsed BTC and preserved last-valid data after failure."
-  );
-  Serial.println(
-      "Phase 5A-2 remains Serial-only; dashboard crypto widgets are unchanged."
+      "Phase 5A-3 remains Serial-only; dashboard crypto widgets are unchanged."
   );
   Serial.println();
 }
@@ -971,9 +1003,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 5A-2: BTC MarketDataService validation");
+  Serial.println("EDP Phase 5A-3: BTC/ETH/HYPE market polling");
   Serial.println("Phase 4 Clock/Wi-Fi behavior remains active.");
-  Serial.println("Market-data parsing is Serial-only; UI prices are unchanged.");
+  Serial.println("Three-symbol market data remains Serial-only; UI prices are unchanged.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1012,8 +1044,6 @@ void loop() {
   }
 
   reportTimeServiceStatus();
-  runPhase5A2MarketProbeIfReady();
-
   bool minuteChanged = false;
 
   if (!stageLiveClockIfMinuteChanged(minuteChanged)) {
@@ -1041,6 +1071,8 @@ void loop() {
   if (!flushLiveDashboardIfNeeded()) {
     Serial.println("FAIL: live dashboard refresh failed.");
   }
+
+  runPhase5A3MarketPollIfDue();
 
   delay(20);
 }
