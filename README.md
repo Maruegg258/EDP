@@ -61,7 +61,7 @@ CrowPanelDashboard.ino
         |    +-- SecureHttpClient    (planned)
         |
         +-- services/
-        |    +-- TimeService         (implemented; Phase 4B-1 hardware verified)
+        |    +-- TimeService         (implemented; Phase 4 hardware verified)
         |    +-- WeatherService      (planned)
         |    +-- MarketDataService   (planned)
         |
@@ -129,7 +129,9 @@ Phase 4 introduces the first live system data: Wi-Fi connection/RSSI and NTP-syn
 
 Phase 4B-1 adds a project-owned `TimeService` that starts SNTP through explicitly configured NTP servers, applies an explicit Taiwan POSIX timezone rule (`CST-8`, UTC+8 with no DST), and exposes synchronized local time without depending on Dashboard or E-paper code. The hardware-test application reports time through Serial only and intentionally performs no display activity. NTP synchronization, Taiwan local-time output, continued system-clock progression during Wi-Fi loss, and Wi-Fi recovery were verified on hardware on 2026-10-03.
 
-Phase 4B-2 connects synchronized minute-level local time to the existing Clock widget. At each new minute the application stages both Clock and a fresh Wi-Fi visual sample before one coalesced flush. If the Wi-Fi icon stays in the same signal band, only `CLOCK` is dirty; if the signal band changes in the same cycle, the pending mask becomes `CLOCK | WIFI` and still produces one physical partial refresh. Wi-Fi connection-state transitions remain immediate. Implementation is committed; hardware verification is pending.
+Phase 4B-2 connects synchronized minute-level local time to the existing Clock widget. At each new minute the application stages both Clock and a fresh Wi-Fi visual sample before one coalesced flush. If the Wi-Fi icon stays in the same signal band, only `CLOCK` is dirty; if the signal band changes in the same cycle, the pending mask becomes `CLOCK | WIFI` and still produces one physical partial refresh. Wi-Fi connection-state transitions remain immediate. Live `HH:MM`, minute-level refresh behavior, Clock/Wi-Fi coalescing, Wi-Fi outage/recovery behavior, and refresh quality were verified on hardware on 2026-10-03.
+
+Phase 4 is complete as of 2026-10-03. The firmware now has hardware-verified non-blocking Wi-Fi management, icon-only signal status, NTP-synchronized Taiwan local time, continued clock progression during temporary network loss, and application-level Clock/Wi-Fi refresh coalescing.
 
 ## Current repository structure
 

@@ -86,7 +86,7 @@ Phase 4B-1 is complete. Phase 4B-2 will connect minute-level live time to the ex
 
 ## Phase 4B-2 — Live minute clock and Wi-Fi coalescing
 
-**Status: Implementation committed; hardware verification pending**
+**Status: Verified on hardware (2026-10-03)**
 
 Implementation:
 
@@ -103,13 +103,15 @@ Implementation:
 - The existing `DashboardUpdateCoalescer`, full-frame composition, and verified partial-refresh path are reused unchanged
 - No display-driver or SSD1683 refresh-sequence code was modified
 
-Hardware verification should confirm:
+Hardware verification confirmed:
 
 - The displayed Clock matches current Taiwan `HH:MM`
 - Clock advances once per minute
-- Normal minute changes cause one physical partial refresh
-- Unchanged Wi-Fi signal bands do not cause a second refresh
-- A coincident Clock + Wi-Fi visual change is represented by one coalesced refresh
+- Normal minute changes use the existing single partial-refresh path
+- Unchanged Wi-Fi signal bands do not cause an additional refresh
+- Clock and Wi-Fi changes are staged through the same coalescer before physical refresh
 - Clock continues advancing while Wi-Fi is temporarily disconnected
 - Wi-Fi disconnect/reconnect icon transitions remain correct
 - Refresh quality remains consistent with the verified Phase 3/4A path
+
+Phase 4 is complete as of 2026-10-03.

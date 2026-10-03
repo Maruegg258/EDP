@@ -131,7 +131,7 @@ Phase 3 is complete. The dashboard framework now has modular widgets, content-ba
 
 ## Phase 4 — Time and Wi-Fi status
 
-**Status: In Progress**
+**Status: Complete**
 
 **Goal:** Add the first live system data without external content APIs.
 
@@ -140,9 +140,11 @@ Phase 4 checkpoints:
 - [x] Phase 4A-1: Add a Wi-Fi connection manager with local credentials kept outside Git, connection-state reporting, and no additional network services (verified on hardware, 2026-10-03)
 - [x] Phase 4A-2: Feed live Wi-Fi RSSI / connection state into the existing Wi-Fi widget through the Phase 3 coalescing path (verified on hardware, 2026-10-03)
 - [x] Phase 4B-1: Add NTP-based time synchronization with explicit local timezone handling (verified on hardware, 2026-10-03)
-- [ ] Phase 4B-2: Feed minute-level live time into the Clock widget and verify coalesced clock + Wi-Fi updates (implementation committed; hardware verification pending)
+- [x] Phase 4B-2: Feed minute-level live time into the Clock widget and verify coalesced clock + Wi-Fi updates (verified on hardware, 2026-10-03)
 
-**Next step: Hardware-verify Phase 4B-2 — confirm live HH:MM rendering, one refresh per minute when only Clock changes, combined CLOCK|WIFI refresh when both change, disconnect/reconnect behavior, and unchanged refresh quality**
+Phase 4 is complete. Live Wi-Fi status and NTP-synchronized Taiwan local time now flow through the existing Phase 3 coalescing and verified partial-refresh path.
+
+**Next step: Phase 5 — introduce secure HTTPS market-data retrieval with certificate validation and a dedicated market-data service**
 
 Planned work:
 
@@ -155,6 +157,8 @@ Planned work:
 - Reconnection behavior
 
 ## Phase 5 — Secure market data
+
+**Status: Not Started**
 
 **Goal:** Display BTC, ETH, and HYPE perpetual-futures prices.
 
