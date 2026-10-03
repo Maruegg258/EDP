@@ -165,6 +165,7 @@ Planned work:
 Phase 5A checkpoints:
 
 - [x] Phase 5A-1: Add a minimal certificate-validating HTTPS GET to `fapi.binance.com`, gated on synchronized system time and reported through Serial only (verified on hardware, 2026-10-04).
+- [ ] Phase 5A-2: Add a dedicated BTC-only `MarketDataService` that parses/validates `symbol`, `price`, and optional `time`, and preserves the last valid value when a later request fails. Implementation committed 2026-10-04; hardware verification pending.
 
 Planned work:
 

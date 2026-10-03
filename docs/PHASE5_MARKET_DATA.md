@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A-1 hardware verified; Phase 5 in progress.
+**Status:** Phase 5A-1 hardware verified; Phase 5A-2 implemented and awaiting hardware verification.
 
 **Reviewed:** 2026-10-04
 
@@ -263,6 +263,78 @@ Hardware verification confirmed:
 
 Phase 5A-1 is therefore complete.
 
+## Phase 5A-2 implementation
+
+**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+
+Phase 5A-2 adds a dedicated `MarketDataService` with the following boundary:
+
+```text
+SecureHttpClient
+       |
+       v
+MarketDataService
+       |
+       v
+validated MarketPriceValue
+```
+
+The service owns Binance ticker URL construction and validation. The application no longer parses the raw HTTPS body.
+
+Initial Phase 5A-2 scope remains BTC-only:
+
+```text
+BTCUSDT
+```
+
+For the fixed, small Symbol Price Ticker V2 payload, this checkpoint uses a project-owned narrow parser rather than adding an external JSON-library dependency. It accepts fields independent of ordering and validates only the contract required by this service.
+
+A successful value is committed only after:
+
+1. HTTPS succeeds.
+2. `symbol` exists as a JSON string and exactly matches the requested symbol.
+3. `price` exists as a JSON string and parses completely as a finite number greater than zero.
+4. Optional `time`, when present, is an unsigned integer.
+
+The service stores its own fixed-capacity `MarketPriceValue` snapshot. Parsing is performed into a temporary value first, so a failed HTTP request or failed validation does not overwrite the existing last-valid snapshot.
+
+The Phase 5A-2 application probe performs:
+
+1. one real `BTCUSDT` fetch through the hardware-verified TLS path
+2. Serial output of parsed symbol, price, and source time
+3. one intentional invalid-symbol request
+4. a comparison proving the valid BTC snapshot remains unchanged after that expected failure
+
+This is still Serial-only. No BTC value is staged into `DashboardUpdateCoalescer`, and ETH/HYPE are not fetched yet.
+
+Expected successful Serial sequence includes:
+
+```text
+Phase 5A-2 MarketDataService probe starting...
+Requested symbol: BTCUSDT
+Parsed BTC symbol: BTCUSDT
+Parsed BTC price: ...
+Parsed BTC source time: ...
+Testing last-valid preservation with an intentional invalid-symbol request...
+Expected failure: HTTPS fetch failed: HTTP status ...
+Preserved BTC symbol: BTCUSDT
+Preserved BTC price: ...
+PASS: MarketDataService parsed BTC and preserved last-valid data after failure.
+Phase 5A-2 remains Serial-only; dashboard crypto widgets are unchanged.
+```
+
+Acceptance criteria before Phase 5A-2 can be marked complete:
+
+1. Firmware compiles and uploads.
+2. The BTC request succeeds only after Wi-Fi and synchronized time are available.
+3. Parsed `symbol` is exactly `BTCUSDT`.
+4. Parsed `price` is a valid positive value.
+5. Source `time` is parsed when Binance provides it.
+6. The intentional invalid-symbol request fails.
+7. The previously valid BTC snapshot remains unchanged after that failure.
+8. Existing Clock/Wi-Fi dashboard behavior remains normal.
+9. Crypto widgets remain unchanged in this checkpoint.
+
 ## Next checkpoint
 
-**Phase 5A-2:** introduce a dedicated `MarketDataService` for one BTC symbol first. Parse and validate the returned `symbol`, `price`, and optional `time` fields, preserve the last valid value on fetch/parse failure, and report the result through Serial only. Do not connect market data to the dashboard UI until that service boundary is hardware-verified.
+After Phase 5A-2 hardware verification, extend the service incrementally to the remaining configured perpetual symbols before connecting market values to the dashboard UI.

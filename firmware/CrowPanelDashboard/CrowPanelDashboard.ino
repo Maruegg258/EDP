@@ -11,6 +11,7 @@
 #include "DashboardUpdateCoalescer.h"
 #include "GraphicsBW.h"
 #include "Icons.h"
+#include "MarketDataService.h"
 #include "SecureHttpClient.h"
 #include "TimeService.h"
 #include "TlsTrustAnchors.h"
@@ -38,6 +39,7 @@ TimeService timeService;
 SecureHttpClient secureHttpClient(
     TlsTrustAnchors::DIGICERT_GLOBAL_ROOT_G2
 );
+MarketDataService marketDataService(secureHttpClient);
 
 enum class UpdateResult {
   FAILED,
@@ -722,9 +724,9 @@ static constexpr char NTP_SERVER_PRIMARY[] = "time.cloudflare.com";
 static constexpr char NTP_SERVER_SECONDARY[] = "pool.ntp.org";
 static constexpr uint32_t TIME_REPORT_INTERVAL_MS = 10000;
 
-static constexpr char PHASE5A1_HTTPS_TEST_URL[] =
-    "https://fapi.binance.com/fapi/v2/ticker/price?symbol=BTCUSDT";
-static bool phase5A1HttpsProbeAttempted = false;
+static constexpr char PHASE5A2_TEST_SYMBOL[] = "BTCUSDT";
+static constexpr char PHASE5A2_INVALID_SYMBOL[] = "EDP_INVALID_SYMBOL";
+static bool phase5A2MarketProbeAttempted = false;
 
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
@@ -809,52 +811,104 @@ static void reportTimeServiceStatus() {
   );
 }
 
-static void runPhase5A1HttpsProbeIfReady() {
-  if (phase5A1HttpsProbeAttempted ||
+static void printMarketValue(
+    const char* label,
+    const MarketPriceValue& value) {
+  Serial.print(label);
+  Serial.print(" symbol: ");
+  Serial.println(value.symbol);
+  Serial.print(label);
+  Serial.print(" price: ");
+  Serial.println(value.price);
+
+  if (value.hasSourceTime) {
+    Serial.print(label);
+    Serial.print(" source time: ");
+    Serial.printf(
+        "%llu\n",
+        static_cast<unsigned long long>(value.sourceTime)
+    );
+  } else {
+    Serial.print(label);
+    Serial.println(" source time: not present");
+  }
+}
+
+static bool sameMarketValue(
+    const MarketPriceValue& left,
+    const MarketPriceValue& right) {
+  return strcmp(left.symbol, right.symbol) == 0 &&
+         strcmp(left.price, right.price) == 0 &&
+         left.sourceTime == right.sourceTime &&
+         left.hasSourceTime == right.hasSourceTime;
+}
+
+static void runPhase5A2MarketProbeIfReady() {
+  if (phase5A2MarketProbeAttempted ||
       !wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
     return;
   }
 
-  phase5A1HttpsProbeAttempted = true;
+  phase5A2MarketProbeAttempted = true;
 
   Serial.println();
-  Serial.println("Phase 5A-1 HTTPS probe starting...");
-  Serial.print("URL: ");
-  Serial.println(PHASE5A1_HTTPS_TEST_URL);
-  Serial.println("TLS mode: DigiCert Global Root G2 validation");
+  Serial.println("Phase 5A-2 MarketDataService probe starting...");
+  Serial.print("Requested symbol: ");
+  Serial.println(PHASE5A2_TEST_SYMBOL);
 
-  SecureHttpResponse response;
-  const bool success =
-      secureHttpClient.get(PHASE5A1_HTTPS_TEST_URL, response);
-
-  Serial.print("HTTP status: ");
-  Serial.println(response.statusCode);
-
-  if (!success) {
-    Serial.print("FAIL: certificate-validating HTTPS request failed: ");
-    Serial.println(response.error);
-
-    if (response.body.length() > 0) {
-      Serial.println("Response body:");
-      Serial.println(response.body);
-    }
-
+  if (!marketDataService.fetchLatest(PHASE5A2_TEST_SYMBOL)) {
+    Serial.print("FAIL: BTC market-data fetch/validation failed: ");
+    Serial.println(marketDataService.lastError());
     return;
   }
 
-  if (response.body.length() == 0) {
-    Serial.println("FAIL: HTTPS request succeeded but response body is empty.");
+  if (!marketDataService.hasValidValue()) {
+    Serial.println(
+        "FAIL: successful market-data fetch did not produce a valid value."
+    );
     return;
   }
 
-  Serial.println("Response body:");
-  Serial.println(response.body);
+  const MarketPriceValue validValue =
+      marketDataService.lastValidValue();
+
+  printMarketValue("Parsed BTC", validValue);
+
   Serial.println(
-      "PASS: certificate-validating HTTPS request completed successfully."
+      "Testing last-valid preservation with an intentional invalid-symbol request..."
+  );
+
+  if (marketDataService.fetchLatest(PHASE5A2_INVALID_SYMBOL)) {
+    Serial.println(
+        "FAIL: intentional invalid-symbol request unexpectedly succeeded."
+    );
+    return;
+  }
+
+  Serial.print("Expected failure: ");
+  Serial.println(marketDataService.lastError());
+
+  if (!marketDataService.hasValidValue() ||
+      !sameMarketValue(
+          validValue,
+          marketDataService.lastValidValue())) {
+    Serial.println(
+        "FAIL: failed request changed or cleared the last valid market value."
+    );
+    return;
+  }
+
+  printMarketValue(
+      "Preserved BTC",
+      marketDataService.lastValidValue()
+  );
+
+  Serial.println(
+      "PASS: MarketDataService parsed BTC and preserved last-valid data after failure."
   );
   Serial.println(
-      "Phase 5A-1 does not stage market data into the dashboard."
+      "Phase 5A-2 remains Serial-only; dashboard crypto widgets are unchanged."
   );
   Serial.println();
 }
@@ -917,9 +971,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 5A-1: certificate-validating HTTPS probe");
+  Serial.println("EDP Phase 5A-2: BTC MarketDataService validation");
   Serial.println("Phase 4 Clock/Wi-Fi behavior remains active.");
-  Serial.println("Market-data test output is Serial-only; UI prices are unchanged.");
+  Serial.println("Market-data parsing is Serial-only; UI prices are unchanged.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -958,7 +1012,7 @@ void loop() {
   }
 
   reportTimeServiceStatus();
-  runPhase5A1HttpsProbeIfReady();
+  runPhase5A2MarketProbeIfReady();
 
   bool minuteChanged = false;
 
