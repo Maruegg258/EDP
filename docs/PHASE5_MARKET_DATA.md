@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A-1 hardware verified; Phase 5A-2 implemented and awaiting hardware verification.
+**Status:** Phase 5A-1 and Phase 5A-2 hardware verified; Phase 5 in progress.
 
 **Reviewed:** 2026-10-04
 
@@ -216,11 +216,24 @@ The display driver must not know about Binance, HTTPS, JSON, symbols, or polling
 - the existing Phase 4 Clock and Wi-Fi behavior remains normal while the HTTPS probe is present
 - no insecure TLS fallback is used
 
+**Hardware-verified on the development CrowPanel (2026-10-04):**
+
+- the device waits for synchronized system time before the Phase 5A-1 HTTPS probe
+- TLS validation succeeds against `fapi.binance.com` using the configured DigiCert Global Root G2 trust anchor
+- the BTC Symbol Price Ticker V2 request returns HTTP 200
+- the response body contains the expected `BTCUSDT` ticker payload
+- `MarketDataService` parses and validates the BTC `symbol`, positive finite `price`, and source `time`
+- an intentional invalid-symbol request fails as expected
+- the previously valid BTC snapshot remains unchanged after the failed request
+- the existing Phase 4 Clock and Wi-Fi behavior remains normal
+- crypto widgets remain unchanged during the Serial-only service tests
+- no insecure TLS fallback is used
+
 **Not yet hardware-verified:**
 
-- JSON field parsing and validation inside a dedicated market-data service
-- ETH/HYPE requests and three-symbol polling behavior
-- last-valid-value preservation and failure/staleness handling on the device
+- ETH/HYPE requests
+- three-symbol polling behavior
+- per-symbol failure/staleness behavior once more than one market value is tracked
 
 Those items remain for later Phase 5 checkpoints.
 
@@ -265,7 +278,7 @@ Phase 5A-1 is therefore complete.
 
 ## Phase 5A-2 implementation
 
-**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+**Status:** PASS on real hardware (2026-10-04).
 
 Phase 5A-2 adds a dedicated `MarketDataService` with the following boundary:
 
@@ -323,18 +336,20 @@ PASS: MarketDataService parsed BTC and preserved last-valid data after failure.
 Phase 5A-2 remains Serial-only; dashboard crypto widgets are unchanged.
 ```
 
-Acceptance criteria before Phase 5A-2 can be marked complete:
+Hardware verification confirmed:
 
 1. Firmware compiles and uploads.
-2. The BTC request succeeds only after Wi-Fi and synchronized time are available.
+2. The BTC request runs only after Wi-Fi and synchronized time are available.
 3. Parsed `symbol` is exactly `BTCUSDT`.
 4. Parsed `price` is a valid positive value.
-5. Source `time` is parsed when Binance provides it.
-6. The intentional invalid-symbol request fails.
+5. Source `time` is parsed successfully.
+6. The intentional invalid-symbol request fails as expected.
 7. The previously valid BTC snapshot remains unchanged after that failure.
 8. Existing Clock/Wi-Fi dashboard behavior remains normal.
 9. Crypto widgets remain unchanged in this checkpoint.
 
+Phase 5A-2 is therefore complete.
+
 ## Next checkpoint
 
-After Phase 5A-2 hardware verification, extend the service incrementally to the remaining configured perpetual symbols before connecting market values to the dashboard UI.
+**Phase 5A-3:** extend the service test to all three configured perpetual symbols — `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` — and introduce the first three-symbol fetch/polling flow. Keep the result Serial-only so per-symbol success/failure and retained last-valid values can be verified before any market value is connected to `DashboardUpdateCoalescer`.
