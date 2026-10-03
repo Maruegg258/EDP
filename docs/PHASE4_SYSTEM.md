@@ -32,7 +32,7 @@ Phase 4A-1 does not yet feed live Wi-Fi data into the dashboard UI. That integra
 
 ## Phase 4A-2 — Live Wi-Fi dashboard integration
 
-**Status: Implementation committed; hardware verification pending**
+**Status: Verified on hardware (2026-10-03)**
 
 Implementation:
 
@@ -53,4 +53,4 @@ Implementation:
 - If the resulting icon is unchanged, E-paper activity is skipped
 - Display-driver and refresh-sequence code are unchanged
 
-Hardware verification should confirm icon appearance, signal-band transitions, disconnect/reconnect behavior, skip-unchanged behavior, and refresh quality.
+Hardware verification confirmed the icon-only Wi-Fi presentation and live integration behave correctly on the panel. The bar-style icon is clear and readable in the current upper-right position. Final position/spacing polish is deferred to Phase 8 UI refinement.
