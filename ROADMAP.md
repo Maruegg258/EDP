@@ -137,12 +137,12 @@ Phase 3 is complete. The dashboard framework now has modular widgets, content-ba
 
 Phase 4 checkpoints:
 
-- [ ] Phase 4A-1: Add a Wi-Fi connection manager with local credentials kept outside Git, connection-state reporting, and no additional network services (implementation committed; hardware verification pending)
+- [x] Phase 4A-1: Add a Wi-Fi connection manager with local credentials kept outside Git, connection-state reporting, and no additional network services (verified on hardware, 2026-10-03)
 - [ ] Phase 4A-2: Feed live Wi-Fi RSSI / connection state into the existing Wi-Fi widget through the Phase 3 coalescing path
 - [ ] Phase 4B-1: Add NTP-based time synchronization with explicit local timezone handling
 - [ ] Phase 4B-2: Feed minute-level live time into the Clock widget and verify coalesced clock + Wi-Fi updates
 
-**Next step: Hardware-verify Phase 4A-1 — compile/upload, confirm non-blocking connect/disconnect/reconnect/RSSI behavior, and verify the E-paper remains untouched**
+**Next step: Phase 4A-2 — feed live Wi-Fi RSSI / connection state into the existing Wi-Fi widget through the Phase 3 coalescing path without changing the display driver or refresh sequence**
 
 Planned work:
 
