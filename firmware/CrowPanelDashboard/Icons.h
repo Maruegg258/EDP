@@ -6,6 +6,9 @@
 
 // First project-owned monochrome dashboard icon set.
 // These are functional Phase 2 assets, intentionally simple and independent
+// from any external image file or graphics library.
+namespace Icons {
+
 // Phase 4A-2 Wi-Fi status icons.
 // Active bars are solid. Inactive bars are hollow for the 1-bit panel.
 // The disconnected state keeps hollow bars and adds an X.
