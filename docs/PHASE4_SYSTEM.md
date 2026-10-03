@@ -83,3 +83,33 @@ Hardware verification confirmed:
 - E-paper performs no refresh during the Phase 4B-1 test
 
 Phase 4B-1 is complete. Phase 4B-2 will connect minute-level live time to the existing Clock widget through the Phase 3 coalescer and combine it with Wi-Fi visual updates before a physical refresh when practical.
+
+## Phase 4B-2 — Live minute clock and Wi-Fi coalescing
+
+**Status: Implementation committed; hardware verification pending**
+
+Implementation:
+
+- The startup dashboard baseline uses `--:--` for Clock and the disconnected Wi-Fi icon
+- After NTP synchronization, Clock displays live Taiwan local time as `HH:MM`
+- Clock changes are detected from the ESP32 system-clock minute value, not from a fixed delay loop
+- Every new minute stages the live Clock state
+- The same minute event also samples Wi-Fi RSSI and stages the current Wi-Fi visual state
+- Clock and Wi-Fi staging complete before one application-level flush
+- If Wi-Fi remains in the same visual signal band, the dirty mask is only `CLOCK`
+- If Wi-Fi crosses a signal band in the same minute cycle, the dirty mask becomes `CLOCK | WIFI` and still produces one physical partial refresh
+- Wi-Fi connection/disconnection transitions remain immediate and do not wait for the next minute
+- A temporary Wi-Fi outage does not stop minute-level Clock updates after time has synchronized
+- The existing `DashboardUpdateCoalescer`, full-frame composition, and verified partial-refresh path are reused unchanged
+- No display-driver or SSD1683 refresh-sequence code was modified
+
+Hardware verification should confirm:
+
+- The displayed Clock matches current Taiwan `HH:MM`
+- Clock advances once per minute
+- Normal minute changes cause one physical partial refresh
+- Unchanged Wi-Fi signal bands do not cause a second refresh
+- A coincident Clock + Wi-Fi visual change is represented by one coalesced refresh
+- Clock continues advancing while Wi-Fi is temporarily disconnected
+- Wi-Fi disconnect/reconnect icon transitions remain correct
+- Refresh quality remains consistent with the verified Phase 3/4A path

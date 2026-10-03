@@ -630,10 +630,8 @@ static bool hasUiWiFiState = false;
 
 static uint32_t lastReportedWiFiAttempt = 0;
 static uint32_t lastRssiReportMs = 0;
-static uint32_t lastWiFiUiSampleMs = 0;
 
 static constexpr uint32_t WIFI_RSSI_REPORT_INTERVAL_MS = 10000;
-static constexpr uint32_t WIFI_UI_SAMPLE_INTERVAL_MS = 60000;
 
 static void reportWiFiManagerStatus() {
   const uint32_t attempts = wifiManager.connectionAttempts();
@@ -676,7 +674,7 @@ static void reportWiFiManagerStatus() {
   }
 }
 
-static bool updateLiveWiFiWidget() {
+static bool stageLiveWiFiWidget() {
   WiFiWidgetState wifiState = {
     &Icons::WIFI_DISCONNECTED
   };
@@ -698,15 +696,7 @@ static bool updateLiveWiFiWidget() {
     return false;
   }
 
-  if (!updateCoalescer.hasPendingUpdate()) {
-    Serial.println("Wi-Fi visual state unchanged; E-paper refresh skipped.");
-    return true;
-  }
-
-  Serial.print("Wi-Fi visual state changed; pending dirty: ");
-  printDirtyMask(updateCoalescer.pendingDirty());
-
-  return flushPendingPartial() == UpdateResult::REFRESHED;
+  return true;
 }
 
 static const char* timeSyncStateName(TimeSyncState state) {
@@ -732,6 +722,9 @@ static bool hasReportedTimeState = false;
 static TimeSyncState lastReportedTimeState =
     TimeSyncState::NOT_STARTED;
 static uint32_t lastTimeReportMs = 0;
+
+static bool hasStagedClockMinute = false;
+static time_t lastStagedClockMinute = 0;
 
 static bool startTimeServiceWhenConnected() {
   if (timeServiceStartAttempted || !wifiManager.isConnected()) {
@@ -807,14 +800,86 @@ static void reportTimeServiceStatus() {
   );
 }
 
+static bool stageLiveClockIfMinuteChanged(bool& minuteChanged) {
+  minuteChanged = false;
+
+  if (!timeService.isSynchronized()) {
+    return true;
+  }
+
+  const time_t currentMinute = timeService.epoch() / 60;
+
+  if (hasStagedClockMinute &&
+      currentMinute == lastStagedClockMinute) {
+    return true;
+  }
+
+  char clockText[8];
+
+  if (!timeService.formatLocalTime(
+          clockText,
+          sizeof(clockText),
+          "%H:%M")) {
+    Serial.println("FAIL: could not format live clock value.");
+    return false;
+  }
+
+  const ClockWidgetState clockState = {
+    clockText
+  };
+
+  if (!updateCoalescer.stageClock(clockState)) {
+    Serial.println("FAIL: could not stage live Clock widget state.");
+    return false;
+  }
+
+  lastStagedClockMinute = currentMinute;
+  hasStagedClockMinute = true;
+  minuteChanged = true;
+
+  Serial.print("Clock minute staged: ");
+  Serial.println(clockText);
+  return true;
+}
+
+static bool flushLiveDashboardIfNeeded() {
+  if (!updateCoalescer.hasPendingUpdate()) {
+    return true;
+  }
+
+  Serial.print("Live dashboard flush dirty: ");
+  printDirtyMask(updateCoalescer.pendingDirty());
+
+  return flushPendingPartial() == UpdateResult::REFRESHED;
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 4B-1: NTP + Taipei local-time hardware test");
-  Serial.println("Clock data is Serial-only in this phase.");
-  Serial.println("E-paper display is intentionally untouched.");
+  Serial.println("EDP Phase 4B-2: live minute clock + Wi-Fi coalescing");
+  Serial.println("Clock uses synchronized Taipei local time.");
+  Serial.println("Minute changes and Wi-Fi samples are staged before one refresh.");
+
+  if (!runDirtySelfCheck() ||
+      !runSnapshotSelfCheck() ||
+      !runCoalescerSelfCheck() ||
+      !runCoalescerOwnershipSelfCheck()) {
+    Serial.println("FAIL: Phase 3 state/coalescing regression self-check failed.");
+    return;
+  }
+
+  Serial.println("PASS: Phase 3 state/coalescing regression self-checks.");
+
+  DashboardState initialState = DashboardTestStates::BASELINE;
+  initialState.clock.time = "--:--";
+  initialState.wifi.icon = &Icons::WIFI_DISCONNECTED;
+
+  Serial.println("Establishing Phase 4B-2 dashboard baseline...");
+  if (!establishBaseline(initialState)) {
+    return;
+  }
 
   if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
     Serial.println("FAIL: Wi-Fi manager could not start. Check config.h.");
@@ -834,5 +899,34 @@ void loop() {
   }
 
   reportTimeServiceStatus();
+
+  bool minuteChanged = false;
+
+  if (!stageLiveClockIfMinuteChanged(minuteChanged)) {
+    delay(1000);
+    return;
+  }
+
+  const WiFiConnectionState currentWiFiState =
+      wifiManager.state();
+
+  const bool wifiStateChanged =
+      !hasUiWiFiState ||
+      currentWiFiState != lastUiWiFiState;
+
+  if (wifiStateChanged || minuteChanged) {
+    lastUiWiFiState = currentWiFiState;
+    hasUiWiFiState = true;
+
+    if (!stageLiveWiFiWidget()) {
+      delay(1000);
+      return;
+    }
+  }
+
+  if (!flushLiveDashboardIfNeeded()) {
+    Serial.println("FAIL: live dashboard refresh failed.");
+  }
+
   delay(20);
 }

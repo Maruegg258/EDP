@@ -140,9 +140,9 @@ Phase 4 checkpoints:
 - [x] Phase 4A-1: Add a Wi-Fi connection manager with local credentials kept outside Git, connection-state reporting, and no additional network services (verified on hardware, 2026-10-03)
 - [x] Phase 4A-2: Feed live Wi-Fi RSSI / connection state into the existing Wi-Fi widget through the Phase 3 coalescing path (verified on hardware, 2026-10-03)
 - [x] Phase 4B-1: Add NTP-based time synchronization with explicit local timezone handling (verified on hardware, 2026-10-03)
-- [ ] Phase 4B-2: Feed minute-level live time into the Clock widget and verify coalesced clock + Wi-Fi updates
+- [ ] Phase 4B-2: Feed minute-level live time into the Clock widget and verify coalesced clock + Wi-Fi updates (implementation committed; hardware verification pending)
 
-**Next step: Phase 4B-2 — feed minute-level live local time into the Clock widget and verify coalesced Clock + Wi-Fi updates through the existing refresh path**
+**Next step: Hardware-verify Phase 4B-2 — confirm live HH:MM rendering, one refresh per minute when only Clock changes, combined CLOCK|WIFI refresh when both change, disconnect/reconnect behavior, and unchanged refresh quality**
 
 Planned work:
 

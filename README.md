@@ -61,7 +61,7 @@ CrowPanelDashboard.ino
         |    +-- SecureHttpClient    (planned)
         |
         +-- services/
-        |    +-- TimeService         (implemented; hardware verification pending)
+        |    +-- TimeService         (implemented; Phase 4B-1 hardware verified)
         |    +-- WeatherService      (planned)
         |    +-- MarketDataService   (planned)
         |
@@ -128,6 +128,8 @@ Phase 3 is complete as of 2026-10-01. The dashboard framework now provides modul
 Phase 4 introduces the first live system data: Wi-Fi connection/RSSI and NTP-synchronized local time, routed through the existing Phase 3 state/coalescing architecture rather than directly controlling the display.\n\nPhase 4A-1 adds a project-owned non-blocking `WiFiManager` that uses local `config.h` credentials, reports connection state and RSSI through Serial, and retries after failed/lost connections without a blocking wait loop. The Phase 4A-1 hardware-test entry point intentionally performs no E-paper activity; the existing display driver and verified refresh sequences remain unchanged. Compile/upload, live connection, RSSI reporting, and reconnect behavior were verified on hardware on 2026-10-03.\n\nPhase 4A-2 maps live RSSI into four visible bar levels plus a disconnected state. `WiFiWidget` now renders only the icon: the `WIFI` label and numeric RSSI were removed. RSSI is sampled for the UI once per minute and connection-state transitions are handled immediately; the Phase 3 coalescer skips physical refresh when the resulting icon is unchanged. Icon-only rendering and live Wi-Fi integration were verified on hardware on 2026-10-03. Final icon positioning is intentionally deferred to Phase 8 UI refinement.
 
 Phase 4B-1 adds a project-owned `TimeService` that starts SNTP through explicitly configured NTP servers, applies an explicit Taiwan POSIX timezone rule (`CST-8`, UTC+8 with no DST), and exposes synchronized local time without depending on Dashboard or E-paper code. The hardware-test application reports time through Serial only and intentionally performs no display activity. NTP synchronization, Taiwan local-time output, continued system-clock progression during Wi-Fi loss, and Wi-Fi recovery were verified on hardware on 2026-10-03.
+
+Phase 4B-2 connects synchronized minute-level local time to the existing Clock widget. At each new minute the application stages both Clock and a fresh Wi-Fi visual sample before one coalesced flush. If the Wi-Fi icon stays in the same signal band, only `CLOCK` is dirty; if the signal band changes in the same cycle, the pending mask becomes `CLOCK | WIFI` and still produces one physical partial refresh. Wi-Fi connection-state transitions remain immediate. Implementation is committed; hardware verification is pending.
 
 ## Current repository structure
 
