@@ -57,7 +57,7 @@ Hardware verification confirmed the icon-only Wi-Fi presentation and live integr
 
 ## Phase 4B-1 — NTP synchronization and local time
 
-**Status: Implementation committed; hardware verification pending**
+**Status: Verified on hardware (2026-10-03)**
 
 Implementation:
 
@@ -74,10 +74,12 @@ Implementation:
 - Phase 4A-2 live Wi-Fi integration code remains in the repository for reuse in Phase 4B-2
 - Security policy now explicitly permits outbound NTP/SNTP only to configured time servers
 
-Hardware verification should confirm:
+Hardware verification confirmed:
 
 - NTP reaches `SYNCHRONIZED`
 - Printed local time matches Taiwan local time (UTC+8)
-- Seconds continue advancing after Wi-Fi/AP is temporarily disabled
+- The ESP32 system clock continues advancing after Wi-Fi/AP is temporarily disabled
 - Wi-Fi reconnect still works
 - E-paper performs no refresh during the Phase 4B-1 test
+
+Phase 4B-1 is complete. Phase 4B-2 will connect minute-level live time to the existing Clock widget through the Phase 3 coalescer and combine it with Wi-Fi visual updates before a physical refresh when practical.
