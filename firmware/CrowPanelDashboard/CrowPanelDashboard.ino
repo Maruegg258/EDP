@@ -11,6 +11,8 @@
 #include "DashboardUpdateCoalescer.h"
 #include "GraphicsBW.h"
 #include "Icons.h"
+#include "WiFiManager.h"
+#include "config.h"
 
 CrowEPD579 display;
 
@@ -28,6 +30,7 @@ GraphicsBW graphics(
 
 Dashboard dashboard(graphics);
 DashboardUpdateCoalescer updateCoalescer;
+WiFiManager wifiManager;
 
 enum class UpdateResult {
   FAILED,
