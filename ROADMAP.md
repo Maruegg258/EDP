@@ -131,7 +131,7 @@ Phase 3 is complete. The dashboard framework now has modular widgets, content-ba
 
 ## Phase 4 — Time and Wi-Fi status
 
-**Status: Not Started**
+**Status: In Progress**
 
 **Goal:** Add the first live system data without external content APIs.
 
