@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A-1, Phase 5A-2, and Phase 5A-3 hardware verified; Phase 5 in progress.
+**Status:** Phase 5A complete; Phase 5B-1 implemented and awaiting hardware verification.
 
 **Reviewed:** 2026-10-04
 
@@ -427,6 +427,123 @@ The multi-symbol failure path was not deliberately forced during this successful
 
 Phase 5A-3 is therefore complete.
 
+## Phase 5B-1 implementation
+
+**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+
+Phase 5B-1 keeps the verified network/service layers unchanged and adds only the application-to-UI integration:
+
+```text
+MarketDataService last-valid value
+            |
+            v
+CryptoWidgetState { price }
+            |
+            v
+DashboardUpdateCoalescer
+      |       |       |
+     BTC     ETH     HYPE
+            |
+            v
+existing application flush
+            |
+            v
+verified E-paper partial-refresh path
+```
+
+The symbol-to-widget mapping lives in the application layer:
+
+- `BTCUSDT` -> `stageBtc()`
+- `ETHUSDT` -> `stageEth()`
+- `HYPEUSDT` -> `stageHype()`
+
+Neither `MarketDataService` nor `SecureHttpClient` knows about widgets, dirty masks, framebuffers, or E-paper refreshes.
+
+### Startup behavior
+
+The initial dashboard baseline now uses:
+
+```text
+BTC  --
+ETH  --
+HYPE --
+```
+
+This prevents Phase 3 regression-test prices from appearing as if they were live market data before the first successful poll.
+
+### Successful poll behavior
+
+For each successfully validated symbol, the application stages the service-owned price string into the matching Crypto widget state.
+
+The existing durable `DashboardStateSnapshot` copies the price into its own 24-byte BTC/ETH/HYPE buffers, so the pending UI state does not depend on the lifetime of a temporary pointer.
+
+The existing content-based comparison then determines whether the visible price actually changed:
+
+- changed price -> matching crypto dirty bit is set
+- unchanged price -> no new crypto dirty bit
+- multiple changed symbols -> dirty bits accumulate in one pending state
+
+### Failure behavior
+
+A failed market fetch stages no replacement value.
+
+Therefore:
+
+- no zero/empty/error string is sent to a Crypto widget
+- a previously displayed valid price remains visible
+- a startup symbol with no valid value remains `--`
+- one symbol's failure does not prevent other successful symbols from being staged
+
+### Polling versus display refresh
+
+The verified 60-second market polling cadence is unchanged.
+
+The application keeps the Phase 5A-3 ordering:
+
+1. stage due Clock/Wi-Fi changes
+2. flush existing pending dashboard state
+3. perform the due market poll
+4. stage successful market values into the coalescer
+5. return to the main loop
+6. on the following loop, stage any newly due system changes and use the existing application flush
+
+The market-data layer never triggers an E-paper refresh directly. This preserves the separation between data retrieval and physical refresh and leaves a coalescing opportunity before the pending market state is physically displayed.
+
+Expected first successful live update includes Serial output similar to:
+
+```text
+Phase 5B-1 live Crypto widget market poll starting...
+Fetching BTCUSDT...
+Updated symbol: BTCUSDT
+Updated price: ...
+Staged live BTCUSDT; pending dirty: ... [BTC]
+Fetching ETHUSDT...
+Updated symbol: ETHUSDT
+Updated price: ...
+Staged live ETHUSDT; pending dirty: ... [BTC|ETH]
+Fetching HYPEUSDT...
+Updated symbol: HYPEUSDT
+Updated price: ...
+Staged live HYPEUSDT; pending dirty: ... [BTC|ETH|HYPE]
+Market staging result: 3/3 symbols accepted by dashboard state.
+No display refresh is triggered directly by MarketDataService.
+```
+
+The next application loop should then report a live-dashboard flush containing the accumulated Crypto dirty bits and the panel should replace the three `--` placeholders with live perpetual prices.
+
+Acceptance criteria before Phase 5B-1 can be marked complete:
+
+1. Firmware compiles and uploads.
+2. Startup displays `--` for BTC, ETH, and HYPE before valid market data arrives.
+3. The first successful poll stages and displays live BTC/ETH/HYPE perpetual prices.
+4. The displayed values match the successfully parsed Serial values.
+5. Crypto updates pass through `DashboardUpdateCoalescer`; MarketDataService performs no display operation.
+6. A market fetch failure does not stage zero/empty/error text over a previously valid displayed price.
+7. Content-identical price values do not create a new Crypto dirty bit.
+8. Multiple changed Crypto values accumulate in the pending dirty mask before one physical refresh.
+9. Existing Clock/Wi-Fi behavior and refresh quality remain normal.
+10. The 60-second market polling cadence remains independent of whether a physical refresh is ultimately needed.
+
 ## Next checkpoint
 
-**Phase 5B-1:** connect the validated `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` last-valid values to the existing BTC/ETH/HYPE widget states through `DashboardUpdateCoalescer`. Preserve the separation between the 60-second market polling cadence and the physical E-paper refresh decision, so only visible value changes mark crypto widgets dirty and nearby Clock/Wi-Fi changes can still coalesce into one refresh.
+After Phase 5B-1 hardware verification, validate the live-market integration under unchanged-price and failure/recovery conditions, then decide whether a dedicated stale-data/status indication is needed before Phase 5 is closed.

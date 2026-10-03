@@ -836,7 +836,40 @@ static void printMarketValue(
   }
 }
 
-static void runPhase5A3MarketPollIfDue() {
+static bool stageLiveMarketWidget(
+    const MarketPriceValue& value) {
+  const CryptoWidgetState widgetState = {
+    value.price
+  };
+
+  bool staged = false;
+
+  if (strcmp(value.symbol, "BTCUSDT") == 0) {
+    staged = updateCoalescer.stageBtc(widgetState);
+  } else if (strcmp(value.symbol, "ETHUSDT") == 0) {
+    staged = updateCoalescer.stageEth(widgetState);
+  } else if (strcmp(value.symbol, "HYPEUSDT") == 0) {
+    staged = updateCoalescer.stageHype(widgetState);
+  } else {
+    Serial.print("FAIL: no Crypto widget mapping for market symbol ");
+    Serial.println(value.symbol);
+    return false;
+  }
+
+  if (!staged) {
+    Serial.print("FAIL: could not stage Crypto widget for ");
+    Serial.println(value.symbol);
+    return false;
+  }
+
+  Serial.print("Staged live ");
+  Serial.print(value.symbol);
+  Serial.print("; pending dirty: ");
+  printDirtyMask(updateCoalescer.pendingDirty());
+  return true;
+}
+
+static void runPhase5B1MarketPollIfDue() {
   if (!wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
     return;
@@ -853,9 +886,10 @@ static void runPhase5A3MarketPollIfDue() {
   lastMarketPollMs = now;
 
   Serial.println();
-  Serial.println("Phase 5A-3 three-symbol market poll starting...");
+  Serial.println("Phase 5B-1 live Crypto widget market poll starting...");
 
-  size_t successCount = 0;
+  size_t fetchSuccessCount = 0;
+  size_t stageSuccessCount = 0;
 
   for (size_t index = 0;
        index < marketDataService.trackedSymbolCount();
@@ -883,14 +917,19 @@ static void runPhase5A3MarketPollIfDue() {
 
       if (preserved != nullptr) {
         printMarketValue("Preserved", *preserved);
+        Serial.println(
+            "UI action: keep the previously displayed price; no failure value staged."
+        );
       } else {
         Serial.println(
-            "No last-valid value exists for this symbol yet."
+            "No last-valid value exists; startup placeholder remains displayed."
         );
       }
 
       continue;
     }
+
+    ++fetchSuccessCount;
 
     const MarketPriceValue* value =
         marketDataService.lastValidValue(symbol);
@@ -905,42 +944,34 @@ static void runPhase5A3MarketPollIfDue() {
     }
 
     printMarketValue("Updated", *value);
-    ++successCount;
+
+    if (!stageLiveMarketWidget(*value)) {
+      continue;
+    }
+
+    ++stageSuccessCount;
   }
 
-  Serial.print("Market poll result: ");
-  Serial.print(successCount);
+  Serial.print("Market fetch result: ");
+  Serial.print(fetchSuccessCount);
   Serial.print("/");
   Serial.print(marketDataService.trackedSymbolCount());
   Serial.println(" symbols updated.");
 
-  bool allSlotsValid = true;
+  Serial.print("Market staging result: ");
+  Serial.print(stageSuccessCount);
+  Serial.print("/");
+  Serial.print(marketDataService.trackedSymbolCount());
+  Serial.println(" symbols accepted by dashboard state.");
 
-  for (size_t index = 0;
-       index < marketDataService.trackedSymbolCount();
-       ++index) {
-    const char* symbol =
-        marketDataService.trackedSymbol(index);
-
-    if (symbol == nullptr ||
-        !marketDataService.hasValidValue(symbol)) {
-      allSlotsValid = false;
-      break;
-    }
-  }
-
-  if (allSlotsValid) {
-    Serial.println(
-        "PASS: BTC/ETH/HYPE have independent last-valid market slots."
-    );
-  } else {
-    Serial.println(
-        "INFO: at least one market slot still has no valid value."
-    );
-  }
+  Serial.print("Pending dashboard dirty after market poll: ");
+  printDirtyMask(updateCoalescer.pendingDirty());
 
   Serial.println(
-      "Phase 5A-3 remains Serial-only; dashboard crypto widgets are unchanged."
+      "No display refresh is triggered directly by MarketDataService."
+  );
+  Serial.println(
+      "The existing application flush handles staged market changes on the next loop."
   );
   Serial.println();
 }
@@ -1003,9 +1034,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 5A-3: BTC/ETH/HYPE market polling");
-  Serial.println("Phase 4 Clock/Wi-Fi behavior remains active.");
-  Serial.println("Three-symbol market data remains Serial-only; UI prices are unchanged.");
+  Serial.println("EDP Phase 5B-1: live BTC/ETH/HYPE Crypto widgets");
+  Serial.println("Market polling remains separate from E-paper refresh decisions.");
+  Serial.println("Validated prices stage through DashboardUpdateCoalescer.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1020,8 +1051,11 @@ void setup() {
   DashboardState initialState = DashboardTestStates::BASELINE;
   initialState.clock.time = "--:--";
   initialState.wifi.icon = &Icons::WIFI_DISCONNECTED;
+  initialState.btc.price = "--";
+  initialState.eth.price = "--";
+  initialState.hype.price = "--";
 
-  Serial.println("Establishing Phase 4B-2 dashboard baseline...");
+  Serial.println("Establishing Phase 5B-1 dashboard baseline...");
   if (!establishBaseline(initialState)) {
     return;
   }
@@ -1072,7 +1106,7 @@ void loop() {
     Serial.println("FAIL: live dashboard refresh failed.");
   }
 
-  runPhase5A3MarketPollIfDue();
+  runPhase5B1MarketPollIfDue();
 
   delay(20);
 }

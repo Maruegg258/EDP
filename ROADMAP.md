@@ -167,7 +167,7 @@ Phase 5A checkpoints:
 - [x] Phase 5A-1: Add a minimal certificate-validating HTTPS GET to `fapi.binance.com`, gated on synchronized system time and reported through Serial only (verified on hardware, 2026-10-04).
 - [x] Phase 5A-2: Add a dedicated BTC-only `MarketDataService` that parses/validates `symbol`, `price`, and optional `time`, and preserves the last valid value when a later request fails (verified on hardware, 2026-10-04).
 - [x] Phase 5A-3: Extend `MarketDataService` to independent `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` last-valid slots and add a 60-second three-symbol polling flow. Results remain Serial-only (verified on hardware, 2026-10-04).
-- [ ] Phase 5B-1: Stage validated BTC/ETH/HYPE prices into the existing crypto widget states through `DashboardUpdateCoalescer`, while keeping the 60-second market polling cadence separate from the physical display refresh decision.
+- [ ] Phase 5B-1: Stage validated BTC/ETH/HYPE prices into the existing crypto widget states through `DashboardUpdateCoalescer`, while keeping the 60-second market polling cadence separate from the physical display refresh decision. Implementation committed 2026-10-04; hardware verification pending.
 
 Planned work:
 
