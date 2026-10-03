@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A-1 implemented; hardware verification pending.
+**Status:** Phase 5A-1 hardware verified; Phase 5 in progress.
 
 **Reviewed:** 2026-10-04
 
@@ -207,18 +207,26 @@ The display driver must not know about Binance, HTTPS, JSON, symbols, or polling
 - `GeoTrust TLS RSA CA G1` is issued by `DigiCert Global Root G2`
 - `DigiCert Global Root G2` is valid until 2038-01-15
 
+**Hardware-verified on the development CrowPanel (2026-10-04):**
+
+- the device waits for synchronized system time before the Phase 5A-1 HTTPS probe
+- TLS validation succeeds against `fapi.binance.com` using the configured DigiCert Global Root G2 trust anchor
+- the BTC Symbol Price Ticker V2 request returns HTTP 200
+- the response body contains the expected `BTCUSDT` ticker payload
+- the existing Phase 4 Clock and Wi-Fi behavior remains normal while the HTTPS probe is present
+- no insecure TLS fallback is used
+
 **Not yet hardware-verified:**
 
-- TLS handshake from the CrowPanel firmware using the selected root CA
-- HTTPS response parsing on the ESP32-S3
-- three-symbol polling behavior
-- failure/last-valid-value behavior on the device
+- JSON field parsing and validation inside a dedicated market-data service
+- ETH/HYPE requests and three-symbol polling behavior
+- last-valid-value preservation and failure/staleness handling on the device
 
-Those items belong to Phase 5 implementation and hardware checkpoints.
+Those items remain for later Phase 5 checkpoints.
 
 ## Phase 5A-1 implementation
 
-**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+**Status:** PASS on real hardware (2026-10-04).
 
 Phase 5A-1 adds:
 
@@ -244,7 +252,7 @@ PASS: certificate-validating HTTPS request completed successfully.
 Phase 5A-1 does not stage market data into the dashboard.
 ```
 
-Acceptance criteria before Phase 5A-1 can be marked complete:
+Hardware verification confirmed:
 
 1. Firmware compiles and uploads on the development CrowPanel.
 2. NTP reaches `SYNCHRONIZED` before the HTTPS probe starts.
@@ -253,6 +261,8 @@ Acceptance criteria before Phase 5A-1 can be marked complete:
 5. Existing minute Clock and Wi-Fi behavior remain normal.
 6. No `setInsecure()` is present or used.
 
+Phase 5A-1 is therefore complete.
+
 ## Next checkpoint
 
-After Phase 5A-1 passes real-hardware verification, proceed to the next incremental market-data step rather than connecting all three assets and UI behavior at once.
+**Phase 5A-2:** introduce a dedicated `MarketDataService` for one BTC symbol first. Parse and validate the returned `symbol`, `price`, and optional `time` fields, preserve the last valid value on fetch/parse failure, and report the result through Serial only. Do not connect market data to the dashboard UI until that service boundary is hardware-verified.

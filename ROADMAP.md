@@ -164,7 +164,7 @@ Planned work:
 
 Phase 5A checkpoints:
 
-- [ ] Phase 5A-1: Add a minimal certificate-validating HTTPS GET to `fapi.binance.com`, gated on synchronized system time and reported through Serial only. Implementation committed 2026-10-04; hardware verification pending.
+- [x] Phase 5A-1: Add a minimal certificate-validating HTTPS GET to `fapi.binance.com`, gated on synchronized system time and reported through Serial only (verified on hardware, 2026-10-04).
 
 Planned work:
 
