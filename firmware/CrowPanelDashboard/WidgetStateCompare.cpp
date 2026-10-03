@@ -34,8 +34,7 @@ bool changed(const WeatherWidgetState& previous,
 
 bool changed(const WiFiWidgetState& previous,
              const WiFiWidgetState& current) {
-  return previous.icon != current.icon ||
-         !sameText(previous.rssi, current.rssi);
+  return previous.icon != current.icon;
 }
 
 bool changed(const CryptoWidgetState& previous,

@@ -111,7 +111,7 @@ static bool runDirtySelfCheck() {
   weatherOnly.weather.icon = &Icons::WEATHER_CLOUD;
 
   DashboardState wifiOnly = baseline;
-  wifiOnly.wifi.rssi = "-58";
+  wifiOnly.wifi.icon = &Icons::WIFI_MEDIUM;
 
   DashboardState btcOnly = baseline;
   btcOnly.btc.price = "65235.00";
@@ -586,13 +586,52 @@ static const char* wifiConnectionStateName(
   return "UNKNOWN";
 }
 
+static const Bitmap1bpp* wifiIconForRssi(int32_t rssi) {
+  if (rssi >= -60) {
+    return &Icons::WIFI_STRONG;
+  }
+
+  if (rssi >= -70) {
+    return &Icons::WIFI_MEDIUM;
+  }
+
+  if (rssi >= -80) {
+    return &Icons::WIFI_WEAK;
+  }
+
+  return &Icons::WIFI_VERY_WEAK;
+}
+
+static const char* wifiSignalLevelName(int32_t rssi) {
+  if (rssi >= -60) {
+    return "STRONG";
+  }
+
+  if (rssi >= -70) {
+    return "MEDIUM";
+  }
+
+  if (rssi >= -80) {
+    return "WEAK";
+  }
+
+  return "VERY_WEAK";
+}
+
 static WiFiConnectionState lastReportedWiFiState =
     WiFiConnectionState::DISCONNECTED;
+static WiFiConnectionState lastUiWiFiState =
+    WiFiConnectionState::DISCONNECTED;
+
 static bool hasReportedWiFiState = false;
+static bool hasUiWiFiState = false;
+
 static uint32_t lastReportedWiFiAttempt = 0;
 static uint32_t lastRssiReportMs = 0;
+static uint32_t lastWiFiUiSampleMs = 0;
 
 static constexpr uint32_t WIFI_RSSI_REPORT_INTERVAL_MS = 10000;
+static constexpr uint32_t WIFI_UI_SAMPLE_INTERVAL_MS = 60000;
 
 static void reportWiFiManagerStatus() {
   const uint32_t attempts = wifiManager.connectionAttempts();
@@ -635,14 +674,65 @@ static void reportWiFiManagerStatus() {
   }
 }
 
+static bool updateLiveWiFiWidget() {
+  WiFiWidgetState wifiState = {
+    &Icons::WIFI_DISCONNECTED
+  };
+
+  if (wifiManager.isConnected()) {
+    const int32_t currentRssi = wifiManager.rssi();
+    wifiState.icon = wifiIconForRssi(currentRssi);
+
+    Serial.print("Wi-Fi UI sample: ");
+    Serial.print(currentRssi);
+    Serial.print(" dBm -> ");
+    Serial.println(wifiSignalLevelName(currentRssi));
+  } else {
+    Serial.println("Wi-Fi UI sample: DISCONNECTED");
+  }
+
+  if (!updateCoalescer.stageWiFi(wifiState)) {
+    Serial.println("FAIL: could not stage live Wi-Fi widget state.");
+    return false;
+  }
+
+  if (!updateCoalescer.hasPendingUpdate()) {
+    Serial.println("Wi-Fi visual state unchanged; E-paper refresh skipped.");
+    return true;
+  }
+
+  Serial.print("Wi-Fi visual state changed; pending dirty: ");
+  printDirtyMask(updateCoalescer.pendingDirty());
+
+  return flushPendingPartial() == UpdateResult::REFRESHED;
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 4A-1: Wi-Fi connection manager hardware test");
-  Serial.println("E-paper display is intentionally untouched in this phase.");
-  Serial.println("Credentials are loaded from local config.h and are not printed.");
+  Serial.println("EDP Phase 4A-2: live Wi-Fi dashboard integration");
+  Serial.println("Display shows icon only; numeric RSSI remains Serial/debug data.");
+  Serial.println("RSSI UI bands: >=-60 strong, >=-70 medium, >=-80 weak, <-80 very weak.");
+
+  if (!runDirtySelfCheck() ||
+      !runSnapshotSelfCheck() ||
+      !runCoalescerSelfCheck() ||
+      !runCoalescerOwnershipSelfCheck()) {
+    Serial.println("FAIL: Phase 3 state/coalescing regression self-check failed.");
+    return;
+  }
+
+  Serial.println("PASS: Phase 3 state/coalescing regression self-checks.");
+
+  DashboardState initialState = DashboardTestStates::BASELINE;
+  initialState.wifi.icon = &Icons::WIFI_DISCONNECTED;
+
+  Serial.println("Establishing Phase 4A-2 dashboard baseline...");
+  if (!establishBaseline(initialState)) {
+    return;
+  }
 
   if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
     Serial.println("FAIL: Wi-Fi manager could not start. Check config.h.");
@@ -650,10 +740,39 @@ void setup() {
   }
 
   reportWiFiManagerStatus();
+
+  lastUiWiFiState = wifiManager.state();
+  hasUiWiFiState = true;
+  lastWiFiUiSampleMs = millis();
+
+  if (!updateLiveWiFiWidget()) {
+    return;
+  }
 }
 
 void loop() {
   wifiManager.tick();
   reportWiFiManagerStatus();
+
+  const uint32_t now = millis();
+  const WiFiConnectionState currentState = wifiManager.state();
+
+  const bool stateChanged =
+      !hasUiWiFiState || currentState != lastUiWiFiState;
+
+  const bool periodicSignalSample =
+      currentState == WiFiConnectionState::CONNECTED &&
+      now - lastWiFiUiSampleMs >= WIFI_UI_SAMPLE_INTERVAL_MS;
+
+  if (stateChanged || periodicSignalSample) {
+    lastUiWiFiState = currentState;
+    hasUiWiFiState = true;
+    lastWiFiUiSampleMs = now;
+
+    if (!updateLiveWiFiWidget()) {
+      Serial.println("FAIL: live Wi-Fi dashboard update failed.");
+    }
+  }
+
   delay(20);
 }

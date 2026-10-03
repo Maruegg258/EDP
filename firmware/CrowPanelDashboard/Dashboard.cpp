@@ -16,7 +16,7 @@ Dashboard::Dashboard(GraphicsBW& graphics)
           graphics,
           static_cast<int16_t>(graphics.width() / 2),
           16),
-      _wifi(graphics, 658, 18),
+      _wifi(graphics, 732, 20),
       _btc(graphics, 24, 82, Icons::CRYPTO_BTC, "BTC"),
       _eth(graphics, 281, 82, Icons::CRYPTO_ETH, "ETH"),
       _hype(graphics, 538, 82, Icons::CRYPTO_HYPE, "HYPE"),

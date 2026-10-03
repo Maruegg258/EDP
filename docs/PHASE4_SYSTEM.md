@@ -29,3 +29,28 @@ Hardware verification confirmed:
 - Existing display driver and verified refresh sequence were not modified
 
 Phase 4A-1 does not yet feed live Wi-Fi data into the dashboard UI. That integration is Phase 4A-2.
+
+## Phase 4A-2 — Live Wi-Fi dashboard integration
+
+**Status: Implementation committed; hardware verification pending**
+
+Implementation:
+
+- Upper-right Wi-Fi widget renders only a compact bar-style icon
+- Removed the visible `WIFI` label and numeric RSSI text
+- RSSI remains internal/Serial diagnostic data
+- Four connected signal bands:
+  - `>= -60 dBm`: four solid bars
+  - `-61..-70 dBm`: three solid bars
+  - `-71..-80 dBm`: two solid bars
+  - `< -80 dBm`: one solid bar
+- Inactive bars are hollow to preserve the reference style on a 1-bit display
+- Disconnected state uses hollow bars plus an X
+- Connection-state changes are handled immediately
+- Connected RSSI is sampled for UI state once per minute
+- `WiFiWidgetState` stores only the visible icon, so RSSI movement inside the same band does not mark the dashboard dirty
+- Updates enter the existing `DashboardUpdateCoalescer::stageWiFi()` path
+- If the resulting icon is unchanged, E-paper activity is skipped
+- Display-driver and refresh-sequence code are unchanged
+
+Hardware verification should confirm icon appearance, signal-band transitions, disconnect/reconnect behavior, skip-unchanged behavior, and refresh quality.

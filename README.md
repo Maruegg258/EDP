@@ -25,8 +25,8 @@ The finished dashboard is planned to support:
    - Market data should live in a dedicated service layer rather than in the display driver
 
 4. **Wi-Fi signal indicator**
-   - A compact signal-strength icon in the upper-right corner
-   - Derived from the ESP32 Wi-Fi RSSI value
+   - A compact bar-style signal-strength icon in the upper-right corner
+   - Derived from the ESP32 Wi-Fi RSSI value; numeric RSSI is not displayed
 
 5. **Improved typography and small icons**
    - Custom bitmap fonts where useful
@@ -57,7 +57,7 @@ CrowPanelDashboard.ino
         |    +-- Icons               (implemented)
         |
         +-- network/
-        |    +-- WiFiManager         (implemented; hardware verification pending)
+        |    +-- WiFiManager         (implemented; Phase 4A-1 hardware verified)
         |    +-- SecureHttpClient    (planned)
         |
         +-- services/
@@ -125,7 +125,7 @@ Phase 3D-2 adds an integration regression around the existing coalescer rather t
 
 Phase 3 is complete as of 2026-10-01. The dashboard framework now provides modular widgets, logical dirty tracking, durable displayed/pending state ownership, skip-unchanged behavior, and refresh coalescing. Physical dirty-region refresh remains deliberately deferred; the project continues to use full-frame composition and the verified full-screen partial/maintenance refresh paths.
 
-Phase 4 introduces the first live system data: Wi-Fi connection/RSSI and NTP-synchronized local time, routed through the existing Phase 3 state/coalescing architecture rather than directly controlling the display.\n\nPhase 4A-1 adds a project-owned non-blocking `WiFiManager` that uses local `config.h` credentials, reports connection state and RSSI through Serial, and retries after failed/lost connections without a blocking wait loop. The Phase 4A-1 hardware-test entry point intentionally performs no E-paper activity; the existing display driver and verified refresh sequences remain unchanged. Compile/upload, live connection, RSSI reporting, and reconnect behavior were verified on hardware on 2026-10-03.
+Phase 4 introduces the first live system data: Wi-Fi connection/RSSI and NTP-synchronized local time, routed through the existing Phase 3 state/coalescing architecture rather than directly controlling the display.\n\nPhase 4A-1 adds a project-owned non-blocking `WiFiManager` that uses local `config.h` credentials, reports connection state and RSSI through Serial, and retries after failed/lost connections without a blocking wait loop. The Phase 4A-1 hardware-test entry point intentionally performs no E-paper activity; the existing display driver and verified refresh sequences remain unchanged. Compile/upload, live connection, RSSI reporting, and reconnect behavior were verified on hardware on 2026-10-03.\n\nPhase 4A-2 maps live RSSI into four visible bar levels plus a disconnected state. `WiFiWidget` now renders only the icon: the `WIFI` label and numeric RSSI were removed. RSSI is sampled for the UI once per minute and connection-state transitions are handled immediately; the Phase 3 coalescer skips physical refresh when the resulting icon is unchanged. Implementation is committed; hardware verification is pending.
 
 ## Current repository structure
 

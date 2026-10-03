@@ -8,7 +8,6 @@ DashboardStateSnapshot::DashboardStateSnapshot()
   _time[0] = '\0';
   _weatherLabel[0] = '\0';
   _temperature[0] = '\0';
-  _rssi[0] = '\0';
   _btcPrice[0] = '\0';
   _ethPrice[0] = '\0';
   _hypePrice[0] = '\0';
@@ -21,7 +20,6 @@ DashboardStateSnapshot::DashboardStateSnapshot()
   _state.weather.temperature = _temperature;
 
   _state.wifi.icon = nullptr;
-  _state.wifi.rssi = _rssi;
 
   _state.btc.price = _btcPrice;
   _state.eth.price = _ethPrice;
@@ -53,7 +51,6 @@ bool DashboardStateSnapshot::capture(const DashboardState& source) {
       !fitsText(source.clock.time, sizeof(_time)) ||
       !fitsText(source.weather.label, sizeof(_weatherLabel)) ||
       !fitsText(source.weather.temperature, sizeof(_temperature)) ||
-      !fitsText(source.wifi.rssi, sizeof(_rssi)) ||
       !fitsText(source.btc.price, sizeof(_btcPrice)) ||
       !fitsText(source.eth.price, sizeof(_ethPrice)) ||
       !fitsText(source.hype.price, sizeof(_hypePrice)) ||
@@ -70,7 +67,6 @@ bool DashboardStateSnapshot::capture(const DashboardState& source) {
       _temperature,
       sizeof(_temperature),
       source.weather.temperature);
-  copyText(_rssi, sizeof(_rssi), source.wifi.rssi);
   copyText(_btcPrice, sizeof(_btcPrice), source.btc.price);
   copyText(_ethPrice, sizeof(_ethPrice), source.eth.price);
   copyText(_hypePrice, sizeof(_hypePrice), source.hype.price);

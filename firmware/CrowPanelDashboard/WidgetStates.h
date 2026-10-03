@@ -14,7 +14,6 @@ struct WeatherWidgetState {
 
 struct WiFiWidgetState {
   const Bitmap1bpp* icon;
-  const char* rssi;
 };
 
 struct CryptoWidgetState {

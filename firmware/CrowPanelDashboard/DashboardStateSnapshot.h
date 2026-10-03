@@ -27,7 +27,6 @@ private:
   char _time[8];
   char _weatherLabel[16];
   char _temperature[16];
-  char _rssi[16];
   char _btcPrice[24];
   char _ethPrice[24];
   char _hypePrice[24];
