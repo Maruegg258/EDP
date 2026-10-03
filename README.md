@@ -64,7 +64,7 @@ CrowPanelDashboard.ino
         +-- services/
         |    +-- TimeService         (implemented; Phase 4 hardware verified)
         |    +-- WeatherService      (planned)
-        |    +-- MarketDataService   (BTC/ETH/HYPE polling implemented; Phase 5A-3 hardware verification pending)
+        |    +-- MarketDataService   (BTC/ETH/HYPE polling hardware verified)
         |
         +-- ui/
              +-- WidgetStates        (implemented)
@@ -138,7 +138,7 @@ Phase 5A-1 introduces a project-owned `SecureHttpClient` and a public `DigiCert 
 
 Phase 5A-2 adds a dedicated `MarketDataService` above `SecureHttpClient`. The initial implementation remains BTC-only and Serial-only: it fetches `BTCUSDT`, strictly validates the returned symbol and positive finite price, accepts the optional numeric source-time field, and commits a new last-valid snapshot only after all validation succeeds. The test flow then intentionally requests an invalid symbol to verify that a later HTTP failure does not clear or mutate the valid BTC snapshot. Compile/upload, BTC parsing, source-time parsing, expected invalid-symbol failure, last-valid preservation, and coexistence with the existing Clock/Wi-Fi dashboard behavior were verified on hardware on 2026-10-04. Crypto widgets remained unchanged as intended.
 
-Phase 5A-3 expands the service from one shared last-valid value to three independent configured slots for `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT`. The application performs a 60-second Serial-only polling cycle after the Clock/Wi-Fi display flush, so market HTTPS work does not take priority over minute-level UI updates. Each symbol is fetched and validated independently; a failed symbol request leaves that symbol's previous valid snapshot intact while the other symbols continue to update. No market value is staged into the dashboard in this checkpoint.
+Phase 5A-3 expands the service from one shared last-valid value to three independent configured slots for `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT`. The application performs a 60-second Serial-only polling cycle after the Clock/Wi-Fi display flush, so market HTTPS work does not take priority over minute-level UI updates. Each symbol is fetched and validated independently; a failed symbol request leaves that symbol's previous valid snapshot intact while the other symbols continue to update. Compile/upload, repeated 60-second polling, valid BTC/ETH/HYPE parsing, three independent stored market values, and coexistence with the existing Clock/Wi-Fi display behavior were verified on hardware on 2026-10-04. No market value was staged into the dashboard in this checkpoint.
 
 ## Current repository structure
 

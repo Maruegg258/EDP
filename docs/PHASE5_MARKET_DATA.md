@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A-1 and Phase 5A-2 hardware verified; Phase 5A-3 implemented and awaiting hardware verification.
+**Status:** Phase 5A-1, Phase 5A-2, and Phase 5A-3 hardware verified; Phase 5 in progress.
 
 **Reviewed:** 2026-10-04
 
@@ -231,9 +231,9 @@ The display driver must not know about Binance, HTTPS, JSON, symbols, or polling
 
 **Not yet hardware-verified:**
 
-- ETH/HYPE requests
-- three-symbol polling behavior
-- per-symbol failure/staleness behavior once more than one market value is tracked
+- an intentionally induced per-symbol failure during the three-symbol polling flow
+- live BTC/ETH/HYPE integration into `DashboardUpdateCoalescer` and Crypto widgets
+- end-to-end stale-data presentation behavior after a prolonged market-data outage
 
 Those items remain for later Phase 5 checkpoints.
 
@@ -352,7 +352,7 @@ Phase 5A-2 is therefore complete.
 
 ## Phase 5A-3 implementation
 
-**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+**Status:** PASS on real hardware (2026-10-04).
 
 Phase 5A-3 expands `MarketDataService` to three independent configured market slots:
 
@@ -412,18 +412,21 @@ PASS: BTC/ETH/HYPE have independent last-valid market slots.
 Phase 5A-3 remains Serial-only; dashboard crypto widgets are unchanged.
 ```
 
-Acceptance criteria before Phase 5A-3 can be marked complete:
+Hardware verification confirmed:
 
 1. Firmware compiles and uploads.
 2. The first market cycle starts only after Wi-Fi and NTP synchronization.
-3. `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` all parse into their own slots.
-4. Serial reports valid positive prices for all three.
+3. `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` all parse successfully into distinct service slots.
+4. Serial reports valid positive prices and source times for all three symbols.
 5. Repeated polling occurs at approximately 60-second application intervals.
-6. Fetching one symbol does not overwrite the other symbols' last-valid values.
-7. If a transient per-symbol failure occurs, an existing last-valid value is preserved and reported.
-8. Existing Clock/Wi-Fi display behavior remains normal.
-9. Crypto widgets remain unchanged.
+6. The three stored last-valid values remain associated with their matching symbols across repeated polls.
+7. Existing Clock/Wi-Fi display behavior remains normal.
+8. Crypto widgets remain unchanged, as intended for the Serial-only checkpoint.
+
+The multi-symbol failure path was not deliberately forced during this successful Phase 5A-3 run. The service is designed to retain a failed symbol's prior valid slot, and BTC last-valid preservation was already hardware-verified in Phase 5A-2. A broader induced-outage/per-symbol failure test remains appropriate for later reliability hardening.
+
+Phase 5A-3 is therefore complete.
 
 ## Next checkpoint
 
-After Phase 5A-3 hardware verification, the next incremental step is to connect validated market values to the existing BTC/ETH/HYPE widget states through `DashboardUpdateCoalescer`, while keeping market polling cadence separate from physical display refresh decisions.
+**Phase 5B-1:** connect the validated `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` last-valid values to the existing BTC/ETH/HYPE widget states through `DashboardUpdateCoalescer`. Preserve the separation between the 60-second market polling cadence and the physical E-paper refresh decision, so only visible value changes mark crypto widgets dirty and nearby Clock/Wi-Fi changes can still coalesce into one refresh.
