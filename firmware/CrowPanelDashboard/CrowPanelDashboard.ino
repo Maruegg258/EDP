@@ -569,156 +569,88 @@ static bool establishBaseline(const DashboardState& state) {
   return true;
 }
 
+static const char* wifiConnectionStateName(
+    WiFiConnectionState state) {
+  switch (state) {
+    case WiFiConnectionState::DISCONNECTED:
+      return "DISCONNECTED";
+    case WiFiConnectionState::CONNECTING:
+      return "CONNECTING";
+    case WiFiConnectionState::CONNECTED:
+      return "CONNECTED";
+  }
+
+  return "UNKNOWN";
+}
+
+static WiFiConnectionState lastReportedWiFiState =
+    WiFiConnectionState::DISCONNECTED;
+static bool hasReportedWiFiState = false;
+static uint32_t lastReportedWiFiAttempt = 0;
+static uint32_t lastRssiReportMs = 0;
+
+static constexpr uint32_t WIFI_RSSI_REPORT_INTERVAL_MS = 10000;
+
+static void reportWiFiManagerStatus() {
+  const uint32_t attempts = wifiManager.connectionAttempts();
+
+  if (attempts != lastReportedWiFiAttempt) {
+    Serial.print("Wi-Fi connection attempt #");
+    Serial.println(attempts);
+    lastReportedWiFiAttempt = attempts;
+  }
+
+  const WiFiConnectionState currentState = wifiManager.state();
+
+  if (!hasReportedWiFiState ||
+      currentState != lastReportedWiFiState) {
+    Serial.print("Wi-Fi state: ");
+    Serial.println(wifiConnectionStateName(currentState));
+
+    lastReportedWiFiState = currentState;
+    hasReportedWiFiState = true;
+
+    if (currentState == WiFiConnectionState::CONNECTED) {
+      Serial.print("Wi-Fi RSSI: ");
+      Serial.print(wifiManager.rssi());
+      Serial.println(" dBm");
+      lastRssiReportMs = millis();
+    }
+  }
+
+  if (currentState != WiFiConnectionState::CONNECTED) {
+    return;
+  }
+
+  const uint32_t now = millis();
+
+  if (now - lastRssiReportMs >= WIFI_RSSI_REPORT_INTERVAL_MS) {
+    Serial.print("Wi-Fi RSSI: ");
+    Serial.print(wifiManager.rssi());
+    Serial.println(" dBm");
+    lastRssiReportMs = now;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 3D-2: coalescing integration regression");
-  Serial.println("Verify dirty, durable ownership, discard/commit, skip, and refresh path.");
+  Serial.println("EDP Phase 4A-1: Wi-Fi connection manager hardware test");
+  Serial.println("E-paper display is intentionally untouched in this phase.");
+  Serial.println("Credentials are loaded from local config.h and are not printed.");
 
-  if (!runDirtySelfCheck()) {
-    Serial.println("FAIL: dirty comparison self-check failed.");
+  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("FAIL: Wi-Fi manager could not start. Check config.h.");
     return;
   }
 
-  Serial.println("PASS: dirty comparison self-check.");
-
-  if (!runSnapshotSelfCheck()) {
-    Serial.println("FAIL: snapshot self-check failed.");
-    return;
-  }
-
-  Serial.println("PASS: durable snapshot self-check.");
-
-  if (!runCoalescerSelfCheck()) {
-    Serial.println("FAIL: coalescer self-check failed.");
-    return;
-  }
-
-  Serial.println("PASS: refresh coalescer self-check.");
-
-  if (!runCoalescerOwnershipSelfCheck()) {
-    Serial.println("FAIL: coalescer ownership/discard self-check failed.");
-    return;
-  }
-
-  Serial.println("PASS: coalescer ownership/discard self-check.");
-
-  Serial.println("Step 1/10: establish full baseline...");
-  if (!establishBaseline(DashboardTestStates::BASELINE)) {
-    return;
-  }
-
-  Serial.println("Step 2/10: stage seven PRE_MAINTENANCE widget events; one partial...");
-  if (!stageStateAsWidgetEvents(DashboardTestStates::PRE_MAINTENANCE) ||
-      !expectPendingDirty(
-          "pre-maintenance final pending",
-          updateCoalescer,
-          DashboardDirty::ALL) ||
-      !expectUpdateResult(
-          "coalesced pre-maintenance partial",
-          flushPendingPartial(),
-          UpdateResult::REFRESHED)) {
-    return;
-  }
-
-  Serial.println("Step 3/10: identical PRE_MAINTENANCE; MUST SKIP...");
-  if (!updateCoalescer.stage(DashboardTestStates::PRE_MAINTENANCE) ||
-      !expectUpdateResult(
-          "identical pre-maintenance",
-          flushPendingPartial(),
-          UpdateResult::SKIPPED)) {
-    return;
-  }
-
-  Serial.println("Step 4/10: stage seven MAINTENANCE widget events; one maintenance refresh...");
-  if (!stageStateAsWidgetEvents(DashboardTestStates::MAINTENANCE) ||
-      !expectPendingDirty(
-          "maintenance final pending",
-          updateCoalescer,
-          DashboardDirty::ALL) ||
-      !expectUpdateResult(
-          "coalesced maintenance",
-          flushPendingMaintenance(),
-          UpdateResult::REFRESHED)) {
-    return;
-  }
-
-  Serial.println("Step 5/10: stage temporary changes then revert all before flush; MUST SKIP...");
-  if (!updateCoalescer.stageClock(DashboardTestStates::POST_MAINTENANCE[0].clock) ||
-      !updateCoalescer.stageBtc(DashboardTestStates::POST_MAINTENANCE[0].btc) ||
-      !expectPendingDirty(
-          "temporary clock+btc",
-          updateCoalescer,
-          DashboardDirty::CLOCK | DashboardDirty::BTC) ||
-      !updateCoalescer.stageClock(DashboardTestStates::MAINTENANCE.clock) ||
-      !updateCoalescer.stageBtc(DashboardTestStates::MAINTENANCE.btc) ||
-      !expectPendingDirty(
-          "temporary changes reverted",
-          updateCoalescer,
-          DashboardDirty::NONE) ||
-      !expectUpdateResult(
-          "reverted before flush",
-          flushPendingPartial(),
-          UpdateResult::SKIPPED)) {
-    return;
-  }
-
-  Serial.println("Step 6/10: identical MAINTENANCE state; MUST SKIP...");
-  if (!updateCoalescer.stage(DashboardTestStates::MAINTENANCE) ||
-      !expectUpdateResult(
-          "identical maintenance",
-          flushPendingMaintenance(),
-          UpdateResult::SKIPPED)) {
-    return;
-  }
-
-  Serial.println("Step 7/10: first post-maintenance state; one partial...");
-  if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[0]) ||
-      !expectUpdateResult(
-          "post partial one",
-          flushPendingPartial(),
-          UpdateResult::REFRESHED)) {
-    return;
-  }
-
-  Serial.println("Step 8/10: second post-maintenance state; one partial...");
-  if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[1]) ||
-      !expectUpdateResult(
-          "post partial two",
-          flushPendingPartial(),
-          UpdateResult::REFRESHED)) {
-    return;
-  }
-
-  Serial.println("Step 9/10: third post-maintenance state; one partial...");
-  if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[2]) ||
-      !expectUpdateResult(
-          "post partial three",
-          flushPendingPartial(),
-          UpdateResult::REFRESHED)) {
-    return;
-  }
-
-  Serial.println("Step 10/10: identical final state; MUST SKIP...");
-  if (!updateCoalescer.stage(DashboardTestStates::POST_MAINTENANCE[2]) ||
-      !expectUpdateResult(
-          "identical final",
-          flushPendingPartial(),
-          UpdateResult::SKIPPED)) {
-    return;
-  }
-
-  Serial.println("PASS: Phase 3D-2 coalescing integration regression completed.");
-  Serial.println("Physical inspection is REQUIRED.");
-  Serial.println("Steps 2 and 4 must each perform only one physical refresh.");
-  Serial.println("Steps 3, 5, 6, and 10 must cause NO E-paper refresh activity.");
-  Serial.println("Step 5 specifically proves dirty changes can cancel before flush.");
-  Serial.println("Final frame should show 12:39 / RAIN / -99 / disconnected Wi-Fi.");
-  Serial.println("Changed-state refresh quality must remain identical to Phase 3D-1.");
+  reportWiFiManagerStatus();
 }
 
 void loop() {
-  delay(1000);
+  wifiManager.tick();
+  reportWiFiManagerStatus();
+  delay(20);
 }

@@ -57,7 +57,7 @@ CrowPanelDashboard.ino
         |    +-- Icons               (implemented)
         |
         +-- network/
-        |    +-- WiFiManager         (planned)
+        |    +-- WiFiManager         (implemented; hardware verification pending)
         |    +-- SecureHttpClient    (planned)
         |
         +-- services/
@@ -125,7 +125,7 @@ Phase 3D-2 adds an integration regression around the existing coalescer rather t
 
 Phase 3 is complete as of 2026-10-01. The dashboard framework now provides modular widgets, logical dirty tracking, durable displayed/pending state ownership, skip-unchanged behavior, and refresh coalescing. Physical dirty-region refresh remains deliberately deferred; the project continues to use full-frame composition and the verified full-screen partial/maintenance refresh paths.
 
-Phase 4 will introduce the first live system data: Wi-Fi connection/RSSI and NTP-synchronized local time, routed through the existing Phase 3 state/coalescing architecture rather than directly controlling the display.
+Phase 4 introduces the first live system data: Wi-Fi connection/RSSI and NTP-synchronized local time, routed through the existing Phase 3 state/coalescing architecture rather than directly controlling the display.\n\nPhase 4A-1 adds a project-owned non-blocking `WiFiManager` that uses local `config.h` credentials, reports connection state and RSSI through Serial, and retries after failed/lost connections without a blocking wait loop. The Phase 4A-1 hardware-test entry point intentionally performs no E-paper activity; the existing display driver and verified refresh sequences remain unchanged. Hardware verification is pending.
 
 ## Current repository structure
 
