@@ -16,6 +16,24 @@ bool isJsonWhitespace(char value) {
          value == '\n';
 }
 
+bool isValidMarketSymbol(const char* symbol) {
+  if (symbol == nullptr || symbol[0] == '\0') {
+    return false;
+  }
+
+  for (const char* cursor = symbol; *cursor != '\0'; ++cursor) {
+    const char value = *cursor;
+    const bool uppercase = value >= 'A' && value <= 'Z';
+    const bool digit = value >= '0' && value <= '9';
+
+    if (!uppercase && !digit) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 }  // namespace
 
 MarketDataService::MarketDataService(SecureHttpClient& httpClient)
@@ -35,6 +53,11 @@ bool MarketDataService::fetchLatest(const char* symbol) {
 
   if (strlen(symbol) >= MarketPriceValue::SYMBOL_CAPACITY) {
     setError("market symbol exceeds service capacity");
+    return false;
+  }
+
+  if (!isValidMarketSymbol(symbol)) {
+    setError("market symbol contains unsupported characters");
     return false;
   }
 
@@ -245,12 +268,11 @@ bool MarketDataService::extractOptionalJsonUint64(
     const uint8_t digit =
         static_cast<uint8_t>(body[cursor] - '0');
 
-    const uint64_t next = parsed * 10ULL + digit;
-    if (next < parsed) {
+    if (parsed > (UINT64_MAX - digit) / 10ULL) {
       return false;
     }
 
-    parsed = next;
+    parsed = parsed * 10ULL + digit;
     ++cursor;
   }
 

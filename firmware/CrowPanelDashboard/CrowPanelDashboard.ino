@@ -725,7 +725,7 @@ static constexpr char NTP_SERVER_SECONDARY[] = "pool.ntp.org";
 static constexpr uint32_t TIME_REPORT_INTERVAL_MS = 10000;
 
 static constexpr char PHASE5A2_TEST_SYMBOL[] = "BTCUSDT";
-static constexpr char PHASE5A2_INVALID_SYMBOL[] = "EDP_INVALID_SYMBOL";
+static constexpr char PHASE5A2_INVALID_SYMBOL[] = "EDPINVALIDUSDT";
 static bool phase5A2MarketProbeAttempted = false;
 
 static bool timeServiceStartAttempted = false;
