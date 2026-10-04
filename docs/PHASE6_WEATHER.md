@@ -345,7 +345,7 @@ Phase 6A-1 is therefore hardware-verified and complete.
 
 ## Phase 6A-2 implementation
 
-**Status:** Implementation committed; awaiting real-hardware verification.
+**Status:** PASS on real hardware (2026-10-05).
 
 Phase 6A-2 replaces the Phase 6A-1 raw-body application probe with a dedicated provider-facing `WeatherService`. It remains Serial-only and does not stage any Weather widget state.
 
@@ -501,3 +501,21 @@ Required hardware verification:
 12. no E-paper refresh-path regression is observed
 
 Phase 6A-2 must remain unchecked in the roadmap until these results are confirmed on hardware.
+
+Hardware verification confirmed:
+
+1. Firmware compiled and uploaded successfully.
+2. The Phase 6A-2 WeatherService probe ran only after the existing Wi-Fi and synchronized-time prerequisites were satisfied.
+3. The live Open-Meteo response parsed successfully through the dedicated `WeatherService`.
+4. Current weather parsed correctly, including local timestamp, temperature, raw WMO weather code, and day/night state.
+5. Exactly five future hourly slots were retained from `hourly[1..5]`, with timestamp, temperature, raw WMO code, precipitation probability, and day/night state.
+6. The service crossed local midnight correctly: the current value belonged to the new local date, `today` matched that date, and `tomorrow` matched the following date.
+7. Today/tomorrow daily minimum/maximum temperatures and maximum precipitation probabilities parsed successfully.
+8. The deliberate invalid-coordinate request failed with `invalid weather coordinates` before network activity.
+9. The previously valid `WeatherSnapshot` remained unchanged after that failed request, confirming last-valid preservation.
+10. The service remained Serial-only in this checkpoint; no Weather widget state was staged.
+11. Existing Phase 5 market-data and dashboard responsibilities remain separate from WeatherService.
+
+Observed live-data examples also confirmed that the service must keep the raw provider semantics rather than infer UI meaning too early: an instantaneous clear condition can coexist with a more severe daily representative weather code and high daily precipitation probability. Semantic mapping remains Phase 6A-3.
+
+Phase 6A-2 is therefore hardware-verified and complete.
