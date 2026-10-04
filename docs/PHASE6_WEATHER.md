@@ -266,3 +266,56 @@ existing WeatherWidgetState / DashboardUpdateCoalescer
 No E-paper driver, refresh sequence, Dashboard coalescer, or existing market-data path needs to change for this checkpoint.
 
 **Next checkpoint: Phase 6A-1 — add the weather trust anchor and a minimal Serial-only Open-Meteo HTTPS probe.**
+
+## Phase 6A-1 implementation
+
+**Status:** Implementation committed; awaiting real-hardware verification.
+
+Phase 6A-1 adds only the transport probe needed to validate the new weather HTTPS path. It does not add `WeatherService`, JSON parsing, weather-widget staging, or any E-paper refresh behavior.
+
+Firmware changes:
+
+- adds public `ISRG_ROOT_X1` trust material to `TlsTrustAnchors.h`
+- creates a weather-specific `SecureHttpClient`
+- waits for Wi-Fi plus synchronized system time
+- performs one Open-Meteo request through certificate-validating HTTPS
+- prints HTTP status, payload size, and the raw response body to Serial
+- leaves the Phase 5 BTC/ETH/HYPE production path active
+- does not call `setInsecure()`
+- does not stage Weather dirty state
+
+The Phase 6A-1 request uses:
+
+```text
+forecast_hours=6
+forecast_days=2
+timezone=Asia/Taipei
+```
+
+The intended hourly response is six rows total:
+
+```text
+current-hour alignment + next five future hours
+```
+
+Real weather coordinates are intentionally not stored in the public repository. Before hardware verification, local `config.h` must contain numeric decimal-degree values:
+
+```cpp
+#define WEATHER_LATITUDE  ...
+#define WEATHER_LONGITUDE ...
+```
+
+If either definition is absent, the firmware still compiles and continues the existing dashboard/market behavior, but the one-shot weather probe reports a Serial `SKIP` instead of sending a request.
+
+Required hardware result before Phase 6A-1 can be checked complete:
+
+1. normal Phase 3 self-checks still pass
+2. Wi-Fi connects normally
+3. NTP reaches `SYNCHRONIZED`
+4. Phase 5 market polling remains normal
+5. the weather probe receives HTTP 200 through `ISRG Root X1`
+6. the raw JSON contains `current`, six aligned `hourly` rows, and two `daily` rows
+7. no Weather widget value changes during this checkpoint
+8. E-paper refresh quality remains unchanged
+
+A successful HTTP request is necessary but the actual response shape will be examined before Phase 6A-2 chooses and implements the parser.
