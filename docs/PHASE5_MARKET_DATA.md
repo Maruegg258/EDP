@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A and Phase 5B-1 hardware verified; Phase 5B-2 implemented and awaiting hardware verification.
+**Status:** Phase 5A, Phase 5B-1, and Phase 5B-2 hardware verified; final production cleanup pending.
 
 **Reviewed:** 2026-10-04
 
@@ -237,14 +237,20 @@ The display driver must not know about Binance, HTTPS, JSON, symbols, or polling
 - Clock/Wi-Fi behavior and display clarity remain normal with market data enabled
 - market polling remains separate from direct display-driver control
 
-**Not yet hardware-verified:**
+**Hardware-verified resilience behavior (2026-10-04):**
 
-- an explicitly unchanged market price producing a no-dirty/no-refresh outcome
-- an intentionally induced market-data failure while live prices are displayed
-- recovery behavior after the induced failure
-- end-to-end stale-data/status behavior after a prolonged market-data outage
+- re-staging identical live Crypto values produces no dirty state and no unnecessary physical refresh
+- simulated one-symbol unavailability preserves the displayed and service last-valid value
+- unaffected symbols continue independently
+- normal polling recovers after the unavailable cycle
 
-Those items remain for Phase 5B-2 and later reliability hardening.
+**Deferred to Phase 9 reliability hardening:**
+
+- prolonged market-data outage thresholds
+- explicit data-age/stale indication if later judged useful
+- long-duration API outage/recovery testing
+
+The temporary Phase 5B-2 diagnostic injection must still be removed and the production path re-verified before Phase 5 is closed.
 
 ## Phase 5A-1 implementation
 
@@ -563,7 +569,7 @@ The following behaviors are deliberately left for the next checkpoint rather tha
 
 ## Phase 5B-2 implementation
 
-**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+**Status:** PASS on real hardware (2026-10-04).
 
 Phase 5B-2 is a diagnostic checkpoint around the already hardware-verified live market pipeline. It deliberately does not change:
 
@@ -633,19 +639,34 @@ This checkpoint does not add a stale-data marker in advance.
 
 The diagnostic answers whether short-lived failures are safely handled by preserving last-valid data. Whether prolonged outages need a visual stale/status indication remains a product decision to make after the hardware result.
 
-Acceptance criteria before Phase 5B-2 can be marked complete:
+Hardware verification confirmed:
 
 1. Firmware compiles and uploads.
-2. Normal live BTC/ETH/HYPE display first becomes established.
+2. Normal live BTC/ETH/HYPE display becomes established before diagnostics run.
 3. Re-staging identical live prices produces `DashboardDirty::NONE` and no pending physical refresh.
-4. The one-cycle ETH unavailable simulation does not change displayed ETH.
-5. The service's ETH last-valid value is unchanged during that simulated unavailable cycle.
-6. BTC/HYPE can continue through the same polling cycle independently.
-7. The immediately restored normal ETH fetch succeeds.
+4. The one-cycle ETH unavailable simulation leaves the displayed ETH price unchanged.
+5. The service's ETH last-valid value remains unchanged during the simulated unavailable cycle.
+6. BTC and HYPE continue independently through that cycle.
+7. Normal ETH fetching resumes successfully.
 8. After recovery, displayed ETH matches the service last-valid ETH price.
-9. Existing Clock/Wi-Fi behavior and E-paper clarity remain normal.
-10. After diagnostics complete, normal 60-second market polling continues.
+9. Existing Clock/Wi-Fi behavior remains normal.
+10. E-paper text remains clear with no observed refresh-quality regression.
+11. Normal 60-second market polling continues after the one-shot diagnostics complete.
+
+Phase 5B-2 is therefore complete.
+
+### Stale-data decision
+
+The verified behavior shows that short-lived market-data failures are safely absorbed by preserving the last valid displayed value, without injecting zero/error text or forcing unnecessary refreshes.
+
+For Phase 5, no additional stale-data visual indicator will be added.
+
+A prolonged outage is a different product/reliability case. Explicit age/staleness indication, outage thresholds, and long-duration recovery policy are deferred to **Phase 9 — Reliability and release hardening**, where they can be designed together with API outage tests and long-duration operation rather than adding a premature UI state here.
+
+### Why Phase 5 is not closed yet
+
+The current firmware still contains the temporary one-shot Phase 5B-2 diagnostic injection. That code intentionally simulates ETH unavailability once after every boot and therefore should not remain in the production application path.
 
 ## Next checkpoint
 
-After Phase 5B-2 hardware verification, decide from the observed behavior whether Phase 5 needs a lightweight stale-data/status policy before it is declared complete, or whether prolonged-outage indication should be deferred to the broader Phase 9 reliability work.
+**Phase 5B-3:** remove the Phase 5B-2 diagnostic state machine and simulated ETH-unavailable cycle, return the application to ordinary 60-second BTC/ETH/HYPE polling only, and run one final hardware regression of live prices, Clock/Wi-Fi behavior, coalesced refreshes, and E-paper clarity. If that passes, Phase 5 can be declared complete.
