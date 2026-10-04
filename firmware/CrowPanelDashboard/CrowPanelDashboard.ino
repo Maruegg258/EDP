@@ -41,6 +41,10 @@ SecureHttpClient secureHttpClient(
 );
 MarketDataService marketDataService(secureHttpClient);
 
+SecureHttpClient weatherSecureHttpClient(
+    TlsTrustAnchors::ISRG_ROOT_X1
+);
+
 enum class UpdateResult {
   FAILED,
   SKIPPED,
@@ -729,6 +733,8 @@ static constexpr uint32_t MARKET_POLL_INTERVAL_MS = 60000;
 static bool hasRunMarketPoll = false;
 static uint32_t lastMarketPollMs = 0;
 
+static bool hasRunWeatherHttpsProbe = false;
+
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
 static TimeSyncState lastReportedTimeState =
@@ -976,6 +982,94 @@ static void runPhase5B3MarketPollIfDue() {
   Serial.println();
 }
 
+static void runPhase6A1WeatherProbeIfReady() {
+  if (hasRunWeatherHttpsProbe ||
+      !wifiManager.isConnected() ||
+      !timeService.isSynchronized()) {
+    return;
+  }
+
+  hasRunWeatherHttpsProbe = true;
+
+  Serial.println();
+  Serial.println("Phase 6A-1 Open-Meteo HTTPS probe starting...");
+  Serial.println("TLS trust anchor: ISRG Root X1");
+  Serial.println("Probe is Serial-only; Weather widget is unchanged.");
+
+#if !defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE)
+  Serial.println(
+      "SKIP: add WEATHER_LATITUDE and WEATHER_LONGITUDE to local config.h."
+  );
+  Serial.println(
+      "The public config.example.h contains commented placeholders only."
+  );
+  Serial.println();
+  return;
+#else
+  const double latitude = static_cast<double>(WEATHER_LATITUDE);
+  const double longitude = static_cast<double>(WEATHER_LONGITUDE);
+
+  if (latitude < -90.0 || latitude > 90.0 ||
+      longitude < -180.0 || longitude > 180.0) {
+    Serial.println("FAIL: configured weather coordinates are out of range.");
+    Serial.println();
+    return;
+  }
+
+  String url;
+  url.reserve(512);
+  url = "https://api.open-meteo.com/v1/forecast?latitude=";
+  url += String(latitude, 6);
+  url += "&longitude=";
+  url += String(longitude, 6);
+  url += "&current=temperature_2m,weather_code,is_day";
+  url += "&hourly=temperature_2m,weather_code,precipitation_probability,is_day";
+  url += "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max";
+  url += "&forecast_hours=6";
+  url += "&forecast_days=2";
+  url += "&timezone=Asia%2FTaipei";
+
+  Serial.println("Requesting certificate-validated weather payload...");
+  Serial.print("Weather request URL: ");
+  Serial.println(url);
+
+  SecureHttpResponse response;
+
+  if (!weatherSecureHttpClient.get(url.c_str(), response)) {
+    Serial.print("FAIL: Open-Meteo HTTPS GET failed");
+    if (response.statusCode != 0) {
+      Serial.print(" (HTTP ");
+      Serial.print(response.statusCode);
+      Serial.print(")");
+    }
+    Serial.print(": ");
+    Serial.println(response.error);
+    Serial.println(
+        "No insecure TLS fallback is attempted; existing dashboard data remains unchanged."
+    );
+    Serial.println();
+    return;
+  }
+
+  Serial.print("Open-Meteo HTTP status: ");
+  Serial.println(response.statusCode);
+  Serial.print("Weather payload bytes: ");
+  Serial.println(response.body.length());
+  Serial.println("Weather payload:");
+  Serial.println(response.body);
+  Serial.println(
+      "PASS candidate: TLS + HTTP succeeded. Inspect the payload before Phase 6A-2 parsing."
+  );
+  Serial.println(
+      "Expected hourly shape: 6 rows total = current-hour alignment + next 5 future hours."
+  );
+  Serial.println(
+      "Phase 6A-1 does not parse or stage weather data into the dashboard."
+  );
+  Serial.println();
+#endif
+}
+
 static bool stageLiveClockIfMinuteChanged(bool& minuteChanged) {
   minuteChanged = false;
 
@@ -1034,9 +1128,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 5B-3: production market path");
-  Serial.println("Live BTC/ETH/HYPE integration remains active.");
-  Serial.println("Diagnostic injection removed; normal 60-second polling only.");
+  Serial.println("EDP Phase 6A-1: Open-Meteo HTTPS probe");
+  Serial.println("Phase 5 production BTC/ETH/HYPE path remains active.");
+  Serial.println("Weather probe is one-shot, certificate-validating, and Serial-only.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1055,7 +1149,7 @@ void setup() {
   initialState.eth.price = "--";
   initialState.hype.price = "--";
 
-  Serial.println("Establishing Phase 5B-3 dashboard baseline...");
+  Serial.println("Establishing live dashboard baseline...");
   if (!establishBaseline(initialState)) {
     return;
   }
@@ -1107,6 +1201,7 @@ void loop() {
   }
 
   runPhase5B3MarketPollIfDue();
+  runPhase6A1WeatherProbeIfReady();
 
   delay(20);
 }
