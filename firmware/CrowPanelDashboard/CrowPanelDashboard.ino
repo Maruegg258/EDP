@@ -15,6 +15,7 @@
 #include "SecureHttpClient.h"
 #include "TimeService.h"
 #include "TlsTrustAnchors.h"
+#include "WeatherService.h"
 #include "WiFiManager.h"
 #include "config.h"
 
@@ -44,6 +45,7 @@ MarketDataService marketDataService(secureHttpClient);
 SecureHttpClient weatherSecureHttpClient(
     TlsTrustAnchors::ISRG_ROOT_X1
 );
+WeatherService weatherService(weatherSecureHttpClient);
 
 enum class UpdateResult {
   FAILED,
@@ -733,7 +735,7 @@ static constexpr uint32_t MARKET_POLL_INTERVAL_MS = 60000;
 static bool hasRunMarketPoll = false;
 static uint32_t lastMarketPollMs = 0;
 
-static bool hasRunWeatherHttpsProbe = false;
+static bool hasRunWeatherServiceProbe = false;
 
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
@@ -982,26 +984,138 @@ static void runPhase5B3MarketPollIfDue() {
   Serial.println();
 }
 
-static void runPhase6A1WeatherProbeIfReady() {
-  if (hasRunWeatherHttpsProbe ||
+static bool sameWeatherSnapshot(const WeatherSnapshot& left,
+                                const WeatherSnapshot& right) {
+  if (strcmp(left.current.time, right.current.time) != 0 ||
+      left.current.temperatureC != right.current.temperatureC ||
+      left.current.weatherCode != right.current.weatherCode ||
+      left.current.isDay != right.current.isDay) {
+    return false;
+  }
+
+  for (size_t index = 0;
+       index < WeatherSnapshot::FUTURE_HOUR_COUNT;
+       ++index) {
+    const WeatherHourlyValue& leftHour = left.futureHours[index];
+    const WeatherHourlyValue& rightHour = right.futureHours[index];
+
+    if (strcmp(leftHour.time, rightHour.time) != 0 ||
+        leftHour.temperatureC != rightHour.temperatureC ||
+        leftHour.weatherCode != rightHour.weatherCode ||
+        leftHour.precipitationProbability !=
+            rightHour.precipitationProbability ||
+        leftHour.isDay != rightHour.isDay) {
+      return false;
+    }
+  }
+
+  const WeatherDailyValue* leftDays[] = {
+    &left.today,
+    &left.tomorrow
+  };
+  const WeatherDailyValue* rightDays[] = {
+    &right.today,
+    &right.tomorrow
+  };
+
+  for (size_t index = 0;
+       index < WeatherService::DAILY_RESPONSE_COUNT;
+       ++index) {
+    const WeatherDailyValue& leftDay = *leftDays[index];
+    const WeatherDailyValue& rightDay = *rightDays[index];
+
+    if (strcmp(leftDay.date, rightDay.date) != 0 ||
+        leftDay.weatherCode != rightDay.weatherCode ||
+        leftDay.temperatureMaxC != rightDay.temperatureMaxC ||
+        leftDay.temperatureMinC != rightDay.temperatureMinC ||
+        leftDay.precipitationProbabilityMax !=
+            rightDay.precipitationProbabilityMax) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static void printWeatherDailyValue(const char* label,
+                                   const WeatherDailyValue& value) {
+  Serial.print(label);
+  Serial.print(" date: ");
+  Serial.println(value.date);
+
+  Serial.print(label);
+  Serial.print(" weather code: ");
+  Serial.println(value.weatherCode);
+
+  Serial.print(label);
+  Serial.print(" temperature: ");
+  Serial.print(value.temperatureMinC, 1);
+  Serial.print(" C .. ");
+  Serial.print(value.temperatureMaxC, 1);
+  Serial.println(" C");
+
+  Serial.print(label);
+  Serial.print(" max precipitation probability: ");
+  Serial.print(value.precipitationProbabilityMax);
+  Serial.println("%");
+}
+
+static void printWeatherSnapshot(const WeatherSnapshot& snapshot) {
+  Serial.println("Parsed current weather:");
+  Serial.print("  time: ");
+  Serial.println(snapshot.current.time);
+  Serial.print("  temperature: ");
+  Serial.print(snapshot.current.temperatureC, 1);
+  Serial.println(" C");
+  Serial.print("  weather code: ");
+  Serial.println(snapshot.current.weatherCode);
+  Serial.print("  is day: ");
+  Serial.println(snapshot.current.isDay ? "YES" : "NO");
+
+  Serial.println("Parsed next five hourly forecast slots:");
+
+  for (size_t index = 0;
+       index < WeatherSnapshot::FUTURE_HOUR_COUNT;
+       ++index) {
+    const WeatherHourlyValue& hour = snapshot.futureHours[index];
+
+    Serial.print("  +");
+    Serial.print(index + 1);
+    Serial.print("h ");
+    Serial.print(hour.time);
+    Serial.print(" | ");
+    Serial.print(hour.temperatureC, 1);
+    Serial.print(" C | code ");
+    Serial.print(hour.weatherCode);
+    Serial.print(" | precip ");
+    Serial.print(hour.precipitationProbability);
+    Serial.print("% | ");
+    Serial.println(hour.isDay ? "DAY" : "NIGHT");
+  }
+
+  printWeatherDailyValue("Today", snapshot.today);
+  printWeatherDailyValue("Tomorrow", snapshot.tomorrow);
+}
+
+static void runPhase6A2WeatherServiceIfReady() {
+  if (hasRunWeatherServiceProbe ||
       !wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
     return;
   }
 
-  hasRunWeatherHttpsProbe = true;
+  hasRunWeatherServiceProbe = true;
 
   Serial.println();
-  Serial.println("Phase 6A-1 Open-Meteo HTTPS probe starting...");
+  Serial.println("Phase 6A-2 WeatherService probe starting...");
   Serial.println("TLS trust anchor: ISRG Root X1");
-  Serial.println("Probe is Serial-only; Weather widget is unchanged.");
+  Serial.println(
+      "WeatherService is Serial-only; Weather widget is unchanged."
+  );
 
 #if !defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE)
   Serial.println(
       "SKIP: add WEATHER_LATITUDE and WEATHER_LONGITUDE to local config.h."
-  );
-  Serial.println(
-      "The public config.example.h contains commented placeholders only."
   );
   Serial.println();
   return;
@@ -1009,62 +1123,70 @@ static void runPhase6A1WeatherProbeIfReady() {
   const double latitude = static_cast<double>(WEATHER_LATITUDE);
   const double longitude = static_cast<double>(WEATHER_LONGITUDE);
 
-  if (latitude < -90.0 || latitude > 90.0 ||
-      longitude < -180.0 || longitude > 180.0) {
-    Serial.println("FAIL: configured weather coordinates are out of range.");
+  Serial.println(
+      "Fetching and validating current + hourly + daily weather..."
+  );
+
+  if (!weatherService.fetchLatest(latitude, longitude)) {
+    Serial.print("FAIL: WeatherService fetch/parse failed: ");
+    Serial.println(weatherService.lastError());
     Serial.println();
     return;
   }
 
-  String url;
-  url.reserve(512);
-  url = "https://api.open-meteo.com/v1/forecast?latitude=";
-  url += String(latitude, 6);
-  url += "&longitude=";
-  url += String(longitude, 6);
-  url += "&current=temperature_2m,weather_code,is_day";
-  url += "&hourly=temperature_2m,weather_code,precipitation_probability,is_day";
-  url += "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max";
-  url += "&forecast_hours=6";
-  url += "&forecast_days=2";
-  url += "&timezone=Asia%2FTaipei";
+  const WeatherSnapshot* snapshot =
+      weatherService.lastValidSnapshot();
 
-  Serial.println("Requesting certificate-validated weather payload...");
-  Serial.print("Weather request URL: ");
-  Serial.println(url);
-
-  SecureHttpResponse response;
-
-  if (!weatherSecureHttpClient.get(url.c_str(), response)) {
-    Serial.print("FAIL: Open-Meteo HTTPS GET failed");
-    if (response.statusCode != 0) {
-      Serial.print(" (HTTP ");
-      Serial.print(response.statusCode);
-      Serial.print(")");
-    }
-    Serial.print(": ");
-    Serial.println(response.error);
+  if (snapshot == nullptr || !weatherService.hasValidSnapshot()) {
     Serial.println(
-        "No insecure TLS fallback is attempted; existing dashboard data remains unchanged."
+        "FAIL: WeatherService succeeded but no last-valid snapshot exists."
     );
     Serial.println();
     return;
   }
 
-  Serial.print("Open-Meteo HTTP status: ");
-  Serial.println(response.statusCode);
-  Serial.print("Weather payload bytes: ");
-  Serial.println(response.body.length());
-  Serial.println("Weather payload:");
-  Serial.println(response.body);
+  printWeatherSnapshot(*snapshot);
+
+  const WeatherSnapshot preservedBeforeFailure = *snapshot;
+
   Serial.println(
-      "PASS candidate: TLS + HTTP succeeded. Inspect the payload before Phase 6A-2 parsing."
+      "Testing last-valid preservation with invalid coordinates..."
+  );
+
+  if (weatherService.fetchLatest(999.0, longitude)) {
+    Serial.println(
+        "FAIL: invalid-coordinate WeatherService request unexpectedly succeeded."
+    );
+    Serial.println();
+    return;
+  }
+
+  Serial.print("Expected failure: ");
+  Serial.println(weatherService.lastError());
+
+  const WeatherSnapshot* preservedAfterFailure =
+      weatherService.lastValidSnapshot();
+
+  if (preservedAfterFailure == nullptr ||
+      !weatherService.hasValidSnapshot() ||
+      !sameWeatherSnapshot(
+          preservedBeforeFailure,
+          *preservedAfterFailure)) {
+    Serial.println(
+        "FAIL: last-valid weather snapshot changed after failed request."
+    );
+    Serial.println();
+    return;
+  }
+
+  Serial.println(
+      "PASS: WeatherService parsed the live forecast and preserved last-valid data after failure."
   );
   Serial.println(
-      "Expected hourly shape: 6 rows total = current-hour alignment + next 5 future hours."
+      "Hourly contract: NOW uses current; five future slots come from hourly[1..5]."
   );
   Serial.println(
-      "Phase 6A-1 does not parse or stage weather data into the dashboard."
+      "Phase 6A-2 remains Serial-only; no Weather widget state is staged."
   );
   Serial.println();
 #endif
@@ -1128,9 +1250,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 6A-1: Open-Meteo HTTPS probe");
+  Serial.println("EDP Phase 6A-2: WeatherService parsing probe");
   Serial.println("Phase 5 production BTC/ETH/HYPE path remains active.");
-  Serial.println("Weather probe is one-shot, certificate-validating, and Serial-only.");
+  Serial.println("WeatherService is one-shot and Serial-only in this checkpoint.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1201,7 +1323,7 @@ void loop() {
   }
 
   runPhase5B3MarketPollIfDue();
-  runPhase6A1WeatherProbeIfReady();
+  runPhase6A2WeatherServiceIfReady();
 
   delay(20);
 }
