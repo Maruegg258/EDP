@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A and Phase 5B-1 hardware verified; Phase 5 in progress.
+**Status:** Phase 5A and Phase 5B-1 hardware verified; Phase 5B-2 implemented and awaiting hardware verification.
 
 **Reviewed:** 2026-10-04
 
@@ -561,6 +561,91 @@ The following behaviors are deliberately left for the next checkpoint rather tha
 - recovery after that failure
 - whether a stale-data/status indicator is necessary for prolonged outages
 
+## Phase 5B-2 implementation
+
+**Implementation status:** committed 2026-10-04; real-hardware verification pending.
+
+Phase 5B-2 is a diagnostic checkpoint around the already hardware-verified live market pipeline. It deliberately does not change:
+
+- `SecureHttpClient`
+- `MarketDataService`
+- `DashboardUpdateCoalescer`
+- the E-paper driver
+- the 60-second production polling interval
+
+Instead, the application runs a one-shot state machine after the first valid BTC/ETH/HYPE prices have been physically displayed.
+
+### Diagnostic 1 — unchanged-price skip
+
+The application re-stages the exact current service last-valid values for BTC, ETH, and HYPE.
+
+Required result:
+
+```text
+Unchanged-price pending dirty: 0x0 [NONE]
+PASS: unchanged Crypto prices produce dirty NONE and no physical refresh.
+```
+
+This verifies the live-data path, not only the older synthetic Phase 3 self-check.
+
+### Diagnostic 2 — one-symbol unavailable hold
+
+For one diagnostic polling cycle only, the application treats `ETHUSDT` as unavailable by deliberately skipping its fetch/stage operation.
+
+This is explicitly an **application-level availability simulation**, not a claim that the transport failed. The real HTTP failure + last-valid preservation behavior was already hardware-verified in Phase 5A-2.
+
+During this simulated unavailable cycle:
+
+- BTC fetch/staging continues normally
+- HYPE fetch/staging continues normally
+- ETH receives no replacement value
+- the service's existing ETH last-valid value remains untouched
+- the displayed ETH price must remain exactly equal to the pre-failure displayed value
+
+Expected Serial markers include:
+
+```text
+DIAGNOSTIC: ETHUSDT will be treated as unavailable for this poll only.
+EXPECTED DIAGNOSTIC FAILURE ETHUSDT: simulated market data unavailable; fetch skipped.
+UI action: keep the previously displayed ETH price; no replacement value staged.
+PASS: simulated ETH unavailability preserved the displayed and service last-valid ETH price.
+```
+
+### Diagnostic 3 — recovery
+
+After the preservation check passes, the application immediately re-enables the normal ETH request rather than waiting another full 60 seconds.
+
+The recovered ETH fetch must succeed, stage through the same Crypto/coalescer path, and the displayed ETH state must match the service's recovered last-valid price after the next application flush.
+
+Expected completion markers include:
+
+```text
+DIAGNOSTIC: normal ETHUSDT fetch restored for recovery verification.
+PASS: ETH market polling recovered and the dashboard state matches the recovered last-valid value.
+PASS: Phase 5B-2 unchanged-price + failure-hold + recovery diagnostics complete.
+```
+
+After the one-shot diagnostic completes, normal 60-second BTC/ETH/HYPE polling continues.
+
+### Stale-data decision
+
+This checkpoint does not add a stale-data marker in advance.
+
+The diagnostic answers whether short-lived failures are safely handled by preserving last-valid data. Whether prolonged outages need a visual stale/status indication remains a product decision to make after the hardware result.
+
+Acceptance criteria before Phase 5B-2 can be marked complete:
+
+1. Firmware compiles and uploads.
+2. Normal live BTC/ETH/HYPE display first becomes established.
+3. Re-staging identical live prices produces `DashboardDirty::NONE` and no pending physical refresh.
+4. The one-cycle ETH unavailable simulation does not change displayed ETH.
+5. The service's ETH last-valid value is unchanged during that simulated unavailable cycle.
+6. BTC/HYPE can continue through the same polling cycle independently.
+7. The immediately restored normal ETH fetch succeeds.
+8. After recovery, displayed ETH matches the service last-valid ETH price.
+9. Existing Clock/Wi-Fi behavior and E-paper clarity remain normal.
+10. After diagnostics complete, normal 60-second market polling continues.
+
 ## Next checkpoint
 
-**Phase 5B-2:** explicitly verify unchanged-price skip behavior plus live market-data failure/recovery while preserving the displayed last-valid BTC/ETH/HYPE values. Use those results to decide whether the dashboard needs a dedicated stale-data/status indication before Phase 5 is closed.
+After Phase 5B-2 hardware verification, decide from the observed behavior whether Phase 5 needs a lightweight stale-data/status policy before it is declared complete, or whether prolonged-outage indication should be deferred to the broader Phase 9 reliability work.

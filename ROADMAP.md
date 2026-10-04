@@ -168,7 +168,7 @@ Phase 5A checkpoints:
 - [x] Phase 5A-2: Add a dedicated BTC-only `MarketDataService` that parses/validates `symbol`, `price`, and optional `time`, and preserves the last valid value when a later request fails (verified on hardware, 2026-10-04).
 - [x] Phase 5A-3: Extend `MarketDataService` to independent `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` last-valid slots and add a 60-second three-symbol polling flow. Results remain Serial-only (verified on hardware, 2026-10-04).
 - [x] Phase 5B-1: Stage validated BTC/ETH/HYPE prices into the existing crypto widget states through `DashboardUpdateCoalescer`, while keeping the 60-second market polling cadence separate from the physical display refresh decision (verified on hardware, 2026-10-04).
-- [ ] Phase 5B-2: Explicitly verify unchanged-price skip behavior plus market fetch failure/recovery with live Crypto widgets, and decide whether stale-data/status indication is required before closing Phase 5.
+- [ ] Phase 5B-2: Explicitly verify unchanged-price skip behavior plus live market-data unavailability/recovery with Crypto widgets. Uses a one-shot application-level ETH unavailable simulation, while the real HTTP failure/last-valid path remains the Phase 5A-2 hardware-verified behavior. Implementation committed 2026-10-04; hardware verification pending.
 
 Planned work:
 
