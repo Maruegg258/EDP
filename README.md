@@ -63,7 +63,7 @@ CrowPanelDashboard.ino
         |
         +-- services/
         |    +-- TimeService         (implemented; Phase 4 hardware verified)
-        |    +-- WeatherService      (Phase 6A-2 implemented; hardware verification pending)
+        |    +-- WeatherService      (Phase 6A-2 hardware verified)
         |    +-- MarketDataService   (BTC/ETH/HYPE polling hardware verified)
         |
         +-- ui/
@@ -189,6 +189,8 @@ EDP/
 │     ├─ WiFiManager.cpp
 │     ├─ TimeService.h
 │     ├─ TimeService.cpp
+│     ├─ WeatherService.h
+│     ├─ WeatherService.cpp
 │     ├─ SecureHttpClient.h
 │     ├─ SecureHttpClient.cpp
 │     ├─ TlsTrustAnchors.h
