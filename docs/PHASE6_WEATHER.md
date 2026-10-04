@@ -342,3 +342,162 @@ Observed payload details important for Phase 6A-2 parser design:
 
 Phase 6A-1 is therefore hardware-verified and complete.
 
+
+## Phase 6A-2 implementation
+
+**Status:** Implementation committed; awaiting real-hardware verification.
+
+Phase 6A-2 replaces the Phase 6A-1 raw-body application probe with a dedicated provider-facing `WeatherService`. It remains Serial-only and does not stage any Weather widget state.
+
+### Service boundary
+
+```text
+ISRG Root X1
+      |
+      v
+weather SecureHttpClient
+      |
+      v
+WeatherService
+      |
+      +-- validated last-valid WeatherSnapshot
+      |
+      v
+Serial diagnostics only
+```
+
+`WeatherService` owns the Open-Meteo URL contract and a durable last-valid snapshot. The application supplies only latitude/longitude and consumes validated values. No Dashboard, widget, graphics, or E-paper type is referenced by the service.
+
+### Data model
+
+The committed snapshot contains:
+
+```text
+WeatherSnapshot
+├── current
+│   ├── time
+│   ├── temperatureC
+│   ├── weatherCode
+│   └── isDay
+│
+├── futureHours[5]
+│   ├── time
+│   ├── temperatureC
+│   ├── weatherCode
+│   ├── precipitationProbability
+│   └── isDay
+│
+├── today
+│   ├── date
+│   ├── weatherCode
+│   ├── temperatureMaxC
+│   ├── temperatureMinC
+│   └── precipitationProbabilityMax
+│
+└── tomorrow
+    ├── date
+    ├── weatherCode
+    ├── temperatureMaxC
+    ├── temperatureMinC
+    └── precipitationProbabilityMax
+```
+
+The six-column display contract is intentionally represented as:
+
+```text
+NOW = current object
++1h .. +5h = hourly[1] .. hourly[5]
+```
+
+The first hourly row, `hourly[0]`, is consumed only as current-hour alignment/validation data. Current temperature, condition, and day/night state remain authoritative from the separate `current` object.
+
+### Parser decision
+
+No external JSON dependency is added in this checkpoint.
+
+The service uses a project-owned narrow parser for the fixed Open-Meteo response contract. It is deliberately not a general-purpose JSON parser. The parser:
+
+- finds the named `current`, `hourly`, and `daily` objects
+- accepts the required scalar values only with valid JSON value termination
+- requires exactly 6 values in every required hourly array
+- requires exactly 2 values in every required daily array
+- rejects missing, extra, malformed, non-finite, or out-of-range required values
+- validates local ISO-style date/time strings
+- requires `current` and `hourly[0]` to align to the same local hour, not the exact same minute
+- requires `current` and `daily[0]` to align to the same local date
+- does not require current and hourly temperatures/conditions to be identical
+- does not compare returned API grid coordinates with the configured request coordinates
+- preserves raw numeric WMO codes; semantic WMO interpretation remains Phase 6A-3
+
+Initial numeric validation boundaries are intentionally provider-contract checks rather than UI policy:
+
+```text
+temperature: finite, -100 C .. +100 C
+weather_code: integer 0 .. 99
+precipitation probability: integer 0 .. 100
+is_day: 0 or 1
+daily max temperature >= daily min temperature
+```
+
+### Last-valid behavior
+
+Parsing is performed into a temporary `WeatherSnapshot`. The stored snapshot is replaced only after the complete current/hourly/daily response passes validation.
+
+Therefore:
+
+```text
+successful validated fetch
+    -> commit new last-valid snapshot
+
+invalid coordinates / TLS / HTTP / malformed payload / validation failure
+    -> leave previous last-valid snapshot untouched
+    -> expose the most recent request error
+```
+
+The Phase 6A-2 application probe performs one real weather fetch and then deliberately calls the service with invalid coordinates. The second call must fail before network activity and the previously valid snapshot must compare unchanged.
+
+### Expected successful Serial shape
+
+```text
+Phase 6A-2 WeatherService probe starting...
+Fetching and validating current + hourly + daily weather...
+
+Parsed current weather:
+  time: ...
+  temperature: ... C
+  weather code: ...
+  is day: YES/NO
+
+Parsed next five hourly forecast slots:
+  +1h ...
+  +2h ...
+  +3h ...
+  +4h ...
+  +5h ...
+
+Today ...
+Tomorrow ...
+
+Testing last-valid preservation with invalid coordinates...
+Expected failure: invalid weather coordinates
+PASS: WeatherService parsed the live forecast and preserved last-valid data after failure.
+Hourly contract: NOW uses current; five future slots come from hourly[1..5].
+Phase 6A-2 remains Serial-only; no Weather widget state is staged.
+```
+
+Required hardware verification:
+
+1. firmware compiles and uploads
+2. Phase 3 state/coalescing self-checks still pass
+3. normal Wi-Fi/NTP/Clock/Wi-Fi UI behavior remains intact
+4. Phase 5 BTC/ETH/HYPE market polling remains intact
+5. the real Open-Meteo response parses successfully
+6. current values print correctly
+7. exactly five future hourly values print from the six-row API response
+8. today and tomorrow daily values print correctly
+9. the intentional invalid-coordinate request fails
+10. the previous valid weather snapshot remains byte-for-value equivalent through that failed request
+11. no Weather dirty bit is staged and the visible Weather widget is unchanged
+12. no E-paper refresh-path regression is observed
+
+Phase 6A-2 must remain unchecked in the roadmap until these results are confirmed on hardware.
