@@ -47,7 +47,7 @@ Coordinates are not authentication secrets, but for a fixed home dashboard they 
 Phase 6 is being designed for more than a single current-temperature value. The service boundary must retain enough data for:
 
 1. current weather
-2. the next six future hourly forecast slots
+2. a six-slot hourly strip: the current hour plus the next five future hourly forecast slots
 3. today/tomorrow daily data so the UI can later render a tomorrow summary
 
 Proposed request variables:
@@ -70,12 +70,12 @@ daily=
   temperature_2m_min,
   precipitation_probability_max
 
-forecast_hours=7
+forecast_hours=6
 forecast_days=2
 timezone=Asia/Taipei
 ```
 
-The hourly range is deliberately seven rows because Open-Meteo defines `forecast_hours` relative to the current hour. The service can retain the current-hour row for alignment/validation and expose the following six rows as the six future hourly forecast slots.
+The hourly range is deliberately six rows because Open-Meteo defines `forecast_hours` relative to the current hour. The service retains the first current-hour row for alignment with the `current` object and exposes the following five rows as future hourly slots. The intended UI strip is therefore six columns total: `NOW + 5 future hours`.
 
 The `current` object remains the authoritative current-condition value because it is provided separately from the hourly forecast.
 
@@ -96,7 +96,7 @@ WeatherSnapshot
 │   ├── weatherCode
 │   └── isDay
 │
-├── nextHours[6]
+├── nextHours[5]
 │   ├── time
 │   ├── temperatureC
 │   ├── weatherCode
@@ -253,7 +253,7 @@ weather SecureHttpClient
 WeatherService
         |
         +-- current conditions
-        +-- next six hourly forecasts
+        +-- current-hour alignment + next five hourly forecasts
         +-- today + tomorrow daily forecasts
         |
         v
