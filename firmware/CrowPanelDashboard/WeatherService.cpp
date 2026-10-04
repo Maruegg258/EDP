@@ -248,6 +248,16 @@ bool parseIntegerAt(const String& text,
   return true;
 }
 
+bool validScalarTerminator(const String& text,
+                           int valueEnd,
+                           int objectEnd) {
+  const int position =
+      skipWhitespace(text, valueEnd, objectEnd);
+
+  return position == objectEnd ||
+         (position < objectEnd && text[position] == ',');
+}
+
 bool parseStringField(const String& text,
                       int objectStart,
                       int objectEnd,
@@ -255,6 +265,7 @@ bool parseStringField(const String& text,
                       char* destination,
                       size_t capacity) {
   int valueStart = 0;
+  int valueEnd = 0;
 
   return findValueStart(
              text,
@@ -267,7 +278,9 @@ bool parseStringField(const String& text,
              valueStart,
              objectEnd,
              destination,
-             capacity);
+             capacity,
+             &valueEnd) &&
+         validScalarTerminator(text, valueEnd, objectEnd);
 }
 
 bool parseDoubleField(const String& text,
@@ -276,6 +289,7 @@ bool parseDoubleField(const String& text,
                       const char* key,
                       double& value) {
   int valueStart = 0;
+  int valueEnd = 0;
 
   return findValueStart(
              text,
@@ -283,7 +297,13 @@ bool parseDoubleField(const String& text,
              objectStart,
              objectEnd,
              valueStart) &&
-         parseDoubleAt(text, valueStart, objectEnd, value);
+         parseDoubleAt(
+             text,
+             valueStart,
+             objectEnd,
+             value,
+             &valueEnd) &&
+         validScalarTerminator(text, valueEnd, objectEnd);
 }
 
 bool parseIntegerField(const String& text,
@@ -292,6 +312,7 @@ bool parseIntegerField(const String& text,
                        const char* key,
                        long& value) {
   int valueStart = 0;
+  int valueEnd = 0;
 
   return findValueStart(
              text,
@@ -299,7 +320,13 @@ bool parseIntegerField(const String& text,
              objectStart,
              objectEnd,
              valueStart) &&
-         parseIntegerAt(text, valueStart, objectEnd, value);
+         parseIntegerAt(
+             text,
+             valueStart,
+             objectEnd,
+             value,
+             &valueEnd) &&
+         validScalarTerminator(text, valueEnd, objectEnd);
 }
 
 bool consumeArraySeparator(const String& text,
@@ -920,6 +947,11 @@ bool WeatherService::parseDailyObject(
 
   if (strncmp(parsed.current.time, dates[0], 10) != 0) {
     setError("current weather date does not align with daily[0]");
+    return false;
+  }
+
+  if (strcmp(dates[0], dates[1]) == 0) {
+    setError("today and tomorrow weather dates are identical");
     return false;
   }
 
