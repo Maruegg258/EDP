@@ -100,7 +100,7 @@ CF:E8:A3:C0:AA:E1:1A:8F:FC:EE:05:C0:BD:DF:08:C6
 
 and certificate `notAfter` 2035-06-04.
 
-The Open-Meteo leaf/intermediate chain can rotate. Therefore the Phase 6A-1 hardware test must verify the live chain through the ESP32-S3 TLS implementation before this trust path is considered hardware-verified.
+The Open-Meteo leaf/intermediate chain can rotate. Phase 6A-1 verified on real ESP32-S3 hardware on 2026-10-04 that the live `api.open-meteo.com` path succeeds through the project `SecureHttpClient` when anchored by ISRG Root X1. This remains a reviewed trust baseline rather than an assumption that the upstream chain can never change.
 
 See `docs/PHASE6_WEATHER.md` for the complete Phase 6A-0 provider/data/TLS review.
 
