@@ -197,7 +197,7 @@ Phase 6A checkpoints:
 
 - [x] Phase 6A-0: Review the weather provider, current/hourly/daily data contract, local-coordinate privacy boundary, polling plan, and certificate-validation strategy. Open-Meteo + ISRG Root X1 selected as the implementation baseline; no firmware behavior changed in this design checkpoint (completed, 2026-10-04).
 - [ ] Phase 6A-1: Add the Open-Meteo trust anchor and perform a minimal certificate-validating HTTPS GET after Wi-Fi + NTP synchronization. Report the weather payload through Serial only.
-- [ ] Phase 6A-2: Add a dedicated `WeatherService` that validates and owns current conditions, the next six hourly forecast slots, and today/tomorrow daily forecast data with last-valid preservation.
+- [ ] Phase 6A-2: Add a dedicated `WeatherService` that validates and owns current conditions, a six-slot hourly strip (current hour + next five future hours), and today/tomorrow daily forecast data with last-valid preservation.
 - [ ] Phase 6A-3: Add provider-code normalization / semantic weather mapping while preserving the raw WMO weather code for later UI refinement.
 
 Phase 6B checkpoints:
@@ -211,7 +211,7 @@ Planned work:
 - Open-Meteo Forecast API
 - Weather service abstraction
 - Current temperature / conditions
-- Next six hourly forecast slots
+- Six-slot hourly forecast strip: current hour + next five future hours
 - Tomorrow high / low / representative condition / precipitation probability
 - Weather icon mapping
 - Initial 30-minute polling
