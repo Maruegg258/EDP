@@ -269,7 +269,7 @@ No E-paper driver, refresh sequence, Dashboard coalescer, or existing market-dat
 
 ## Phase 6A-1 implementation
 
-**Status:** Implementation committed; awaiting real-hardware verification.
+**Status:** PASS on real hardware (2026-10-04).
 
 Phase 6A-1 adds only the transport probe needed to validate the new weather HTTPS path. It does not add `WeatherService`, JSON parsing, weather-widget staging, or any E-paper refresh behavior.
 
@@ -319,3 +319,26 @@ Required hardware result before Phase 6A-1 can be checked complete:
 8. E-paper refresh quality remains unchanged
 
 A successful HTTP request is necessary but the actual response shape will be examined before Phase 6A-2 chooses and implements the parser.
+
+Hardware verification confirmed:
+
+1. The firmware compiled and uploaded successfully with local weather coordinates supplied through uncommitted `config.h`.
+2. Wi-Fi and NTP synchronization completed before the weather request.
+3. `api.open-meteo.com` returned HTTP 200 through the weather-specific `SecureHttpClient` anchored by `ISRG Root X1`.
+4. The response used `Asia/Taipei` with `utc_offset_seconds=28800`.
+5. The `current` object contained time, interval, `temperature_2m`, `weather_code`, and `is_day`.
+6. The `hourly` object contained exactly six aligned rows for time, temperature, weather code, precipitation probability, and day/night state: current-hour alignment plus the next five future hours.
+7. The `daily` object contained exactly two aligned rows for today and tomorrow with weather code, maximum temperature, minimum temperature, and maximum precipitation probability.
+8. The Weather widget was not staged or changed by this checkpoint.
+9. The existing dashboard / market path remained independent of the weather transport probe.
+10. No insecure TLS fallback was used.
+
+Observed payload details important for Phase 6A-2 parser design:
+
+- The `current.time` sample was inside the current hour, while the first hourly row was the top of that hour. Therefore the parser must align the first hourly slot by hour semantics and must **not** require `current.time` to equal `hourly.time[0]` exactly.
+- The current temperature and the first hourly temperature were close but not identical. The `current` object remains authoritative for the "NOW" value; the hourly arrays are forecast slots and should not be forced to equal current observations.
+- The daily weather code differed from the instantaneous current weather code, which is valid because daily data summarizes the day rather than the current instant. Phase 6A-2 must validate each scope independently.
+- The API response reported a nearby model/grid coordinate rather than echoing the requested coordinates exactly. The parser must not reject a valid response merely because returned latitude/longitude differ slightly from the configured request point.
+
+Phase 6A-1 is therefore hardware-verified and complete.
+
