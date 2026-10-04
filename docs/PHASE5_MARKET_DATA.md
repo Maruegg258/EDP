@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A, Phase 5B-1, and Phase 5B-2 hardware verified; Phase 5B-3 production cleanup implemented and awaiting final hardware regression.
+**Status:** Complete — Phase 5A and Phase 5B hardware verified on real hardware (2026-10-04).
 
 **Reviewed:** 2026-10-04
 
@@ -663,13 +663,13 @@ For Phase 5, no additional stale-data visual indicator will be added.
 
 A prolonged outage is a different product/reliability case. Explicit age/staleness indication, outage thresholds, and long-duration recovery policy are deferred to **Phase 9 — Reliability and release hardening**, where they can be designed together with API outage tests and long-duration operation rather than adding a premature UI state here.
 
-### Why Phase 5 is not closed yet
+### Production cleanup follow-up
 
-The current firmware still contains the temporary one-shot Phase 5B-2 diagnostic injection. That code intentionally simulates ETH unavailability once after every boot and therefore should not remain in the production application path.
+The temporary one-shot Phase 5B-2 diagnostic injection was removed in Phase 5B-3 before Phase 5 was closed.
 
 ## Phase 5B-3 production cleanup
 
-**Implementation status:** committed 2026-10-04; final real-hardware regression pending.
+**Status:** PASS on real hardware (2026-10-04).
 
 Phase 5B-3 removes all temporary Phase 5B-2 diagnostic behavior from the production application path:
 
@@ -730,17 +730,38 @@ Pending dashboard dirty after market poll: ...
 Market-data code does not trigger E-paper refresh directly.
 ```
 
-Acceptance criteria before Phase 5 can be closed:
+Final hardware regression confirmed:
 
 1. Firmware compiles and uploads.
 2. No Phase 5B-2 diagnostic/simulated-failure output appears after boot.
 3. Startup placeholders are replaced by valid live BTC/ETH/HYPE perpetual prices.
 4. Normal market polling repeats at approximately 60-second intervals.
 5. Live prices continue to stage through `DashboardUpdateCoalescer`.
-6. A normal fetch failure, if one occurs naturally, stages no replacement error value and preserves last-valid behavior.
+6. Existing failure handling remains last-valid preserving; no error/zero replacement path was introduced by the cleanup.
 7. Clock and Wi-Fi behavior remain normal.
-8. E-paper refreshes remain clear with no ghosting/blur regression.
+8. E-paper refreshes remain clear with no observed ghosting/blur regression.
 9. No insecure TLS fallback exists.
 10. No diagnostic timing override remains in the production application.
 
-If this final regression passes, Phase 5 is complete and the roadmap can move to Phase 6 — Weather.
+Phase 5B-3 is therefore complete.
+
+## Phase 5 completion
+
+Phase 5 is complete as of 2026-10-04.
+
+The hardware-verified production path now provides:
+
+- certificate-validating HTTPS to Binance USDⓈ-M Futures
+- public market-data access without API credentials
+- dedicated `MarketDataService`
+- independent `BTCUSDT`, `ETHUSDT`, and `HYPEUSDT` last-valid slots
+- strict symbol/price/source-time validation
+- 60-second polling independent from physical E-paper refresh cadence
+- live BTC/ETH/HYPE Crypto widget updates through `DashboardUpdateCoalescer`
+- content-identical price suppression with no unnecessary refresh
+- short-lived failure hold/recovery behavior that preserves visible last-valid data
+- a production application path with all temporary Phase 5 diagnostic injection removed
+
+Prolonged API-outage thresholds, explicit stale-data age indicators, and long-duration recovery testing remain intentionally deferred to Phase 9.
+
+**Next roadmap phase: Phase 6 — Weather.**
