@@ -19,7 +19,7 @@ The intended production firmware should have the smallest practical network surf
 
 - outbound Wi-Fi client only
 - outbound NTP/SNTP requests only to explicitly configured time servers for clock synchronization
-- outbound HTTPS requests only to explicitly configured market-data endpoints
+- outbound HTTPS requests only to explicitly configured market-data and weather endpoints
 - TLS certificate validation enabled
 - no `setInsecure()` in production
 - no OTA service unless deliberately designed and reviewed
@@ -62,6 +62,47 @@ At review time, the Binance `*.binance.com` certificate path used `GeoTrust TLS 
 This trust anchor is an implementation baseline, not an assumption that Binance will use the same certificate hierarchy forever. Re-check the live certificate chain before release hardening and whenever TLS validation begins failing.
 
 See `docs/PHASE5_MARKET_DATA.md` for the market-data endpoint and symbol contract.
+
+## Phase 6 weather TLS policy
+
+Phase 6 weather data is read-only public forecast data from Open-Meteo.
+
+Production host:
+
+```text
+https://api.open-meteo.com
+```
+
+The weather path does not require an API key for the project's current non-commercial usage. Exact home coordinates must remain local in `config.h` rather than being committed to the public repository.
+
+The production TLS path follows the same baseline rules as market data:
+
+1. Wi-Fi must be connected before a weather request is attempted.
+2. The system clock must be synchronized before certificate-validating HTTPS.
+3. HTTPS must use `NetworkClientSecure` with an explicitly configured trusted CA certificate.
+4. Production code must never call `setInsecure()`.
+5. Leaf-certificate or fingerprint pinning is not the default trust model.
+6. TLS validation failure is a weather-data fetch failure; there is no insecure fallback.
+7. A failed request must preserve the last valid weather snapshot rather than manufacture replacement weather data.
+
+Initial Phase 6 trust anchor, reviewed 2026-10-04:
+
+```text
+ISRG Root X1
+```
+
+Let's Encrypt documents ISRG Root X1 as an active RSA root. Public certificate observations reviewed for `api.open-meteo.com` show Let's Encrypt-issued server chains. The root certificate has SHA-256 fingerprint:
+
+```text
+96:BC:EC:06:26:49:76:F3:74:60:77:9A:CF:28:C5:A7:
+CF:E8:A3:C0:AA:E1:1A:8F:FC:EE:05:C0:BD:DF:08:C6
+```
+
+and certificate `notAfter` 2035-06-04.
+
+The Open-Meteo leaf/intermediate chain can rotate. Therefore the Phase 6A-1 hardware test must verify the live chain through the ESP32-S3 TLS implementation before this trust path is considered hardware-verified.
+
+See `docs/PHASE6_WEATHER.md` for the complete Phase 6A-0 provider/data/TLS review.
 
 ## Driver isolation
 
