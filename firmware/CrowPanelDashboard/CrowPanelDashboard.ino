@@ -729,24 +729,6 @@ static constexpr uint32_t MARKET_POLL_INTERVAL_MS = 60000;
 static bool hasRunMarketPoll = false;
 static uint32_t lastMarketPollMs = 0;
 
-enum class Phase5B2DiagnosticState : uint8_t {
-  WAIT_FOR_LIVE_DISPLAY,
-  INJECT_ETH_UNAVAILABLE,
-  VERIFY_ETH_PRESERVED,
-  RECOVERY_POLL,
-  VERIFY_RECOVERY_DISPLAY,
-  COMPLETE,
-  FAILED
-};
-
-static Phase5B2DiagnosticState phase5B2DiagnosticState =
-    Phase5B2DiagnosticState::WAIT_FOR_LIVE_DISPLAY;
-
-static char phase5B2EthDisplayedBeforeFailure[
-    MarketPriceValue::PRICE_CAPACITY] = {};
-
-static bool phase5B2RecoveryEthFetchSucceeded = false;
-
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
 static TimeSyncState lastReportedTimeState =
@@ -887,223 +869,7 @@ static bool stageLiveMarketWidget(
   return true;
 }
 
-static bool allMarketSlotsHaveValidValues() {
-  for (size_t index = 0;
-       index < marketDataService.trackedSymbolCount();
-       ++index) {
-    const char* symbol =
-        marketDataService.trackedSymbol(index);
-
-    if (symbol == nullptr ||
-        !marketDataService.hasValidValue(symbol)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static bool liveCryptoPricesAreDisplayed() {
-  if (!updateCoalescer.hasDisplayedState()) {
-    return false;
-  }
-
-  const DashboardState& displayed =
-      updateCoalescer.displayedState();
-
-  return displayed.btc.price != nullptr &&
-         displayed.eth.price != nullptr &&
-         displayed.hype.price != nullptr &&
-         strcmp(displayed.btc.price, "--") != 0 &&
-         strcmp(displayed.eth.price, "--") != 0 &&
-         strcmp(displayed.hype.price, "--") != 0;
-}
-
-static bool stageAllLastValidMarketValues() {
-  for (size_t index = 0;
-       index < marketDataService.trackedSymbolCount();
-       ++index) {
-    const char* symbol =
-        marketDataService.trackedSymbol(index);
-
-    if (symbol == nullptr) {
-      return false;
-    }
-
-    const MarketPriceValue* value =
-        marketDataService.lastValidValue(symbol);
-
-    if (value == nullptr ||
-        !stageLiveMarketWidget(*value)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static void runPhase5B2DiagnosticsAfterFlush() {
-  if (phase5B2DiagnosticState ==
-          Phase5B2DiagnosticState::WAIT_FOR_LIVE_DISPLAY) {
-    if (!liveCryptoPricesAreDisplayed() ||
-        !allMarketSlotsHaveValidValues()) {
-      return;
-    }
-
-    Serial.println();
-    Serial.println(
-        "Phase 5B-2 diagnostic 1: unchanged-price staging test..."
-    );
-
-    if (!stageAllLastValidMarketValues()) {
-      Serial.println(
-          "FAIL: could not re-stage all last-valid market values."
-      );
-      phase5B2DiagnosticState =
-          Phase5B2DiagnosticState::FAILED;
-      return;
-    }
-
-    Serial.print("Unchanged-price pending dirty: ");
-    printDirtyMask(updateCoalescer.pendingDirty());
-
-    if (updateCoalescer.hasPendingUpdate() ||
-        updateCoalescer.pendingDirty() != DashboardDirty::NONE) {
-      Serial.println(
-          "FAIL: content-identical Crypto prices created a pending dashboard update."
-      );
-      updateCoalescer.discardPending();
-      phase5B2DiagnosticState =
-          Phase5B2DiagnosticState::FAILED;
-      return;
-    }
-
-    Serial.println(
-        "PASS: unchanged Crypto prices produce dirty NONE and no physical refresh."
-    );
-
-    const DashboardState& displayed =
-        updateCoalescer.displayedState();
-
-    strncpy(
-        phase5B2EthDisplayedBeforeFailure,
-        displayed.eth.price,
-        sizeof(phase5B2EthDisplayedBeforeFailure) - 1
-    );
-    phase5B2EthDisplayedBeforeFailure[
-        sizeof(phase5B2EthDisplayedBeforeFailure) - 1
-    ] = '\0';
-
-    phase5B2DiagnosticState =
-        Phase5B2DiagnosticState::INJECT_ETH_UNAVAILABLE;
-
-    // Run the diagnostic market cycle immediately instead of waiting
-    // another full production polling interval.
-    hasRunMarketPoll = false;
-
-    Serial.println(
-        "Phase 5B-2 diagnostic 2 armed: simulate ETH market data unavailable for one poll."
-    );
-    Serial.println(
-        "This is an application-level availability simulation; the real HTTP failure path was hardware-verified in Phase 5A-2."
-    );
-    Serial.println();
-    return;
-  }
-
-  if (phase5B2DiagnosticState ==
-          Phase5B2DiagnosticState::VERIFY_ETH_PRESERVED) {
-    if (!updateCoalescer.hasDisplayedState()) {
-      return;
-    }
-
-    const DashboardState& displayed =
-        updateCoalescer.displayedState();
-
-    const MarketPriceValue* preservedEth =
-        marketDataService.lastValidValue("ETHUSDT");
-
-    if (displayed.eth.price == nullptr ||
-        preservedEth == nullptr ||
-        strcmp(
-            displayed.eth.price,
-            phase5B2EthDisplayedBeforeFailure) != 0 ||
-        strcmp(
-            preservedEth->price,
-            phase5B2EthDisplayedBeforeFailure) != 0) {
-      Serial.println(
-          "FAIL: simulated ETH unavailability changed the displayed or service last-valid ETH price."
-      );
-      phase5B2DiagnosticState =
-          Phase5B2DiagnosticState::FAILED;
-      return;
-    }
-
-    Serial.println();
-    Serial.println(
-        "PASS: simulated ETH unavailability preserved the displayed and service last-valid ETH price."
-    );
-
-    phase5B2RecoveryEthFetchSucceeded = false;
-    phase5B2DiagnosticState =
-        Phase5B2DiagnosticState::RECOVERY_POLL;
-
-    // Trigger the recovery request immediately after the preservation
-    // check so the diagnostic completes without changing production cadence.
-    hasRunMarketPoll = false;
-
-    Serial.println(
-        "Phase 5B-2 diagnostic 3 armed: resume normal ETH fetch for recovery."
-    );
-    Serial.println();
-    return;
-  }
-
-  if (phase5B2DiagnosticState ==
-          Phase5B2DiagnosticState::VERIFY_RECOVERY_DISPLAY) {
-    if (!phase5B2RecoveryEthFetchSucceeded) {
-      return;
-    }
-
-    const MarketPriceValue* recoveredEth =
-        marketDataService.lastValidValue("ETHUSDT");
-
-    if (recoveredEth == nullptr ||
-        !updateCoalescer.hasDisplayedState()) {
-      return;
-    }
-
-    const DashboardState& displayed =
-        updateCoalescer.displayedState();
-
-    if (displayed.eth.price == nullptr ||
-        strcmp(displayed.eth.price, recoveredEth->price) != 0) {
-      Serial.println(
-          "FAIL: recovered ETH market value is not reflected in the displayed dashboard state."
-      );
-      phase5B2DiagnosticState =
-          Phase5B2DiagnosticState::FAILED;
-      return;
-    }
-
-    Serial.println();
-    Serial.println(
-        "PASS: ETH market polling recovered and the dashboard state matches the recovered last-valid value."
-    );
-    Serial.println(
-        "PASS: Phase 5B-2 unchanged-price + failure-hold + recovery diagnostics complete."
-    );
-    Serial.println(
-        "No stale-data marker is added by this checkpoint; prolonged-outage UX remains a product decision."
-    );
-    Serial.println();
-
-    phase5B2DiagnosticState =
-        Phase5B2DiagnosticState::COMPLETE;
-  }
-}
-
-static void runPhase5B2MarketPollIfDue() {
+static void runPhase5B3MarketPollIfDue() {
   if (!wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
     return;
@@ -1119,26 +885,8 @@ static void runPhase5B2MarketPollIfDue() {
   hasRunMarketPoll = true;
   lastMarketPollMs = now;
 
-  const bool injectEthUnavailable =
-      phase5B2DiagnosticState ==
-          Phase5B2DiagnosticState::INJECT_ETH_UNAVAILABLE;
-
-  const bool recoveryPoll =
-      phase5B2DiagnosticState ==
-          Phase5B2DiagnosticState::RECOVERY_POLL;
-
   Serial.println();
-  Serial.println("Phase 5B-2 live Crypto widget market poll starting...");
-
-  if (injectEthUnavailable) {
-    Serial.println(
-        "DIAGNOSTIC: ETHUSDT will be treated as unavailable for this poll only."
-    );
-  } else if (recoveryPoll) {
-    Serial.println(
-        "DIAGNOSTIC: normal ETHUSDT fetch restored for recovery verification."
-    );
-  }
+  Serial.println("Phase 5B-3 production market poll starting...");
 
   size_t fetchSuccessCount = 0;
   size_t stageSuccessCount = 0;
@@ -1157,25 +905,6 @@ static void runPhase5B2MarketPollIfDue() {
     Serial.print("Fetching ");
     Serial.print(symbol);
     Serial.println("...");
-
-    if (injectEthUnavailable &&
-        strcmp(symbol, "ETHUSDT") == 0) {
-      Serial.println(
-          "EXPECTED DIAGNOSTIC FAILURE ETHUSDT: simulated market data unavailable; fetch skipped."
-      );
-
-      const MarketPriceValue* preserved =
-          marketDataService.lastValidValue(symbol);
-
-      if (preserved != nullptr) {
-        printMarketValue("Preserved", *preserved);
-        Serial.println(
-            "UI action: keep the previously displayed ETH price; no replacement value staged."
-        );
-      }
-
-      continue;
-    }
 
     if (!marketDataService.fetchLatest(symbol)) {
       Serial.print("FAIL ");
@@ -1220,11 +949,6 @@ static void runPhase5B2MarketPollIfDue() {
       continue;
     }
 
-    if (recoveryPoll &&
-        strcmp(symbol, "ETHUSDT") == 0) {
-      phase5B2RecoveryEthFetchSucceeded = true;
-    }
-
     ++stageSuccessCount;
   }
 
@@ -1243,17 +967,11 @@ static void runPhase5B2MarketPollIfDue() {
   Serial.print("Pending dashboard dirty after market poll: ");
   printDirtyMask(updateCoalescer.pendingDirty());
 
-  if (injectEthUnavailable) {
-    phase5B2DiagnosticState =
-        Phase5B2DiagnosticState::VERIFY_ETH_PRESERVED;
-  } else if (recoveryPoll &&
-             phase5B2RecoveryEthFetchSucceeded) {
-    phase5B2DiagnosticState =
-        Phase5B2DiagnosticState::VERIFY_RECOVERY_DISPLAY;
-  }
-
   Serial.println(
-      "Market-data code still does not trigger E-paper refresh directly."
+      "Market-data code does not trigger E-paper refresh directly."
+  );
+  Serial.println(
+      "The existing application flush handles staged market changes on the next loop."
   );
   Serial.println();
 }
@@ -1316,9 +1034,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 5B-2: unchanged/failure/recovery diagnostics");
+  Serial.println("EDP Phase 5B-3: production market path");
   Serial.println("Live BTC/ETH/HYPE integration remains active.");
-  Serial.println("Diagnostics do not alter MarketDataService or display-driver behavior.");
+  Serial.println("Diagnostic injection removed; normal 60-second polling only.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1337,7 +1055,7 @@ void setup() {
   initialState.eth.price = "--";
   initialState.hype.price = "--";
 
-  Serial.println("Establishing Phase 5B-2 dashboard baseline...");
+  Serial.println("Establishing Phase 5B-3 dashboard baseline...");
   if (!establishBaseline(initialState)) {
     return;
   }
@@ -1388,8 +1106,7 @@ void loop() {
     Serial.println("FAIL: live dashboard refresh failed.");
   }
 
-  runPhase5B2DiagnosticsAfterFlush();
-  runPhase5B2MarketPollIfDue();
+  runPhase5B3MarketPollIfDue();
 
   delay(20);
 }

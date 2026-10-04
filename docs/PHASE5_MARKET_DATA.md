@@ -1,6 +1,6 @@
 # Phase 5 market-data baseline
 
-**Status:** Phase 5A, Phase 5B-1, and Phase 5B-2 hardware verified; final production cleanup pending.
+**Status:** Phase 5A, Phase 5B-1, and Phase 5B-2 hardware verified; Phase 5B-3 production cleanup implemented and awaiting final hardware regression.
 
 **Reviewed:** 2026-10-04
 
@@ -667,6 +667,80 @@ A prolonged outage is a different product/reliability case. Explicit age/stalene
 
 The current firmware still contains the temporary one-shot Phase 5B-2 diagnostic injection. That code intentionally simulates ETH unavailability once after every boot and therefore should not remain in the production application path.
 
-## Next checkpoint
+## Phase 5B-3 production cleanup
 
-**Phase 5B-3:** remove the Phase 5B-2 diagnostic state machine and simulated ETH-unavailable cycle, return the application to ordinary 60-second BTC/ETH/HYPE polling only, and run one final hardware regression of live prices, Clock/Wi-Fi behavior, coalesced refreshes, and E-paper clarity. If that passes, Phase 5 can be declared complete.
+**Implementation status:** committed 2026-10-04; final real-hardware regression pending.
+
+Phase 5B-3 removes all temporary Phase 5B-2 diagnostic behavior from the production application path:
+
+- no diagnostic state enum
+- no boot-time unchanged-price re-staging test
+- no simulated ETH-unavailable cycle
+- no forced immediate recovery poll
+- no diagnostic-only market timing overrides
+
+The production market path is again only:
+
+```text
+Wi-Fi connected + synchronized time
+            |
+            v
+60-second market poll
+            |
+            +-- BTCUSDT fetch/validate
+            +-- ETHUSDT fetch/validate
+            +-- HYPEUSDT fetch/validate
+            |
+            v
+successful values -> DashboardUpdateCoalescer
+failed values     -> stage nothing / preserve displayed last-valid
+            |
+            v
+existing application flush
+            |
+            v
+verified partial-refresh path
+```
+
+The following verified components are deliberately unchanged by this cleanup:
+
+- `SecureHttpClient` certificate validation
+- `MarketDataService` parsing, per-symbol slots, and last-valid behavior
+- `DashboardUpdateCoalescer` content comparison and dirty accumulation
+- 60-second market polling interval
+- Clock/Wi-Fi application flow
+- E-paper driver and maintenance/partial refresh sequences
+
+Expected normal Serial behavior no longer contains `DIAGNOSTIC`, simulated failure, or recovery-test messages. A regular cycle should resemble:
+
+```text
+Phase 5B-3 production market poll starting...
+Fetching BTCUSDT...
+Updated symbol: BTCUSDT
+...
+Fetching ETHUSDT...
+Updated symbol: ETHUSDT
+...
+Fetching HYPEUSDT...
+Updated symbol: HYPEUSDT
+...
+Market fetch result: 3/3 symbols updated.
+Market staging result: 3/3 symbols accepted by dashboard state.
+Pending dashboard dirty after market poll: ...
+Market-data code does not trigger E-paper refresh directly.
+```
+
+Acceptance criteria before Phase 5 can be closed:
+
+1. Firmware compiles and uploads.
+2. No Phase 5B-2 diagnostic/simulated-failure output appears after boot.
+3. Startup placeholders are replaced by valid live BTC/ETH/HYPE perpetual prices.
+4. Normal market polling repeats at approximately 60-second intervals.
+5. Live prices continue to stage through `DashboardUpdateCoalescer`.
+6. A normal fetch failure, if one occurs naturally, stages no replacement error value and preserves last-valid behavior.
+7. Clock and Wi-Fi behavior remain normal.
+8. E-paper refreshes remain clear with no ghosting/blur regression.
+9. No insecure TLS fallback exists.
+10. No diagnostic timing override remains in the production application.
+
+If this final regression passes, Phase 5 is complete and the roadmap can move to Phase 6 — Weather.
