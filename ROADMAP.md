@@ -189,16 +189,36 @@ Phase 5 is complete. Secure Binance USDⓈ-M market data, independent BTC/ETH/HY
 
 ## Phase 6 — Weather
 
+**Status: In Progress**
+
 **Goal:** Add weather information without coupling the weather provider to the UI.
+
+Phase 6A checkpoints:
+
+- [x] Phase 6A-0: Review the weather provider, current/hourly/daily data contract, local-coordinate privacy boundary, polling plan, and certificate-validation strategy. Open-Meteo + ISRG Root X1 selected as the implementation baseline; no firmware behavior changed in this design checkpoint (completed, 2026-10-04).
+- [ ] Phase 6A-1: Add the Open-Meteo trust anchor and perform a minimal certificate-validating HTTPS GET after Wi-Fi + NTP synchronization. Report the weather payload through Serial only.
+- [ ] Phase 6A-2: Add a dedicated `WeatherService` that validates and owns current conditions, the next six hourly forecast slots, and today/tomorrow daily forecast data with last-valid preservation.
+- [ ] Phase 6A-3: Add provider-code normalization / semantic weather mapping while preserving the raw WMO weather code for later UI refinement.
+
+Phase 6B checkpoints:
+
+- [ ] Phase 6B-1: Stage live current weather into the existing Weather widget through `DashboardUpdateCoalescer` without letting the service control display refresh.
+- [ ] Phase 6B-2: Add the initial 30-minute weather polling flow and verify unchanged-value suppression plus unavailable/recovery behavior while retaining last-valid weather.
+- [ ] Phase 6B-3: Remove temporary diagnostics, run the final Phase 6 regression, document hardware results, and close Phase 6.
 
 Planned work:
 
-- Select a weather data provider
+- Open-Meteo Forecast API
 - Weather service abstraction
-- Temperature / conditions
+- Current temperature / conditions
+- Next six hourly forecast slots
+- Tomorrow high / low / representative condition / precipitation probability
 - Weather icon mapping
-- Sensible low-frequency polling
+- Initial 30-minute polling
 - Graceful handling of unavailable network data
+- Certificate-validating HTTPS with no `setInsecure()`
+
+See [docs/PHASE6_WEATHER.md](docs/PHASE6_WEATHER.md) for the Phase 6A-0 provider, forecast-data, location, and TLS design review.
 
 ## Phase 7 — Physical button controls
 
