@@ -797,6 +797,8 @@ bool WeatherService::parseCurrentObject(
 
   current.temperatureC = static_cast<float>(temperature);
   current.weatherCode = static_cast<uint8_t>(weatherCode);
+  current.condition =
+      weatherConditionFromWmoCode(current.weatherCode);
   current.isDay = isDay == 1;
   return true;
 }
@@ -879,6 +881,8 @@ bool WeatherService::parseHourlyObject(
         static_cast<float>(temperatures[sourceIndex]);
     destination.weatherCode =
         static_cast<uint8_t>(weatherCodes[sourceIndex]);
+    destination.condition =
+        weatherConditionFromWmoCode(destination.weatherCode);
     destination.precipitationProbability =
         static_cast<uint8_t>(
             precipitationProbabilities[sourceIndex]);
@@ -969,6 +973,8 @@ bool WeatherService::parseDailyObject(
         dates[index]);
     destination.weatherCode =
         static_cast<uint8_t>(weatherCodes[index]);
+    destination.condition =
+        weatherConditionFromWmoCode(destination.weatherCode);
     destination.temperatureMaxC =
         static_cast<float>(maximumTemperatures[index]);
     destination.temperatureMinC =
