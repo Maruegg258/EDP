@@ -735,7 +735,7 @@ static constexpr uint32_t MARKET_POLL_INTERVAL_MS = 60000;
 static bool hasRunMarketPoll = false;
 static uint32_t lastMarketPollMs = 0;
 
-static bool hasRunWeatherServiceProbe = false;
+static bool hasRunWeatherConditionProbe = false;
 
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
@@ -989,6 +989,7 @@ static bool sameWeatherSnapshot(const WeatherSnapshot& left,
   if (strcmp(left.current.time, right.current.time) != 0 ||
       left.current.temperatureC != right.current.temperatureC ||
       left.current.weatherCode != right.current.weatherCode ||
+      left.current.condition != right.current.condition ||
       left.current.isDay != right.current.isDay) {
     return false;
   }
@@ -1002,6 +1003,7 @@ static bool sameWeatherSnapshot(const WeatherSnapshot& left,
     if (strcmp(leftHour.time, rightHour.time) != 0 ||
         leftHour.temperatureC != rightHour.temperatureC ||
         leftHour.weatherCode != rightHour.weatherCode ||
+        leftHour.condition != rightHour.condition ||
         leftHour.precipitationProbability !=
             rightHour.precipitationProbability ||
         leftHour.isDay != rightHour.isDay) {
@@ -1026,6 +1028,7 @@ static bool sameWeatherSnapshot(const WeatherSnapshot& left,
 
     if (strcmp(leftDay.date, rightDay.date) != 0 ||
         leftDay.weatherCode != rightDay.weatherCode ||
+        leftDay.condition != rightDay.condition ||
         leftDay.temperatureMaxC != rightDay.temperatureMaxC ||
         leftDay.temperatureMinC != rightDay.temperatureMinC ||
         leftDay.precipitationProbabilityMax !=
@@ -1045,7 +1048,9 @@ static void printWeatherDailyValue(const char* label,
 
   Serial.print(label);
   Serial.print(" weather code: ");
-  Serial.println(value.weatherCode);
+  Serial.print(value.weatherCode);
+  Serial.print(" -> ");
+  Serial.println(weatherConditionName(value.condition));
 
   Serial.print(label);
   Serial.print(" temperature: ");
@@ -1068,7 +1073,9 @@ static void printWeatherSnapshot(const WeatherSnapshot& snapshot) {
   Serial.print(snapshot.current.temperatureC, 1);
   Serial.println(" C");
   Serial.print("  weather code: ");
-  Serial.println(snapshot.current.weatherCode);
+  Serial.print(snapshot.current.weatherCode);
+  Serial.print(" -> ");
+  Serial.println(weatherConditionName(snapshot.current.condition));
   Serial.print("  is day: ");
   Serial.println(snapshot.current.isDay ? "YES" : "NO");
 
@@ -1087,6 +1094,8 @@ static void printWeatherSnapshot(const WeatherSnapshot& snapshot) {
     Serial.print(hour.temperatureC, 1);
     Serial.print(" C | code ");
     Serial.print(hour.weatherCode);
+    Serial.print(" -> ");
+    Serial.print(weatherConditionName(hour.condition));
     Serial.print(" | precip ");
     Serial.print(hour.precipitationProbability);
     Serial.print("% | ");
@@ -1097,21 +1106,94 @@ static void printWeatherSnapshot(const WeatherSnapshot& snapshot) {
   printWeatherDailyValue("Tomorrow", snapshot.tomorrow);
 }
 
-static void runPhase6A2WeatherServiceIfReady() {
-  if (hasRunWeatherServiceProbe ||
+static bool runWeatherConditionMappingSelfCheck() {
+  struct MappingExpectation {
+    uint8_t code;
+    WeatherCondition expected;
+  };
+
+  static const MappingExpectation EXPECTATIONS[] = {
+    { 0, WeatherCondition::CLEAR },
+    { 1, WeatherCondition::MAINLY_CLEAR },
+    { 2, WeatherCondition::PARTLY_CLOUDY },
+    { 3, WeatherCondition::OVERCAST },
+    { 45, WeatherCondition::FOG },
+    { 48, WeatherCondition::FOG },
+    { 51, WeatherCondition::DRIZZLE },
+    { 53, WeatherCondition::DRIZZLE },
+    { 55, WeatherCondition::DRIZZLE },
+    { 56, WeatherCondition::FREEZING_DRIZZLE },
+    { 57, WeatherCondition::FREEZING_DRIZZLE },
+    { 61, WeatherCondition::RAIN },
+    { 63, WeatherCondition::RAIN },
+    { 65, WeatherCondition::RAIN },
+    { 66, WeatherCondition::FREEZING_RAIN },
+    { 67, WeatherCondition::FREEZING_RAIN },
+    { 71, WeatherCondition::SNOW },
+    { 73, WeatherCondition::SNOW },
+    { 75, WeatherCondition::SNOW },
+    { 77, WeatherCondition::SNOW_GRAINS },
+    { 80, WeatherCondition::RAIN_SHOWERS },
+    { 81, WeatherCondition::RAIN_SHOWERS },
+    { 82, WeatherCondition::RAIN_SHOWERS },
+    { 85, WeatherCondition::SNOW_SHOWERS },
+    { 86, WeatherCondition::SNOW_SHOWERS },
+    { 95, WeatherCondition::THUNDERSTORM },
+    { 96, WeatherCondition::THUNDERSTORM_HAIL },
+    { 97, WeatherCondition::THUNDERSTORM },
+    { 99, WeatherCondition::THUNDERSTORM_HAIL }
+  };
+
+  for (const MappingExpectation& entry : EXPECTATIONS) {
+    const WeatherCondition actual =
+        weatherConditionFromWmoCode(entry.code);
+
+    if (actual != entry.expected) {
+      Serial.print("FAIL: WMO code ");
+      Serial.print(entry.code);
+      Serial.print(" mapped to ");
+      Serial.print(weatherConditionName(actual));
+      Serial.print(", expected ");
+      Serial.println(weatherConditionName(entry.expected));
+      return false;
+    }
+  }
+
+  if (weatherConditionFromWmoCode(4) != WeatherCondition::UNKNOWN ||
+      weatherConditionFromWmoCode(98) != WeatherCondition::UNKNOWN) {
+    Serial.println(
+        "FAIL: undefined WMO weather codes must map to UNKNOWN."
+    );
+    return false;
+  }
+
+  Serial.println(
+      "PASS: WeatherCondition mapping self-check "
+      "(29 documented WMO codes + UNKNOWN fallback)."
+  );
+  return true;
+}
+
+static void runPhase6A3WeatherConditionIfReady() {
+  if (hasRunWeatherConditionProbe ||
       !wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
     return;
   }
 
-  hasRunWeatherServiceProbe = true;
+  hasRunWeatherConditionProbe = true;
 
   Serial.println();
-  Serial.println("Phase 6A-2 WeatherService probe starting...");
+  Serial.println("Phase 6A-3 WeatherCondition probe starting...");
   Serial.println("TLS trust anchor: ISRG Root X1");
   Serial.println(
-      "WeatherService is Serial-only; Weather widget is unchanged."
+      "Normalized conditions are Serial-only; Weather widget is unchanged."
   );
+
+  if (!runWeatherConditionMappingSelfCheck()) {
+    Serial.println();
+    return;
+  }
 
 #if !defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE)
   Serial.println(
@@ -1180,13 +1262,13 @@ static void runPhase6A2WeatherServiceIfReady() {
   }
 
   Serial.println(
-      "PASS: WeatherService parsed the live forecast and preserved last-valid data after failure."
+      "PASS: WeatherService parsed normalized conditions and preserved last-valid data after failure."
   );
   Serial.println(
-      "Hourly contract: NOW uses current; five future slots come from hourly[1..5]."
+      "Raw WMO weatherCode values remain preserved beside WeatherCondition."
   );
   Serial.println(
-      "Phase 6A-2 remains Serial-only; no Weather widget state is staged."
+      "Phase 6A-3 remains Serial-only; no Weather widget state is staged."
   );
   Serial.println();
 #endif
@@ -1250,9 +1332,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 6A-2: WeatherService parsing probe");
+  Serial.println("EDP Phase 6A-3: WMO semantic weather mapping");
   Serial.println("Phase 5 production BTC/ETH/HYPE path remains active.");
-  Serial.println("WeatherService is one-shot and Serial-only in this checkpoint.");
+  Serial.println("WeatherCondition mapping is Serial-only in this checkpoint.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1323,7 +1405,7 @@ void loop() {
   }
 
   runPhase5B3MarketPollIfDue();
-  runPhase6A2WeatherServiceIfReady();
+  runPhase6A3WeatherConditionIfReady();
 
   delay(20);
 }
