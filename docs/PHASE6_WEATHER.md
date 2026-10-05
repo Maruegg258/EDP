@@ -1020,6 +1020,32 @@ Production weather cadence remains 30 minutes.
 
 Phase 6B-2 remains unchecked in the roadmap until these results are confirmed on hardware.
 
+### Phase 6B-2 partial hardware verification
+
+Hardware verification is partially complete on 2026-10-05. The accelerated/deterministic diagnostic path passed; only the natural 30-minute production re-poll remains to be observed.
+
+Confirmed on hardware:
+
+1. The first eligible production weather poll ran after Wi-Fi + synchronized time were ready.
+2. Live current/hourly/daily Open-Meteo parsing remained correct.
+3. The current Weather widget mapped and staged successfully.
+4. Weather and market updates coalesced together before display flush; the observed dirty mask contained `WEATHER | BTC | ETH | HYPE`, and the subsequent application flush also included the due Clock update.
+5. Re-staging the exact same displayed Weather state produced `0x0 [NONE]`; no `WEATHER` dirty bit was created.
+6. The deterministic invalid-coordinate failure returned the expected error.
+7. The complete WeatherService last-valid snapshot remained unchanged after that failure.
+8. The displayed Weather widget remained unchanged during the failure hold, and no `WEATHER` dirty bit was staged.
+9. The forced normal recovery fetch succeeded.
+10. The recovered visible Weather state was unchanged, so no Weather refresh was requested.
+11. The complete Phase 6B-2 diagnostic reported PASS for unchanged suppression, failure hold, and live recovery.
+12. The production weather interval remained configured at 30 minutes.
+
+Still pending before Phase 6B-2 can be marked complete:
+
+- observe one naturally scheduled production weather poll after approximately 30 minutes of continuous runtime
+- confirm that the natural re-poll still uses the normal WeatherService -> mapper -> coalescer path
+- confirm no display/refresh regression is observed during that natural cycle
+
+
 ### Phase 6B-2 compile correction
 
 The first compile attempt failed with:
