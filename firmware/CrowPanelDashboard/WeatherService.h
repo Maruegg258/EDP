@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "SecureHttpClient.h"
+#include "WeatherCondition.h"
 
 struct WeatherCurrentValue {
   static constexpr size_t TIME_CAPACITY = 20;
@@ -12,6 +13,7 @@ struct WeatherCurrentValue {
   char time[TIME_CAPACITY];
   float temperatureC;
   uint8_t weatherCode;
+  WeatherCondition condition;
   bool isDay;
 };
 
@@ -21,6 +23,7 @@ struct WeatherHourlyValue {
   char time[TIME_CAPACITY];
   float temperatureC;
   uint8_t weatherCode;
+  WeatherCondition condition;
   uint8_t precipitationProbability;
   bool isDay;
 };
@@ -30,6 +33,7 @@ struct WeatherDailyValue {
 
   char date[DATE_CAPACITY];
   uint8_t weatherCode;
+  WeatherCondition condition;
   float temperatureMaxC;
   float temperatureMinC;
   uint8_t precipitationProbabilityMax;
