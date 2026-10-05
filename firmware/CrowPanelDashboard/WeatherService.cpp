@@ -566,8 +566,8 @@ bool validTemperature(double value) {
 }
 
 bool validWeatherCode(long value) {
-  // WMO weather interpretation is deliberately deferred to Phase 6A-3.
-  // Phase 6A-2 only preserves a bounded integer provider code.
+  // Preserve the bounded raw provider code. Documented WMO values are
+  // normalized by WeatherCondition; undefined values remain UNKNOWN.
   return value >= 0 && value <= 99;
 }
 
