@@ -857,7 +857,7 @@ No WeatherService parsing, TLS behavior, live mapping policy, coalescer behavior
 
 ## Phase 6B-2 implementation
 
-**Status:** Implementation committed; awaiting real-hardware verification.
+**Status:** PASS on real hardware (2026-10-05).
 
 Phase 6B-2 converts the Phase 6B-1 one-shot weather integration into the initial production polling flow and adds a temporary application-level diagnostic sequence for unchanged-value suppression, failure hold, and recovery.
 
@@ -1020,9 +1020,9 @@ Production weather cadence remains 30 minutes.
 
 Phase 6B-2 remains unchecked in the roadmap until these results are confirmed on hardware.
 
-### Phase 6B-2 partial hardware verification
+### Phase 6B-2 hardware verification
 
-Hardware verification is partially complete on 2026-10-05. The accelerated/deterministic diagnostic path passed; only the natural 30-minute production re-poll remains to be observed.
+Hardware verification completed on 2026-10-05. The deterministic diagnostic path passed first, followed by a naturally scheduled production re-poll after approximately 30 minutes of continuous runtime.
 
 Confirmed on hardware:
 
@@ -1039,11 +1039,14 @@ Confirmed on hardware:
 11. The complete Phase 6B-2 diagnostic reported PASS for unchanged suppression, failure hold, and live recovery.
 12. The production weather interval remained configured at 30 minutes.
 
-Still pending before Phase 6B-2 can be marked complete:
+Natural 30-minute production re-poll verification:
 
-- observe one naturally scheduled production weather poll after approximately 30 minutes of continuous runtime
-- confirm that the natural re-poll still uses the normal WeatherService -> mapper -> coalescer path
-- confirm no display/refresh regression is observed during that natural cycle
+- the next production weather poll triggered naturally after the configured interval
+- the live current value changed from the previously displayed temperature to a new valid value
+- the mapped visible state therefore produced exactly `0x2 [WEATHER]`
+- no unrelated widget dirty bit was introduced by the weather poll
+- the update continued to use `WeatherService -> WeatherWidgetMapper -> DashboardUpdateCoalescer`
+- WeatherService still did not trigger E-paper refresh directly
 
 
 ### Phase 6B-2 compile correction
@@ -1058,3 +1061,5 @@ The Phase 6B-2 implementation initially declared `WeatherStageResult` immediatel
 
 The fix moves `WeatherStageResult` beside the existing top-level `UpdateResult` enum, before helper function definitions. No polling, WeatherService, UI staging, diagnostic, or E-paper behavior changed.
 
+
+Phase 6B-2 is therefore hardware-verified and complete. The production weather cadence remains 30 minutes, identical visible weather is suppressed by the existing coalescer, transient weather failures preserve the last valid service/UI state, and recovery returns to the normal application-owned staging/refresh path.
