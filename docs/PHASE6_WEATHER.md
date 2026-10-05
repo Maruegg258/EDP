@@ -854,3 +854,168 @@ The correction keeps the icon pointer identity check inside `WeatherWidgetMapper
 
 No WeatherService parsing, TLS behavior, live mapping policy, coalescer behavior, display driver, or E-paper refresh sequence was changed by this correction.
 
+
+## Phase 6B-2 implementation
+
+**Status:** Implementation committed; awaiting real-hardware verification.
+
+Phase 6B-2 converts the Phase 6B-1 one-shot weather integration into the initial production polling flow and adds a temporary application-level diagnostic sequence for unchanged-value suppression, failure hold, and recovery.
+
+### Production polling cadence
+
+The application now owns:
+
+```text
+WEATHER_POLL_INTERVAL_MS = 30 minutes
+```
+
+The first eligible poll runs immediately after Wi-Fi is connected and system time is synchronized. Later production attempts use unsigned `millis()` subtraction:
+
+```text
+now - lastPoll >= interval
+```
+
+so normal 32-bit `millis()` wrap-around remains safe.
+
+A deterministic cadence self-check verifies:
+
+```text
+first poll           -> due immediately
+29:59.999            -> not due
+30:00.000            -> due
+millis() wrap-around -> still due correctly
+```
+
+The production interval remains 30 minutes during this diagnostic checkpoint; it is not shortened merely to make the hardware test finish faster.
+
+### Poll attempt policy
+
+Weather HTTPS work remains after the existing application display flush and remains gated by:
+
+```text
+Wi-Fi connected
++
+TimeService synchronized
+```
+
+When a poll becomes due, the application records the attempt time before performing HTTPS. Therefore a failed API/TLS/parse attempt does not create a tight retry loop; the next ordinary production attempt remains on the 30-minute cadence.
+
+A successful fetch is mapped through `WeatherWidgetMapper` and staged only through:
+
+```text
+DashboardUpdateCoalescer::stageWeather(...)
+```
+
+The application then examines only the `WEATHER` bit of the pending dirty mask:
+
+```text
+visible weather changed
+    -> WEATHER dirty pending
+
+visible weather unchanged
+    -> no WEATHER dirty
+```
+
+Other simultaneously pending widgets do not affect this decision.
+
+### Failure behavior
+
+A production WeatherService failure stages no replacement value.
+
+```text
+weather fetch fails
+        |
+        +-- WeatherService retains last-valid WeatherSnapshot
+        |
+        +-- application stages no WeatherWidgetState
+        |
+        +-- displayed Weather widget remains last-valid
+        |
+        +-- no WEATHER dirty caused by the failure
+```
+
+The startup placeholder remains only when no valid weather has ever been obtained.
+
+### Temporary Phase 6B-2 diagnostic
+
+To verify the behavior without waiting through multiple 30-minute wall-clock intervals, Phase 6B-2 temporarily runs a diagnostic state machine after the first live Weather widget has been physically committed.
+
+It performs these steps in order:
+
+```text
+1. Re-stage the exact displayed Weather widget
+   -> WEATHER dirty must remain absent
+
+2. Preserve the complete last-valid WeatherSnapshot
+
+3. Inject deterministic WeatherService failure
+   using invalid coordinates
+   -> request fails before network activity
+   -> complete last-valid snapshot must remain unchanged
+   -> displayed Weather widget must remain unchanged
+   -> no WEATHER dirty may be staged
+
+4. Force one normal live recovery fetch
+   -> success may be visibly unchanged or changed
+   -> if changed, normal coalescer/application flush handles it
+
+5. Wait until recovered Weather state is physically committed
+   -> diagnostic PASS
+```
+
+The invalid-coordinate injection is only a deterministic way to exercise the already established WeatherService failure contract. Production polling never substitutes invalid coordinates.
+
+The forced recovery fetch resets the ordinary 30-minute polling origin, so after the diagnostic finishes the next normal poll remains 30 minutes later.
+
+This temporary diagnostic state machine is intended to be removed in Phase 6B-3 after hardware verification, just as the Phase 5B-2 market diagnostic was removed in Phase 5B-3.
+
+### Expected Serial checkpoints
+
+A successful run should include:
+
+```text
+PASS: WeatherCondition mapping self-check ...
+PASS: WeatherWidgetMapper self-check ...
+PASS: Weather 30-minute cadence self-check ...
+Production weather polling interval: 30 minutes.
+
+Phase 6B-2 production weather poll starting...
+...
+Weather staging pending dirty: ... [WEATHER|...]
+Weather poll completed successfully ...
+
+Phase 6B-2 weather unchanged/failure/recovery diagnostic starting...
+First live Weather widget is physically committed.
+
+Re-staged identical weather; pending dirty: ...
+PASS: identical Weather widget created no WEATHER dirty.
+
+Injecting deterministic WeatherService failure (invalid coordinates)...
+Expected weather failure: invalid weather coordinates
+PASS: Weather failure preserved last-valid service data and displayed Weather widget; no WEATHER dirty was staged.
+
+Forcing one normal live Weather recovery fetch...
+...
+
+PASS: Phase 6B-2 weather diagnostics complete: unchanged suppression, failure hold, and live recovery verified.
+Production weather cadence remains 30 minutes.
+```
+
+### Required hardware verification
+
+1. firmware compiles and uploads
+2. existing Phase 3 self-checks still pass
+3. WMO and WeatherWidgetMapper regression checks still pass
+4. 30-minute cadence self-check passes
+5. the first production weather poll runs immediately after Wi-Fi + NTP readiness
+6. live weather remains correctly displayed
+7. re-staging identical visible Weather state produces no `WEATHER` dirty bit
+8. the injected WeatherService failure preserves the complete last-valid snapshot
+9. the failure does not replace or clear the displayed Weather widget
+10. the failure does not create a `WEATHER` dirty bit or physical refresh
+11. a normal recovery fetch succeeds
+12. changed recovery data, if any, is staged through the coalescer and application flush only
+13. BTC/ETH/HYPE, Clock, and Wi-Fi behavior remain normal
+14. E-paper refresh quality remains normal
+
+Phase 6B-2 remains unchecked in the roadmap until these results are confirmed on hardware.
