@@ -681,3 +681,138 @@ application/UI mapping later
 ```
 
 Phase 6A-3 is therefore hardware-verified and complete.
+
+## Phase 6B-1 implementation
+
+**Status:** Implementation committed; awaiting real-hardware verification.
+
+Phase 6B-1 is the first checkpoint that allows validated live weather to affect the visible dashboard. Only the **current** condition is presented. The five future-hour values and today/tomorrow values remain owned by `WeatherService` and are not yet laid out on the E-paper.
+
+### UI adapter boundary
+
+A dedicated `WeatherWidgetMapper` now bridges the service model to the existing Phase 3 Weather widget contract:
+
+```text
+WeatherService
+    |
+    +-- WeatherSnapshot.current
+                |
+                v
+       WeatherWidgetMapper
+                |
+                +-- existing SUN / CLOUD / RAIN assets
+                +-- short display label
+                +-- one-decimal Celsius text
+                |
+                v
+        WeatherWidgetState
+                |
+                v
+DashboardUpdateCoalescer::stageWeather()
+                |
+                v
+existing application flush
+```
+
+`WeatherService` still has no dependency on `Icons.h`, `WeatherWidgetState`, Dashboard state, the coalescer, graphics, or the E-paper driver.
+
+### Current three-icon presentation policy
+
+The current icon set predates the richer Phase 6 weather semantics, so Phase 6B-1 deliberately uses a conservative temporary mapping:
+
+```text
+CLEAR, MAINLY_CLEAR
+    -> WEATHER_SUN
+
+PARTLY_CLOUDY, OVERCAST, FOG, UNKNOWN
+    -> WEATHER_CLOUD
+
+DRIZZLE, FREEZING_DRIZZLE,
+RAIN, FREEZING_RAIN,
+SNOW, SNOW_GRAINS,
+RAIN_SHOWERS, SNOW_SHOWERS,
+THUNDERSTORM, THUNDERSTORM_HAIL
+    -> WEATHER_RAIN
+```
+
+The label remains more descriptive than the temporary three-icon family, for example `DRIZZLE`, `SNOW`, `SHOWERS`, or `THUNDERSTORM`.
+
+This is intentionally a UI mapping rather than a loss of service data. Raw WMO codes, normalized `WeatherCondition`, precipitation probabilities, and day/night flags remain available in `WeatherSnapshot`. Richer moon/fog/snow/thunder assets can therefore be added later without changing the provider/service contract.
+
+### Startup behavior
+
+The dashboard baseline no longer presents the old test fixture `SUN / 28 C` as though it were live weather.
+
+Before the first validated weather result arrives, the Weather widget uses:
+
+```text
+icon: WEATHER_CLOUD
+label: --
+temperature: -- C
+```
+
+The non-null cloud bitmap is only a neutral placeholder required by the existing snapshot/widget contract. It is replaced only after a complete validated WeatherService fetch succeeds.
+
+### Temperature presentation
+
+The existing Weather widget state has a 16-byte temperature buffer. Phase 6B-1 formats current temperature with one decimal place:
+
+```text
+23.2 C
+```
+
+This preserves the current provider precision while remaining inside the existing widget layout/buffer contract.
+
+### Coalescing behavior
+
+The weather fetch occurs after the existing dashboard flush, alongside the application-owned external-data work. A successful weather result calls only:
+
+```text
+DashboardUpdateCoalescer::stageWeather(...)
+```
+
+It does **not** call an E-paper refresh.
+
+The next application loop consumes the pending state through the already verified flush path. If market data is also pending, the dirty mask can contain Weather and Crypto bits together and still produce one physical refresh.
+
+Phase 6B-1 intentionally remains a one-shot weather integration. The 30-minute production polling schedule, unchanged-value observation, and unavailable/recovery behavior belong to Phase 6B-2.
+
+### Verification diagnostics
+
+The Phase 6A-3 WMO semantic self-check remains temporarily active as a regression check. Phase 6B-1 also adds a deterministic `WeatherWidgetMapper` self-check covering every `WeatherCondition` value, ensuring:
+
+- every condition maps to one of the current three non-null weather bitmaps
+- every display label fits the existing 16-byte weather-label buffer
+- temperature formatting fits the existing 16-byte temperature buffer
+
+After a live fetch, Serial reports the mapped current Weather widget state and the pending dashboard dirty mask.
+
+Expected success includes:
+
+```text
+PASS: WeatherCondition mapping self-check ...
+PASS: WeatherWidgetMapper self-check ...
+
+Weather widget mapping: <condition> -> <label> | <temperature>
+Staged live weather; pending dirty: ... WEATHER ...
+
+PASS candidate: live current weather staged through DashboardUpdateCoalescer.
+WeatherService did not trigger E-paper refresh; existing application flush will consume the pending state.
+```
+
+### Required hardware verification
+
+1. firmware compiles and uploads
+2. existing Phase 3 self-checks still pass
+3. WeatherCondition and WeatherWidgetMapper self-checks pass
+4. startup Weather widget shows the placeholder rather than fake test weather
+5. live Open-Meteo fetch/parse remains successful
+6. current condition maps to the expected temporary SUN/CLOUD/RAIN family and short label
+7. current temperature renders with one decimal place
+8. `WEATHER` appears in the coalescer pending dirty mask after the first valid weather stage
+9. the subsequent application flush visibly updates the Weather widget
+10. WeatherService itself never invokes display refresh
+11. BTC/ETH/HYPE, Clock, and Wi-Fi behavior remain normal
+12. E-paper text/icon clarity remains normal after the weather update
+
+Phase 6B-1 remains unchecked in the roadmap until these results are confirmed on hardware.
