@@ -684,7 +684,7 @@ Phase 6A-3 is therefore hardware-verified and complete.
 
 ## Phase 6B-1 implementation
 
-**Status:** Implementation committed; awaiting real-hardware verification.
+**Status:** PASS on real hardware (2026-10-05).
 
 Phase 6B-1 is the first checkpoint that allows validated live weather to affect the visible dashboard. Only the **current** condition is presented. The five future-hour values and today/tomorrow values remain owned by `WeatherService` and are not yet laid out on the E-paper.
 
@@ -816,6 +816,25 @@ WeatherService did not trigger E-paper refresh; existing application flush will 
 12. E-paper text/icon clarity remains normal after the weather update
 
 Phase 6B-1 remains unchecked in the roadmap until these results are confirmed on hardware.
+
+Hardware verification confirmed after the diagnostic correction:
+
+1. Firmware compiled and uploaded successfully.
+2. The WMO semantic mapping self-check passed all 29 documented codes plus UNKNOWN fallback.
+3. The mapper-local WeatherWidget self-check passed for every `WeatherCondition`.
+4. The live Open-Meteo response parsed successfully through `WeatherService`.
+5. The live current condition was mapped into the existing Weather widget contract with the expected label and one-decimal Celsius temperature.
+6. The Weather widget update was staged only through `DashboardUpdateCoalescer::stageWeather()`.
+7. The observed pending dirty mask was `WEATHER | BTC | ETH | HYPE`, confirming weather and market updates can accumulate before one application-owned display flush.
+8. The live Weather widget visibly updated on the panel and the user confirmed the hardware result was normal.
+9. The WeatherService remained display-independent and did not call the E-paper driver.
+10. The five future-hour slots and today/tomorrow daily values remained service-owned and were not yet added to the visible layout.
+11. Existing BTC/ETH/HYPE, Clock, and Wi-Fi behavior remained normal.
+12. No E-paper clarity or refresh regression was reported.
+
+The first failed hardware attempt is retained above as a useful regression note: a cross-compilation-unit pointer-identity diagnostic falsely rejected identical header-level `static constexpr` bitmap assets. Moving that diagnostic into `WeatherWidgetMapper.cpp` corrected the test without changing production weather mapping behavior.
+
+Phase 6B-1 is therefore hardware-verified and complete.
 
 ### Phase 6B-1 diagnostic correction
 
