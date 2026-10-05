@@ -80,7 +80,7 @@ CrowPanelDashboard.ino
              +-- WeatherWidget       (implemented)
              +-- WeatherWidgetMapper (Phase 6B-1 hardware verified)
              +-- Weather polling      (Phase 6B-2 hardware verified; 30-minute cadence)
-             +-- Weather prod cleanup (Phase 6B-3 implemented; hardware verification pending)
+             +-- Weather prod cleanup (Phase 6B-3 hardware verified)
              +-- CryptoWidget        (implemented)
              +-- WiFiWidget          (implemented)
              +-- StatusWidget        (implemented)
@@ -151,6 +151,8 @@ Phase 5B-2 adds a one-shot application-level diagnostic state machine without ch
 Phase 5B-3 removes the temporary Phase 5B-2 boot-time diagnostic state machine and its simulated ETH-unavailable cycle from the application. The production path now contains only the normal 60-second BTC/ETH/HYPE fetch loop, per-symbol validation/last-valid preservation, Crypto-widget staging through `DashboardUpdateCoalescer`, and the existing application-controlled E-paper flush. `MarketDataService`, TLS handling, coalescer internals, and display-driver refresh behavior are unchanged. The cleaned production path was verified on hardware on 2026-10-04: no diagnostic injection remained, live BTC/ETH/HYPE pricing and 60-second polling were normal, Clock/Wi-Fi behavior remained normal, and E-paper refresh quality remained clear.
 
 Phase 5 is complete as of 2026-10-04. The firmware now has hardware-verified certificate-validating Binance USDⓈ-M market retrieval, independent last-valid BTC/ETH/HYPE state, live Crypto widget integration through the coalescer, unchanged-value refresh suppression, short-failure hold/recovery behavior, and a production path free of diagnostic injection. Prolonged market-data outage/staleness indication is intentionally deferred to Phase 9 reliability hardening.
+
+Phase 6 is complete as of 2026-10-05. The firmware now has hardware-verified certificate-validating Open-Meteo retrieval, validated current/hourly/daily weather data, provider-neutral weather-condition normalization, live current-weather widget integration, 30-minute production polling, unchanged-value suppression, last-valid failure handling, and application-level refresh coalescing. Temporary Phase 6 diagnostics have been removed from the production path. Richer weather icons and forecast/tomorrow presentation remain later UI work.
 
 ## Current repository structure
 
