@@ -741,6 +741,7 @@ static uint32_t lastMarketPollMs = 0;
 static bool hasRunWeatherPoll = false;
 static uint32_t lastWeatherPollMs = 0;
 static bool hasRunWeatherSelfChecks = false;
+static bool weatherSelfChecksPassed = false;
 static bool hasReportedMissingWeatherConfig = false;
 
 enum class WeatherDiagnosticPhase {
