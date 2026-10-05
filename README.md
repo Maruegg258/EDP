@@ -78,7 +78,7 @@ CrowPanelDashboard.ino
              +-- Dashboard           (implemented)
              +-- ClockWidget         (implemented)
              +-- WeatherWidget       (implemented)
-             +-- WeatherWidgetMapper (Phase 6B-1 hardware verified)
+             +-- WeatherWidgetMapper (Phase 6B-1 hardware verified)\n             +-- Weather polling      (Phase 6B-2 implemented; hardware verification pending)
              +-- CryptoWidget        (implemented)
              +-- WiFiWidget          (implemented)
              +-- StatusWidget        (implemented)
