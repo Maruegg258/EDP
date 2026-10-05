@@ -54,6 +54,12 @@ enum class UpdateResult {
   REFRESHED
 };
 
+enum class WeatherStageResult {
+  FAILED,
+  UNCHANGED,
+  CHANGED
+};
+
 static void printDirtyMask(DashboardDirtyMask dirty) {
   Serial.print("0x");
   Serial.print(static_cast<unsigned int>(dirty), HEX);
@@ -1271,12 +1277,6 @@ static bool runWeatherSelfChecksIfNeeded() {
   Serial.println(" minutes.");
   return true;
 }
-
-enum class WeatherStageResult {
-  FAILED,
-  UNCHANGED,
-  CHANGED
-};
 
 static WeatherStageResult fetchAndStageLiveWeather(
     double latitude,
