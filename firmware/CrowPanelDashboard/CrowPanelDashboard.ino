@@ -16,6 +16,7 @@
 #include "TimeService.h"
 #include "TlsTrustAnchors.h"
 #include "WeatherService.h"
+#include "WeatherWidgetMapper.h"
 #include "WiFiManager.h"
 #include "config.h"
 
@@ -735,7 +736,7 @@ static constexpr uint32_t MARKET_POLL_INTERVAL_MS = 60000;
 static bool hasRunMarketPoll = false;
 static uint32_t lastMarketPollMs = 0;
 
-static bool hasRunWeatherConditionProbe = false;
+static bool hasRunWeatherWidgetIntegration = false;
 
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
@@ -984,62 +985,6 @@ static void runPhase5B3MarketPollIfDue() {
   Serial.println();
 }
 
-static bool sameWeatherSnapshot(const WeatherSnapshot& left,
-                                const WeatherSnapshot& right) {
-  if (strcmp(left.current.time, right.current.time) != 0 ||
-      left.current.temperatureC != right.current.temperatureC ||
-      left.current.weatherCode != right.current.weatherCode ||
-      left.current.condition != right.current.condition ||
-      left.current.isDay != right.current.isDay) {
-    return false;
-  }
-
-  for (size_t index = 0;
-       index < WeatherSnapshot::FUTURE_HOUR_COUNT;
-       ++index) {
-    const WeatherHourlyValue& leftHour = left.futureHours[index];
-    const WeatherHourlyValue& rightHour = right.futureHours[index];
-
-    if (strcmp(leftHour.time, rightHour.time) != 0 ||
-        leftHour.temperatureC != rightHour.temperatureC ||
-        leftHour.weatherCode != rightHour.weatherCode ||
-        leftHour.condition != rightHour.condition ||
-        leftHour.precipitationProbability !=
-            rightHour.precipitationProbability ||
-        leftHour.isDay != rightHour.isDay) {
-      return false;
-    }
-  }
-
-  const WeatherDailyValue* leftDays[] = {
-    &left.today,
-    &left.tomorrow
-  };
-  const WeatherDailyValue* rightDays[] = {
-    &right.today,
-    &right.tomorrow
-  };
-
-  for (size_t index = 0;
-       index < WeatherService::DAILY_RESPONSE_COUNT;
-       ++index) {
-    const WeatherDailyValue& leftDay = *leftDays[index];
-    const WeatherDailyValue& rightDay = *rightDays[index];
-
-    if (strcmp(leftDay.date, rightDay.date) != 0 ||
-        leftDay.weatherCode != rightDay.weatherCode ||
-        leftDay.condition != rightDay.condition ||
-        leftDay.temperatureMaxC != rightDay.temperatureMaxC ||
-        leftDay.temperatureMinC != rightDay.temperatureMinC ||
-        leftDay.precipitationProbabilityMax !=
-            rightDay.precipitationProbabilityMax) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 static void printWeatherDailyValue(const char* label,
                                    const WeatherDailyValue& value) {
   Serial.print(label);
@@ -1174,23 +1119,74 @@ static bool runWeatherConditionMappingSelfCheck() {
   return true;
 }
 
-static void runPhase6A3WeatherConditionIfReady() {
-  if (hasRunWeatherConditionProbe ||
+static bool runWeatherWidgetMapperSelfCheck() {
+  struct WidgetExpectation {
+    WeatherCondition condition;
+    const Bitmap1bpp* icon;
+    const char* label;
+  };
+
+  static const WidgetExpectation EXPECTATIONS[] = {
+    { WeatherCondition::UNKNOWN, &Icons::WEATHER_CLOUD, "UNKNOWN" },
+    { WeatherCondition::CLEAR, &Icons::WEATHER_SUN, "CLEAR" },
+    { WeatherCondition::MAINLY_CLEAR, &Icons::WEATHER_SUN, "MAINLY CLEAR" },
+    { WeatherCondition::PARTLY_CLOUDY, &Icons::WEATHER_CLOUD, "PARTLY CLOUDY" },
+    { WeatherCondition::OVERCAST, &Icons::WEATHER_CLOUD, "OVERCAST" },
+    { WeatherCondition::FOG, &Icons::WEATHER_CLOUD, "FOG" },
+    { WeatherCondition::DRIZZLE, &Icons::WEATHER_RAIN, "DRIZZLE" },
+    { WeatherCondition::FREEZING_DRIZZLE, &Icons::WEATHER_RAIN, "FRZ DRIZZLE" },
+    { WeatherCondition::RAIN, &Icons::WEATHER_RAIN, "RAIN" },
+    { WeatherCondition::FREEZING_RAIN, &Icons::WEATHER_RAIN, "FRZ RAIN" },
+    { WeatherCondition::SNOW, &Icons::WEATHER_RAIN, "SNOW" },
+    { WeatherCondition::SNOW_GRAINS, &Icons::WEATHER_RAIN, "SNOW GRAINS" },
+    { WeatherCondition::RAIN_SHOWERS, &Icons::WEATHER_RAIN, "SHOWERS" },
+    { WeatherCondition::SNOW_SHOWERS, &Icons::WEATHER_RAIN, "SNOW SHOWERS" },
+    { WeatherCondition::THUNDERSTORM, &Icons::WEATHER_RAIN, "THUNDERSTORM" },
+    { WeatherCondition::THUNDERSTORM_HAIL, &Icons::WEATHER_RAIN, "T-STORM HAIL" }
+  };
+
+  for (const WidgetExpectation& entry : EXPECTATIONS) {
+    WeatherCurrentValue current{};
+    current.temperatureC = 23.2f;
+    current.condition = entry.condition;
+
+    WeatherWidgetPresentation presentation{};
+
+    if (!buildWeatherWidgetPresentation(current, presentation) ||
+        presentation.state.icon != entry.icon ||
+        strcmp(presentation.state.label, entry.label) != 0 ||
+        strcmp(presentation.state.temperature, "23.2 C") != 0) {
+      Serial.print("FAIL: WeatherWidget mapping for ");
+      Serial.println(weatherConditionName(entry.condition));
+      return false;
+    }
+  }
+
+  Serial.println(
+      "PASS: WeatherWidgetMapper self-check "
+      "(all WeatherCondition values fit current widget contract)."
+  );
+  return true;
+}
+
+static void runPhase6B1WeatherIntegrationIfReady() {
+  if (hasRunWeatherWidgetIntegration ||
       !wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
     return;
   }
 
-  hasRunWeatherConditionProbe = true;
+  hasRunWeatherWidgetIntegration = true;
 
   Serial.println();
-  Serial.println("Phase 6A-3 WeatherCondition probe starting...");
+  Serial.println("Phase 6B-1 live Weather widget integration starting...");
   Serial.println("TLS trust anchor: ISRG Root X1");
   Serial.println(
-      "Normalized conditions are Serial-only; Weather widget is unchanged."
+      "WeatherService remains display-independent; application owns staging."
   );
 
-  if (!runWeatherConditionMappingSelfCheck()) {
+  if (!runWeatherConditionMappingSelfCheck() ||
+      !runWeatherWidgetMapperSelfCheck()) {
     Serial.println();
     return;
   }
@@ -1206,12 +1202,15 @@ static void runPhase6A3WeatherConditionIfReady() {
   const double longitude = static_cast<double>(WEATHER_LONGITUDE);
 
   Serial.println(
-      "Fetching and validating current + hourly + daily weather..."
+      "Fetching current + hourly + daily weather through WeatherService..."
   );
 
   if (!weatherService.fetchLatest(latitude, longitude)) {
     Serial.print("FAIL: WeatherService fetch/parse failed: ");
     Serial.println(weatherService.lastError());
+    Serial.println(
+        "UI action: startup weather placeholder remains; no failure state staged."
+    );
     Serial.println();
     return;
   }
@@ -1229,46 +1228,50 @@ static void runPhase6A3WeatherConditionIfReady() {
 
   printWeatherSnapshot(*snapshot);
 
-  const WeatherSnapshot preservedBeforeFailure = *snapshot;
+  WeatherWidgetPresentation presentation{};
 
-  Serial.println(
-      "Testing last-valid preservation with invalid coordinates..."
-  );
-
-  if (weatherService.fetchLatest(999.0, longitude)) {
+  if (!buildWeatherWidgetPresentation(
+          snapshot->current,
+          presentation)) {
     Serial.println(
-        "FAIL: invalid-coordinate WeatherService request unexpectedly succeeded."
+        "FAIL: live current weather could not be mapped to WeatherWidgetState."
     );
     Serial.println();
     return;
   }
 
-  Serial.print("Expected failure: ");
-  Serial.println(weatherService.lastError());
+  Serial.print("Weather widget mapping: ");
+  Serial.print(weatherConditionName(snapshot->current.condition));
+  Serial.print(" -> ");
+  Serial.print(presentation.state.label);
+  Serial.print(" | ");
+  Serial.println(presentation.state.temperature);
 
-  const WeatherSnapshot* preservedAfterFailure =
-      weatherService.lastValidSnapshot();
+  if (!updateCoalescer.stageWeather(presentation.state)) {
+    Serial.println("FAIL: could not stage live Weather widget state.");
+    Serial.println();
+    return;
+  }
 
-  if (preservedAfterFailure == nullptr ||
-      !weatherService.hasValidSnapshot() ||
-      !sameWeatherSnapshot(
-          preservedBeforeFailure,
-          *preservedAfterFailure)) {
+  Serial.print("Staged live weather; pending dirty: ");
+  printDirtyMask(updateCoalescer.pendingDirty());
+
+  if ((updateCoalescer.pendingDirty() & DashboardDirty::WEATHER) == 0) {
     Serial.println(
-        "FAIL: last-valid weather snapshot changed after failed request."
+        "FAIL: startup placeholder should differ from first valid live weather."
     );
     Serial.println();
     return;
   }
 
   Serial.println(
-      "PASS: WeatherService parsed normalized conditions and preserved last-valid data after failure."
+      "PASS candidate: live current weather staged through DashboardUpdateCoalescer."
   );
   Serial.println(
-      "Raw WMO weatherCode values remain preserved beside WeatherCondition."
+      "WeatherService did not trigger E-paper refresh; existing application flush will consume the pending state."
   );
   Serial.println(
-      "Phase 6A-3 remains Serial-only; no Weather widget state is staged."
+      "Future-hour and daily values remain service-owned for later UI work."
   );
   Serial.println();
 #endif
@@ -1332,9 +1335,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 6A-3: WMO semantic weather mapping");
+  Serial.println("EDP Phase 6B-1: live current weather integration");
   Serial.println("Phase 5 production BTC/ETH/HYPE path remains active.");
-  Serial.println("WeatherCondition mapping is Serial-only in this checkpoint.");
+  Serial.println("WeatherService remains separate from UI and display refresh.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1348,6 +1351,9 @@ void setup() {
 
   DashboardState initialState = DashboardTestStates::BASELINE;
   initialState.clock.time = "--:--";
+  initialState.weather.icon = &Icons::WEATHER_CLOUD;
+  initialState.weather.label = "--";
+  initialState.weather.temperature = "-- C";
   initialState.wifi.icon = &Icons::WIFI_DISCONNECTED;
   initialState.btc.price = "--";
   initialState.eth.price = "--";
@@ -1405,7 +1411,7 @@ void loop() {
   }
 
   runPhase5B3MarketPollIfDue();
-  runPhase6A3WeatherConditionIfReady();
+  runPhase6B1WeatherIntegrationIfReady();
 
   delay(20);
 }
