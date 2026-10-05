@@ -750,21 +750,6 @@ static bool hasRunWeatherSelfChecks = false;
 static bool weatherSelfChecksPassed = false;
 static bool hasReportedMissingWeatherConfig = false;
 
-enum class WeatherDiagnosticPhase {
-  WAIT_FIRST_DISPLAY,
-  CHECK_UNCHANGED,
-  INJECT_FAILURE,
-  RECOVERY_FETCH,
-  WAIT_RECOVERY_DISPLAY,
-  COMPLETE,
-  FAILED
-};
-
-static WeatherDiagnosticPhase weatherDiagnosticPhase =
-    WeatherDiagnosticPhase::WAIT_FIRST_DISPLAY;
-static WeatherSnapshot weatherDiagnosticPreservedSnapshot{};
-static bool hasWeatherDiagnosticPreservedSnapshot = false;
-
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
 static TimeSyncState lastReportedTimeState =
@@ -1012,140 +997,6 @@ static void runPhase5B3MarketPollIfDue() {
   Serial.println();
 }
 
-static void printWeatherDailyValue(const char* label,
-                                   const WeatherDailyValue& value) {
-  Serial.print(label);
-  Serial.print(" date: ");
-  Serial.println(value.date);
-
-  Serial.print(label);
-  Serial.print(" weather code: ");
-  Serial.print(value.weatherCode);
-  Serial.print(" -> ");
-  Serial.println(weatherConditionName(value.condition));
-
-  Serial.print(label);
-  Serial.print(" temperature: ");
-  Serial.print(value.temperatureMinC, 1);
-  Serial.print(" C .. ");
-  Serial.print(value.temperatureMaxC, 1);
-  Serial.println(" C");
-
-  Serial.print(label);
-  Serial.print(" max precipitation probability: ");
-  Serial.print(value.precipitationProbabilityMax);
-  Serial.println("%");
-}
-
-static void printWeatherSnapshot(const WeatherSnapshot& snapshot) {
-  Serial.println("Parsed current weather:");
-  Serial.print("  time: ");
-  Serial.println(snapshot.current.time);
-  Serial.print("  temperature: ");
-  Serial.print(snapshot.current.temperatureC, 1);
-  Serial.println(" C");
-  Serial.print("  weather code: ");
-  Serial.print(snapshot.current.weatherCode);
-  Serial.print(" -> ");
-  Serial.println(weatherConditionName(snapshot.current.condition));
-  Serial.print("  is day: ");
-  Serial.println(snapshot.current.isDay ? "YES" : "NO");
-
-  Serial.println("Parsed next five hourly forecast slots:");
-
-  for (size_t index = 0;
-       index < WeatherSnapshot::FUTURE_HOUR_COUNT;
-       ++index) {
-    const WeatherHourlyValue& hour = snapshot.futureHours[index];
-
-    Serial.print("  +");
-    Serial.print(index + 1);
-    Serial.print("h ");
-    Serial.print(hour.time);
-    Serial.print(" | ");
-    Serial.print(hour.temperatureC, 1);
-    Serial.print(" C | code ");
-    Serial.print(hour.weatherCode);
-    Serial.print(" -> ");
-    Serial.print(weatherConditionName(hour.condition));
-    Serial.print(" | precip ");
-    Serial.print(hour.precipitationProbability);
-    Serial.print("% | ");
-    Serial.println(hour.isDay ? "DAY" : "NIGHT");
-  }
-
-  printWeatherDailyValue("Today", snapshot.today);
-  printWeatherDailyValue("Tomorrow", snapshot.tomorrow);
-}
-
-static bool sameWeatherSnapshot(const WeatherSnapshot& left,
-                                const WeatherSnapshot& right) {
-  if (strcmp(left.current.time, right.current.time) != 0 ||
-      left.current.temperatureC != right.current.temperatureC ||
-      left.current.weatherCode != right.current.weatherCode ||
-      left.current.condition != right.current.condition ||
-      left.current.isDay != right.current.isDay) {
-    return false;
-  }
-
-  for (size_t index = 0;
-       index < WeatherSnapshot::FUTURE_HOUR_COUNT;
-       ++index) {
-    const WeatherHourlyValue& leftHour = left.futureHours[index];
-    const WeatherHourlyValue& rightHour = right.futureHours[index];
-
-    if (strcmp(leftHour.time, rightHour.time) != 0 ||
-        leftHour.temperatureC != rightHour.temperatureC ||
-        leftHour.weatherCode != rightHour.weatherCode ||
-        leftHour.condition != rightHour.condition ||
-        leftHour.precipitationProbability !=
-            rightHour.precipitationProbability ||
-        leftHour.isDay != rightHour.isDay) {
-      return false;
-    }
-  }
-
-  const WeatherDailyValue* leftDays[] = {
-    &left.today,
-    &left.tomorrow
-  };
-  const WeatherDailyValue* rightDays[] = {
-    &right.today,
-    &right.tomorrow
-  };
-
-  for (size_t index = 0;
-       index < WeatherService::DAILY_RESPONSE_COUNT;
-       ++index) {
-    const WeatherDailyValue& leftDay = *leftDays[index];
-    const WeatherDailyValue& rightDay = *rightDays[index];
-
-    if (strcmp(leftDay.date, rightDay.date) != 0 ||
-        leftDay.weatherCode != rightDay.weatherCode ||
-        leftDay.condition != rightDay.condition ||
-        leftDay.temperatureMaxC != rightDay.temperatureMaxC ||
-        leftDay.temperatureMinC != rightDay.temperatureMinC ||
-        leftDay.precipitationProbabilityMax !=
-            rightDay.precipitationProbabilityMax) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static bool sameWeatherWidgetState(const WeatherWidgetState& left,
-                                   const WeatherWidgetState& right) {
-  if (left.icon != right.icon ||
-      left.label == nullptr || right.label == nullptr ||
-      left.temperature == nullptr || right.temperature == nullptr) {
-    return false;
-  }
-
-  return strcmp(left.label, right.label) == 0 &&
-         strcmp(left.temperature, right.temperature) == 0;
-}
-
 static bool runWeatherConditionMappingSelfCheck() {
   struct MappingExpectation {
     uint8_t code;
@@ -1263,8 +1114,7 @@ static bool runWeatherSelfChecksIfNeeded() {
       runWeatherPollCadenceSelfCheck();
 
   if (!weatherSelfChecksPassed) {
-    Serial.println("FAIL: Phase 6B-2 weather self-checks.");
-    weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+    Serial.println("FAIL: weather production self-checks.");
     return false;
   }
 
@@ -1280,8 +1130,7 @@ static bool runWeatherSelfChecksIfNeeded() {
 
 static WeatherStageResult fetchAndStageLiveWeather(
     double latitude,
-    double longitude,
-    bool printSnapshot) {
+    double longitude) {
   if (!weatherService.fetchLatest(latitude, longitude)) {
     Serial.print("Weather fetch failed: ");
     Serial.println(weatherService.lastError());
@@ -1312,10 +1161,6 @@ static WeatherStageResult fetchAndStageLiveWeather(
         "FAIL: WeatherService succeeded but no last-valid snapshot exists."
     );
     return WeatherStageResult::FAILED;
-  }
-
-  if (printSnapshot) {
-    printWeatherSnapshot(*snapshot);
   }
 
   WeatherWidgetPresentation presentation{};
@@ -1361,7 +1206,7 @@ static WeatherStageResult fetchAndStageLiveWeather(
   return WeatherStageResult::CHANGED;
 }
 
-static void runPhase6B2WeatherPollIfDue() {
+static void runProductionWeatherPollIfDue() {
   if (!wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
     return;
@@ -1394,7 +1239,7 @@ static void runPhase6B2WeatherPollIfDue() {
   lastWeatherPollMs = now;
 
   Serial.println();
-  Serial.println("Phase 6B-2 production weather poll starting...");
+  Serial.println("Production weather poll starting...");
   Serial.println("TLS trust anchor: ISRG Root X1");
   Serial.println(
       "Weather polling is 30 minutes; "
@@ -1404,8 +1249,7 @@ static void runPhase6B2WeatherPollIfDue() {
   const WeatherStageResult result =
       fetchAndStageLiveWeather(
           static_cast<double>(WEATHER_LATITUDE),
-          static_cast<double>(WEATHER_LONGITUDE),
-          true
+          static_cast<double>(WEATHER_LONGITUDE)
       );
 
   if (result == WeatherStageResult::FAILED) {
@@ -1428,251 +1272,6 @@ static void runPhase6B2WeatherPollIfDue() {
   );
   Serial.println();
 #endif
-}
-
-static void runPhase6B2WeatherDiagnostics() {
-  if (weatherDiagnosticPhase == WeatherDiagnosticPhase::COMPLETE ||
-      weatherDiagnosticPhase == WeatherDiagnosticPhase::FAILED ||
-      !weatherService.hasValidSnapshot() ||
-      !updateCoalescer.hasDisplayedState()) {
-    return;
-  }
-
-  const WeatherSnapshot* snapshot =
-      weatherService.lastValidSnapshot();
-
-  if (snapshot == nullptr) {
-    return;
-  }
-
-  WeatherWidgetPresentation presentation{};
-
-  if (!buildWeatherWidgetPresentation(
-          snapshot->current,
-          presentation)) {
-    Serial.println(
-        "FAIL: Phase 6B-2 diagnostic could not map last-valid weather."
-    );
-    weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-    return;
-  }
-
-  switch (weatherDiagnosticPhase) {
-    case WeatherDiagnosticPhase::WAIT_FIRST_DISPLAY: {
-      if ((updateCoalescer.pendingDirty() &
-           DashboardDirty::WEATHER) != 0) {
-        return;
-      }
-
-      if (!sameWeatherWidgetState(
-              updateCoalescer.displayedState().weather,
-              presentation.state)) {
-        return;
-      }
-
-      Serial.println();
-      Serial.println(
-          "Phase 6B-2 weather unchanged/failure/recovery diagnostic starting..."
-      );
-      Serial.println(
-          "First live Weather widget is physically committed."
-      );
-
-      weatherDiagnosticPhase =
-          WeatherDiagnosticPhase::CHECK_UNCHANGED;
-      return;
-    }
-
-    case WeatherDiagnosticPhase::CHECK_UNCHANGED: {
-      if (!updateCoalescer.stageWeather(presentation.state)) {
-        Serial.println(
-            "FAIL: could not re-stage identical Weather widget state."
-        );
-        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-        return;
-      }
-
-      Serial.print("Re-staged identical weather; pending dirty: ");
-      printDirtyMask(updateCoalescer.pendingDirty());
-
-      if ((updateCoalescer.pendingDirty() &
-           DashboardDirty::WEATHER) != 0) {
-        Serial.println(
-            "FAIL: identical Weather widget created WEATHER dirty."
-        );
-        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-        return;
-      }
-
-      Serial.println(
-          "PASS: identical Weather widget created no WEATHER dirty."
-      );
-
-      weatherDiagnosticPreservedSnapshot = *snapshot;
-      hasWeatherDiagnosticPreservedSnapshot = true;
-      weatherDiagnosticPhase =
-          WeatherDiagnosticPhase::INJECT_FAILURE;
-      return;
-    }
-
-    case WeatherDiagnosticPhase::INJECT_FAILURE: {
-      if (!hasWeatherDiagnosticPreservedSnapshot) {
-        Serial.println(
-            "FAIL: no preserved WeatherSnapshot for failure diagnostic."
-        );
-        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-        return;
-      }
-
-      Serial.println(
-          "Injecting deterministic WeatherService failure "
-          "(invalid coordinates)..."
-      );
-
-      if (weatherService.fetchLatest(999.0, 0.0)) {
-        Serial.println(
-            "FAIL: injected WeatherService failure unexpectedly succeeded."
-        );
-        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-        return;
-      }
-
-      Serial.print("Expected weather failure: ");
-      Serial.println(weatherService.lastError());
-
-      const WeatherSnapshot* preservedAfterFailure =
-          weatherService.lastValidSnapshot();
-
-      if (preservedAfterFailure == nullptr ||
-          !weatherService.hasValidSnapshot() ||
-          !sameWeatherSnapshot(
-              weatherDiagnosticPreservedSnapshot,
-              *preservedAfterFailure)) {
-        Serial.println(
-            "FAIL: WeatherService last-valid snapshot changed after failure."
-        );
-        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-        return;
-      }
-
-      WeatherWidgetPresentation preservedPresentation{};
-
-      if (!buildWeatherWidgetPresentation(
-              preservedAfterFailure->current,
-              preservedPresentation) ||
-          !sameWeatherWidgetState(
-              updateCoalescer.displayedState().weather,
-              preservedPresentation.state) ||
-          (updateCoalescer.pendingDirty() &
-           DashboardDirty::WEATHER) != 0) {
-        Serial.println(
-            "FAIL: displayed Weather widget changed during failure hold."
-        );
-        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-        return;
-      }
-
-      Serial.println(
-          "PASS: Weather failure preserved last-valid service data "
-          "and displayed Weather widget; no WEATHER dirty was staged."
-      );
-
-      weatherDiagnosticPhase =
-          WeatherDiagnosticPhase::RECOVERY_FETCH;
-      return;
-    }
-
-    case WeatherDiagnosticPhase::RECOVERY_FETCH: {
-#if !defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE)
-      weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-      return;
-#else
-      if (!wifiManager.isConnected() ||
-          !timeService.isSynchronized()) {
-        return;
-      }
-
-      Serial.println(
-          "Forcing one normal live Weather recovery fetch..."
-      );
-
-      const uint32_t recoveryNow = millis();
-      hasRunWeatherPoll = true;
-      lastWeatherPollMs = recoveryNow;
-
-      const WeatherStageResult recoveryResult =
-          fetchAndStageLiveWeather(
-              static_cast<double>(WEATHER_LATITUDE),
-              static_cast<double>(WEATHER_LONGITUDE),
-              true
-          );
-
-      if (recoveryResult == WeatherStageResult::FAILED) {
-        Serial.println(
-            "FAIL: live Weather recovery fetch failed."
-        );
-        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-        return;
-      }
-
-      Serial.println(
-          recoveryResult == WeatherStageResult::UNCHANGED
-              ? "Recovery fetch succeeded with unchanged visible weather."
-              : "Recovery fetch succeeded and staged changed visible weather."
-      );
-
-      weatherDiagnosticPhase =
-          WeatherDiagnosticPhase::WAIT_RECOVERY_DISPLAY;
-      return;
-#endif
-    }
-
-    case WeatherDiagnosticPhase::WAIT_RECOVERY_DISPLAY: {
-      if ((updateCoalescer.pendingDirty() &
-           DashboardDirty::WEATHER) != 0) {
-        return;
-      }
-
-      const WeatherSnapshot* recovered =
-          weatherService.lastValidSnapshot();
-
-      if (recovered == nullptr) {
-        Serial.println(
-            "FAIL: no last-valid weather after recovery."
-        );
-        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
-        return;
-      }
-
-      WeatherWidgetPresentation recoveredPresentation{};
-
-      if (!buildWeatherWidgetPresentation(
-              recovered->current,
-              recoveredPresentation) ||
-          !sameWeatherWidgetState(
-              updateCoalescer.displayedState().weather,
-              recoveredPresentation.state)) {
-        return;
-      }
-
-      Serial.println(
-          "PASS: Phase 6B-2 weather diagnostics complete: "
-          "unchanged suppression, failure hold, and live recovery verified."
-      );
-      Serial.println(
-          "Production weather cadence remains 30 minutes."
-      );
-      Serial.println();
-
-      weatherDiagnosticPhase =
-          WeatherDiagnosticPhase::COMPLETE;
-      return;
-    }
-
-    case WeatherDiagnosticPhase::COMPLETE:
-    case WeatherDiagnosticPhase::FAILED:
-      return;
-  }
 }
 
 static bool stageLiveClockIfMinuteChanged(bool& minuteChanged) {
@@ -1733,9 +1332,10 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 6B-2: weather polling and resilience");
+  Serial.println("EDP Phase 6B-3: cleaned production weather path");
   Serial.println("Phase 5 production BTC/ETH/HYPE path remains active.");
   Serial.println("Weather polling target: 30 minutes.");
+  Serial.println("Temporary Phase 6B-2 weather diagnostics are removed.");
   Serial.println("WeatherService remains separate from UI and display refresh.");
 
   if (!runDirtySelfCheck() ||
@@ -1810,8 +1410,7 @@ void loop() {
   }
 
   runPhase5B3MarketPollIfDue();
-  runPhase6B2WeatherPollIfDue();
-  runPhase6B2WeatherDiagnostics();
+  runProductionWeatherPollIfDue();
 
   delay(20);
 }
