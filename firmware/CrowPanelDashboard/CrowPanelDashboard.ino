@@ -1072,6 +1072,74 @@ static void printWeatherSnapshot(const WeatherSnapshot& snapshot) {
   printWeatherDailyValue("Tomorrow", snapshot.tomorrow);
 }
 
+static bool sameWeatherSnapshot(const WeatherSnapshot& left,
+                                const WeatherSnapshot& right) {
+  if (strcmp(left.current.time, right.current.time) != 0 ||
+      left.current.temperatureC != right.current.temperatureC ||
+      left.current.weatherCode != right.current.weatherCode ||
+      left.current.condition != right.current.condition ||
+      left.current.isDay != right.current.isDay) {
+    return false;
+  }
+
+  for (size_t index = 0;
+       index < WeatherSnapshot::FUTURE_HOUR_COUNT;
+       ++index) {
+    const WeatherHourlyValue& leftHour = left.futureHours[index];
+    const WeatherHourlyValue& rightHour = right.futureHours[index];
+
+    if (strcmp(leftHour.time, rightHour.time) != 0 ||
+        leftHour.temperatureC != rightHour.temperatureC ||
+        leftHour.weatherCode != rightHour.weatherCode ||
+        leftHour.condition != rightHour.condition ||
+        leftHour.precipitationProbability !=
+            rightHour.precipitationProbability ||
+        leftHour.isDay != rightHour.isDay) {
+      return false;
+    }
+  }
+
+  const WeatherDailyValue* leftDays[] = {
+    &left.today,
+    &left.tomorrow
+  };
+  const WeatherDailyValue* rightDays[] = {
+    &right.today,
+    &right.tomorrow
+  };
+
+  for (size_t index = 0;
+       index < WeatherService::DAILY_RESPONSE_COUNT;
+       ++index) {
+    const WeatherDailyValue& leftDay = *leftDays[index];
+    const WeatherDailyValue& rightDay = *rightDays[index];
+
+    if (strcmp(leftDay.date, rightDay.date) != 0 ||
+        leftDay.weatherCode != rightDay.weatherCode ||
+        leftDay.condition != rightDay.condition ||
+        leftDay.temperatureMaxC != rightDay.temperatureMaxC ||
+        leftDay.temperatureMinC != rightDay.temperatureMinC ||
+        leftDay.precipitationProbabilityMax !=
+            rightDay.precipitationProbabilityMax) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool sameWeatherWidgetState(const WeatherWidgetState& left,
+                                   const WeatherWidgetState& right) {
+  if (left.icon != right.icon ||
+      left.label == nullptr || right.label == nullptr ||
+      left.temperature == nullptr || right.temperature == nullptr) {
+    return false;
+  }
+
+  return strcmp(left.label, right.label) == 0 &&
+         strcmp(left.temperature, right.temperature) == 0;
+}
+
 static bool runWeatherConditionMappingSelfCheck() {
   struct MappingExpectation {
     uint8_t code;
@@ -1140,62 +1208,100 @@ static bool runWeatherConditionMappingSelfCheck() {
   return true;
 }
 
-static void runPhase6B1WeatherIntegrationIfReady() {
-  if (hasRunWeatherWidgetIntegration ||
-      !wifiManager.isConnected() ||
-      !timeService.isSynchronized()) {
-    return;
+static bool weatherPollDue(bool hasRun,
+                           uint32_t lastPollMs,
+                           uint32_t nowMs) {
+  return !hasRun ||
+         static_cast<uint32_t>(nowMs - lastPollMs) >=
+             WEATHER_POLL_INTERVAL_MS;
+}
+
+static bool runWeatherPollCadenceSelfCheck() {
+  const uint32_t base = 1000;
+  const uint32_t almostDue =
+      base + WEATHER_POLL_INTERVAL_MS - 1;
+  const uint32_t exactlyDue =
+      base + WEATHER_POLL_INTERVAL_MS;
+
+  const uint32_t wrapLast = 0xFFF00000UL;
+  const uint32_t wrapNow =
+      static_cast<uint32_t>(
+          wrapLast + WEATHER_POLL_INTERVAL_MS
+      );
+
+  if (!weatherPollDue(false, 0, base) ||
+      weatherPollDue(true, base, almostDue) ||
+      !weatherPollDue(true, base, exactlyDue) ||
+      !weatherPollDue(true, wrapLast, wrapNow)) {
+    Serial.println("FAIL: Weather 30-minute cadence self-check.");
+    return false;
   }
 
-  hasRunWeatherWidgetIntegration = true;
-
-  Serial.println();
-  Serial.println("Phase 6B-1 live Weather widget integration starting...");
-  Serial.println("TLS trust anchor: ISRG Root X1");
   Serial.println(
-      "WeatherService remains display-independent; application owns staging."
+      "PASS: Weather 30-minute cadence self-check "
+      "(initial/immediate, pre-due, exact-due, millis wrap)."
   );
+  return true;
+}
 
-  if (!runWeatherConditionMappingSelfCheck()) {
-    Serial.println();
-    return;
+static bool runWeatherSelfChecksIfNeeded() {
+  if (hasRunWeatherSelfChecks) {
+    return weatherSelfChecksPassed;
   }
 
-  if (!weatherWidgetMapperSelfCheck()) {
-    Serial.println(
-        "FAIL: WeatherWidgetMapper self-check failed."
-    );
-    Serial.println();
-    return;
+  hasRunWeatherSelfChecks = true;
+
+  weatherSelfChecksPassed =
+      runWeatherConditionMappingSelfCheck() &&
+      weatherWidgetMapperSelfCheck() &&
+      runWeatherPollCadenceSelfCheck();
+
+  if (!weatherSelfChecksPassed) {
+    Serial.println("FAIL: Phase 6B-2 weather self-checks.");
+    weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+    return false;
   }
 
   Serial.println(
       "PASS: WeatherWidgetMapper self-check "
       "(all WeatherCondition values fit current widget contract)."
   );
+  Serial.print("Production weather polling interval: ");
+  Serial.print(WEATHER_POLL_INTERVAL_MS / 60000UL);
+  Serial.println(" minutes.");
+  return true;
+}
 
-#if !defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE)
-  Serial.println(
-      "SKIP: add WEATHER_LATITUDE and WEATHER_LONGITUDE to local config.h."
-  );
-  Serial.println();
-  return;
-#else
-  const double latitude = static_cast<double>(WEATHER_LATITUDE);
-  const double longitude = static_cast<double>(WEATHER_LONGITUDE);
+enum class WeatherStageResult {
+  FAILED,
+  UNCHANGED,
+  CHANGED
+};
 
-  Serial.println(
-      "Fetching current + hourly + daily weather through WeatherService..."
-  );
-
+static WeatherStageResult fetchAndStageLiveWeather(
+    double latitude,
+    double longitude,
+    bool printSnapshot) {
   if (!weatherService.fetchLatest(latitude, longitude)) {
-    Serial.print("FAIL: WeatherService fetch/parse failed: ");
+    Serial.print("Weather fetch failed: ");
     Serial.println(weatherService.lastError());
-    Serial.println(
-        "UI action: startup weather placeholder remains; no failure state staged."
-    );
-    Serial.println();
-    return;
+
+    const WeatherSnapshot* preserved =
+        weatherService.lastValidSnapshot();
+
+    if (preserved != nullptr) {
+      Serial.println(
+          "UI action: preserve last-valid Weather widget; "
+          "no failure value staged."
+      );
+    } else {
+      Serial.println(
+          "UI action: no last-valid weather exists; "
+          "startup placeholder remains."
+      );
+    }
+
+    return WeatherStageResult::FAILED;
   }
 
   const WeatherSnapshot* snapshot =
@@ -1205,11 +1311,12 @@ static void runPhase6B1WeatherIntegrationIfReady() {
     Serial.println(
         "FAIL: WeatherService succeeded but no last-valid snapshot exists."
     );
-    Serial.println();
-    return;
+    return WeatherStageResult::FAILED;
   }
 
-  printWeatherSnapshot(*snapshot);
+  if (printSnapshot) {
+    printWeatherSnapshot(*snapshot);
+  }
 
   WeatherWidgetPresentation presentation{};
 
@@ -1217,10 +1324,10 @@ static void runPhase6B1WeatherIntegrationIfReady() {
           snapshot->current,
           presentation)) {
     Serial.println(
-        "FAIL: live current weather could not be mapped to WeatherWidgetState."
+        "FAIL: live current weather could not be mapped "
+        "to WeatherWidgetState."
     );
-    Serial.println();
-    return;
+    return WeatherStageResult::FAILED;
   }
 
   Serial.print("Weather widget mapping: ");
@@ -1232,32 +1339,335 @@ static void runPhase6B1WeatherIntegrationIfReady() {
 
   if (!updateCoalescer.stageWeather(presentation.state)) {
     Serial.println("FAIL: could not stage live Weather widget state.");
-    Serial.println();
-    return;
+    return WeatherStageResult::FAILED;
   }
 
-  Serial.print("Staged live weather; pending dirty: ");
+  Serial.print("Weather staging pending dirty: ");
   printDirtyMask(updateCoalescer.pendingDirty());
 
-  if ((updateCoalescer.pendingDirty() & DashboardDirty::WEATHER) == 0) {
+  if ((updateCoalescer.pendingDirty() &
+       DashboardDirty::WEATHER) == 0) {
     Serial.println(
-        "FAIL: startup placeholder should differ from first valid live weather."
+        "Weather visible state unchanged; "
+        "no WEATHER refresh requested."
     );
-    Serial.println();
-    return;
+    return WeatherStageResult::UNCHANGED;
   }
 
   Serial.println(
-      "PASS candidate: live current weather staged through DashboardUpdateCoalescer."
+      "Weather visible state changed; "
+      "WEATHER is pending for application flush."
   );
+  return WeatherStageResult::CHANGED;
+}
+
+static void runPhase6B2WeatherPollIfDue() {
+  if (!wifiManager.isConnected() ||
+      !timeService.isSynchronized()) {
+    return;
+  }
+
+  if (!runWeatherSelfChecksIfNeeded()) {
+    return;
+  }
+
+#if !defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE)
+  if (!hasReportedMissingWeatherConfig) {
+    Serial.println(
+        "SKIP: add WEATHER_LATITUDE and WEATHER_LONGITUDE "
+        "to local config.h."
+    );
+    hasReportedMissingWeatherConfig = true;
+  }
+  return;
+#else
+  const uint32_t now = millis();
+
+  if (!weatherPollDue(
+          hasRunWeatherPoll,
+          lastWeatherPollMs,
+          now)) {
+    return;
+  }
+
+  hasRunWeatherPoll = true;
+  lastWeatherPollMs = now;
+
+  Serial.println();
+  Serial.println("Phase 6B-2 production weather poll starting...");
+  Serial.println("TLS trust anchor: ISRG Root X1");
   Serial.println(
-      "WeatherService did not trigger E-paper refresh; existing application flush will consume the pending state."
+      "Weather polling is 30 minutes; "
+      "display refresh remains application-owned."
   );
+
+  const WeatherStageResult result =
+      fetchAndStageLiveWeather(
+          static_cast<double>(WEATHER_LATITUDE),
+          static_cast<double>(WEATHER_LONGITUDE),
+          true
+      );
+
+  if (result == WeatherStageResult::FAILED) {
+    Serial.println(
+        "Weather poll completed with failure; "
+        "next production attempt remains on the 30-minute cadence."
+    );
+  } else if (result == WeatherStageResult::UNCHANGED) {
+    Serial.println(
+        "Weather poll completed successfully with no visible change."
+    );
+  } else {
+    Serial.println(
+        "Weather poll completed successfully with a visible update staged."
+    );
+  }
+
   Serial.println(
-      "Future-hour and daily values remain service-owned for later UI work."
+      "WeatherService did not trigger E-paper refresh directly."
   );
   Serial.println();
 #endif
+}
+
+static void runPhase6B2WeatherDiagnostics() {
+  if (weatherDiagnosticPhase == WeatherDiagnosticPhase::COMPLETE ||
+      weatherDiagnosticPhase == WeatherDiagnosticPhase::FAILED ||
+      !weatherService.hasValidSnapshot() ||
+      !updateCoalescer.hasDisplayedState()) {
+    return;
+  }
+
+  const WeatherSnapshot* snapshot =
+      weatherService.lastValidSnapshot();
+
+  if (snapshot == nullptr) {
+    return;
+  }
+
+  WeatherWidgetPresentation presentation{};
+
+  if (!buildWeatherWidgetPresentation(
+          snapshot->current,
+          presentation)) {
+    Serial.println(
+        "FAIL: Phase 6B-2 diagnostic could not map last-valid weather."
+    );
+    weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+    return;
+  }
+
+  switch (weatherDiagnosticPhase) {
+    case WeatherDiagnosticPhase::WAIT_FIRST_DISPLAY: {
+      if ((updateCoalescer.pendingDirty() &
+           DashboardDirty::WEATHER) != 0) {
+        return;
+      }
+
+      if (!sameWeatherWidgetState(
+              updateCoalescer.displayedState().weather,
+              presentation.state)) {
+        return;
+      }
+
+      Serial.println();
+      Serial.println(
+          "Phase 6B-2 weather unchanged/failure/recovery diagnostic starting..."
+      );
+      Serial.println(
+          "First live Weather widget is physically committed."
+      );
+
+      weatherDiagnosticPhase =
+          WeatherDiagnosticPhase::CHECK_UNCHANGED;
+      return;
+    }
+
+    case WeatherDiagnosticPhase::CHECK_UNCHANGED: {
+      if (!updateCoalescer.stageWeather(presentation.state)) {
+        Serial.println(
+            "FAIL: could not re-stage identical Weather widget state."
+        );
+        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+        return;
+      }
+
+      Serial.print("Re-staged identical weather; pending dirty: ");
+      printDirtyMask(updateCoalescer.pendingDirty());
+
+      if ((updateCoalescer.pendingDirty() &
+           DashboardDirty::WEATHER) != 0) {
+        Serial.println(
+            "FAIL: identical Weather widget created WEATHER dirty."
+        );
+        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+        return;
+      }
+
+      Serial.println(
+          "PASS: identical Weather widget created no WEATHER dirty."
+      );
+
+      weatherDiagnosticPreservedSnapshot = *snapshot;
+      hasWeatherDiagnosticPreservedSnapshot = true;
+      weatherDiagnosticPhase =
+          WeatherDiagnosticPhase::INJECT_FAILURE;
+      return;
+    }
+
+    case WeatherDiagnosticPhase::INJECT_FAILURE: {
+      if (!hasWeatherDiagnosticPreservedSnapshot) {
+        Serial.println(
+            "FAIL: no preserved WeatherSnapshot for failure diagnostic."
+        );
+        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+        return;
+      }
+
+      Serial.println(
+          "Injecting deterministic WeatherService failure "
+          "(invalid coordinates)..."
+      );
+
+      if (weatherService.fetchLatest(999.0, 0.0)) {
+        Serial.println(
+            "FAIL: injected WeatherService failure unexpectedly succeeded."
+        );
+        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+        return;
+      }
+
+      Serial.print("Expected weather failure: ");
+      Serial.println(weatherService.lastError());
+
+      const WeatherSnapshot* preservedAfterFailure =
+          weatherService.lastValidSnapshot();
+
+      if (preservedAfterFailure == nullptr ||
+          !weatherService.hasValidSnapshot() ||
+          !sameWeatherSnapshot(
+              weatherDiagnosticPreservedSnapshot,
+              *preservedAfterFailure)) {
+        Serial.println(
+            "FAIL: WeatherService last-valid snapshot changed after failure."
+        );
+        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+        return;
+      }
+
+      WeatherWidgetPresentation preservedPresentation{};
+
+      if (!buildWeatherWidgetPresentation(
+              preservedAfterFailure->current,
+              preservedPresentation) ||
+          !sameWeatherWidgetState(
+              updateCoalescer.displayedState().weather,
+              preservedPresentation.state) ||
+          (updateCoalescer.pendingDirty() &
+           DashboardDirty::WEATHER) != 0) {
+        Serial.println(
+            "FAIL: displayed Weather widget changed during failure hold."
+        );
+        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+        return;
+      }
+
+      Serial.println(
+          "PASS: Weather failure preserved last-valid service data "
+          "and displayed Weather widget; no WEATHER dirty was staged."
+      );
+
+      weatherDiagnosticPhase =
+          WeatherDiagnosticPhase::RECOVERY_FETCH;
+      return;
+    }
+
+    case WeatherDiagnosticPhase::RECOVERY_FETCH: {
+#if !defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE)
+      weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+      return;
+#else
+      Serial.println(
+          "Forcing one normal live Weather recovery fetch..."
+      );
+
+      const uint32_t recoveryNow = millis();
+      hasRunWeatherPoll = true;
+      lastWeatherPollMs = recoveryNow;
+
+      const WeatherStageResult recoveryResult =
+          fetchAndStageLiveWeather(
+              static_cast<double>(WEATHER_LATITUDE),
+              static_cast<double>(WEATHER_LONGITUDE),
+              true
+          );
+
+      if (recoveryResult == WeatherStageResult::FAILED) {
+        Serial.println(
+            "FAIL: live Weather recovery fetch failed."
+        );
+        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+        return;
+      }
+
+      Serial.println(
+          recoveryResult == WeatherStageResult::UNCHANGED
+              ? "Recovery fetch succeeded with unchanged visible weather."
+              : "Recovery fetch succeeded and staged changed visible weather."
+      );
+
+      weatherDiagnosticPhase =
+          WeatherDiagnosticPhase::WAIT_RECOVERY_DISPLAY;
+      return;
+#endif
+    }
+
+    case WeatherDiagnosticPhase::WAIT_RECOVERY_DISPLAY: {
+      if ((updateCoalescer.pendingDirty() &
+           DashboardDirty::WEATHER) != 0) {
+        return;
+      }
+
+      const WeatherSnapshot* recovered =
+          weatherService.lastValidSnapshot();
+
+      if (recovered == nullptr) {
+        Serial.println(
+            "FAIL: no last-valid weather after recovery."
+        );
+        weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
+        return;
+      }
+
+      WeatherWidgetPresentation recoveredPresentation{};
+
+      if (!buildWeatherWidgetPresentation(
+              recovered->current,
+              recoveredPresentation) ||
+          !sameWeatherWidgetState(
+              updateCoalescer.displayedState().weather,
+              recoveredPresentation.state)) {
+        return;
+      }
+
+      Serial.println(
+          "PASS: Phase 6B-2 weather diagnostics complete: "
+          "unchanged suppression, failure hold, and live recovery verified."
+      );
+      Serial.println(
+          "Production weather cadence remains 30 minutes."
+      );
+      Serial.println();
+
+      weatherDiagnosticPhase =
+          WeatherDiagnosticPhase::COMPLETE;
+      return;
+    }
+
+    case WeatherDiagnosticPhase::COMPLETE:
+    case WeatherDiagnosticPhase::FAILED:
+      return;
+  }
 }
 
 static bool stageLiveClockIfMinuteChanged(bool& minuteChanged) {
@@ -1318,8 +1728,9 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("EDP Phase 6B-1: live current weather integration");
+  Serial.println("EDP Phase 6B-2: weather polling and resilience");
   Serial.println("Phase 5 production BTC/ETH/HYPE path remains active.");
+  Serial.println("Weather polling target: 30 minutes.");
   Serial.println("WeatherService remains separate from UI and display refresh.");
 
   if (!runDirtySelfCheck() ||
@@ -1394,7 +1805,8 @@ void loop() {
   }
 
   runPhase5B3MarketPollIfDue();
-  runPhase6B1WeatherIntegrationIfReady();
+  runPhase6B2WeatherPollIfDue();
+  runPhase6B2WeatherDiagnostics();
 
   delay(20);
 }
