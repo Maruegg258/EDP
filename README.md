@@ -64,7 +64,7 @@ CrowPanelDashboard.ino
         +-- services/
         |    +-- TimeService         (implemented; Phase 4 hardware verified)
         |    +-- WeatherService      (Phase 6A-2 hardware verified)
-        |    +-- WeatherCondition    (Phase 6A-3 implemented; hardware verification pending)
+        |    +-- WeatherCondition    (Phase 6A-3 hardware verified)
         |    +-- MarketDataService   (BTC/ETH/HYPE polling hardware verified)
         |
         +-- ui/
