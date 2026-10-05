@@ -1066,7 +1066,7 @@ Phase 6B-2 is therefore hardware-verified and complete. The production weather c
 
 ## Phase 6B-3 implementation
 
-**Status:** Implementation committed; awaiting final real-hardware regression.
+**Status:** PASS on real hardware (2026-10-05).
 
 Phase 6B-3 removes the temporary Phase 6B-2 fault-injection/recovery diagnostics and leaves a single cleaned production weather path.
 
@@ -1172,3 +1172,42 @@ Before Phase 6 can be closed:
 The natural 30-minute re-poll, unchanged suppression, failure hold, and recovery behaviors were already hardware-verified in Phase 6B-2 and do not need a second fault-injection cycle merely to close Phase 6.
 
 Phase 6B-3 remains unchecked in the roadmap until this cleaned production build passes the final hardware regression.
+
+### Phase 6B-3 hardware verification
+
+The cleaned production firmware was compiled, uploaded, and tested successfully on real hardware on 2026-10-05.
+
+Confirmed:
+
+- the first eligible production weather poll ran normally
+- certificate-validating HTTPS remained active with ISRG Root X1
+- the production weather interval remained 30 minutes
+- current weather mapped successfully through `WeatherWidgetMapper`
+- the observed live current state mapped `DRIZZLE -> DRIZZLE | 22.7 C`
+- weather staging produced `0x3A [WEATHER|BTC|ETH|HYPE]`, confirming Weather continued to coalesce with simultaneous market updates
+- WeatherService did not trigger E-paper refresh directly
+- no Phase 6B-2 invalid-coordinate injection, forced recovery fetch, or diagnostic state-machine output appeared
+- Clock, Wi-Fi, BTC, ETH, and HYPE behavior remained normal
+- the user reported the real-hardware result as normal, with no display/refresh regression observed
+
+Phase 6B-3 is therefore hardware-verified and complete.
+
+## Phase 6 conclusion
+
+Phase 6 is complete as of 2026-10-05.
+
+The firmware now has a hardware-verified weather stack with:
+
+- Open-Meteo Forecast API retrieval over certificate-validating HTTPS using ISRG Root X1
+- a dedicated provider-facing `WeatherService`
+- validated current weather, five future hourly slots, and today/tomorrow forecast data
+- raw WMO code preservation plus provider-neutral `WeatherCondition` normalization
+- live current-weather rendering through `WeatherWidgetMapper`
+- 30-minute production polling
+- unchanged visible-state suppression through the existing Dashboard coalescer
+- last-valid preservation across temporary weather fetch failures
+- application-owned refresh coalescing with Clock, Wi-Fi, and market data
+- a cleaned production path with temporary weather diagnostics removed
+- no `setInsecure()` fallback and no committed private weather coordinates
+
+Richer weather icons, forecast-strip layout, tomorrow-summary presentation, and broader visual polish remain UI work for later phases rather than blockers for closing Phase 6.
