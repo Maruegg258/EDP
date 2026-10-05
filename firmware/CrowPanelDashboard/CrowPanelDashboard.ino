@@ -732,11 +732,31 @@ static constexpr char NTP_SERVER_SECONDARY[] = "pool.ntp.org";
 static constexpr uint32_t TIME_REPORT_INTERVAL_MS = 10000;
 
 static constexpr uint32_t MARKET_POLL_INTERVAL_MS = 60000;
+static constexpr uint32_t WEATHER_POLL_INTERVAL_MS =
+    30UL * 60UL * 1000UL;
 
 static bool hasRunMarketPoll = false;
 static uint32_t lastMarketPollMs = 0;
 
-static bool hasRunWeatherWidgetIntegration = false;
+static bool hasRunWeatherPoll = false;
+static uint32_t lastWeatherPollMs = 0;
+static bool hasRunWeatherSelfChecks = false;
+static bool hasReportedMissingWeatherConfig = false;
+
+enum class WeatherDiagnosticPhase {
+  WAIT_FIRST_DISPLAY,
+  CHECK_UNCHANGED,
+  INJECT_FAILURE,
+  RECOVERY_FETCH,
+  WAIT_RECOVERY_DISPLAY,
+  COMPLETE,
+  FAILED
+};
+
+static WeatherDiagnosticPhase weatherDiagnosticPhase =
+    WeatherDiagnosticPhase::WAIT_FIRST_DISPLAY;
+static WeatherSnapshot weatherDiagnosticPreservedSnapshot{};
+static bool hasWeatherDiagnosticPreservedSnapshot = false;
 
 static bool timeServiceStartAttempted = false;
 static bool hasReportedTimeState = false;
