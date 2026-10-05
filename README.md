@@ -78,6 +78,7 @@ CrowPanelDashboard.ino
              +-- Dashboard           (implemented)
              +-- ClockWidget         (implemented)
              +-- WeatherWidget       (implemented)
+             +-- WeatherWidgetMapper (Phase 6B-1 implemented; hardware verification pending)
              +-- CryptoWidget        (implemented)
              +-- WiFiWidget          (implemented)
              +-- StatusWidget        (implemented)
@@ -184,6 +185,8 @@ EDP/
 │     ├─ ClockWidget.cpp
 │     ├─ WeatherWidget.h
 │     ├─ WeatherWidget.cpp
+│     ├─ WeatherWidgetMapper.h
+│     ├─ WeatherWidgetMapper.cpp
 │     ├─ WiFiWidget.h
 │     ├─ WiFiWidget.cpp
 │     ├─ WiFiManager.h
