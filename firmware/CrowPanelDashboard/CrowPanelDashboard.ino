@@ -1587,6 +1587,11 @@ static void runPhase6B2WeatherDiagnostics() {
       weatherDiagnosticPhase = WeatherDiagnosticPhase::FAILED;
       return;
 #else
+      if (!wifiManager.isConnected() ||
+          !timeService.isSynchronized()) {
+        return;
+      }
+
       Serial.println(
           "Forcing one normal live Weather recovery fetch..."
       );
