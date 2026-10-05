@@ -816,3 +816,22 @@ WeatherService did not trigger E-paper refresh; existing application flush will 
 12. E-paper text/icon clarity remains normal after the weather update
 
 Phase 6B-1 remains unchecked in the roadmap until these results are confirmed on hardware.
+
+### Phase 6B-1 diagnostic correction
+
+The first hardware attempt stopped before the live Open-Meteo fetch with:
+
+```text
+FAIL: WeatherWidget mapping for UNKNOWN
+```
+
+Root cause was the **diagnostic**, not the weather mapping itself.
+
+`Icons.h` currently defines bitmap objects as header-level `static constexpr`. That gives each compilation unit its own object instance. The first diagnostic implementation built the actual mapped icon inside `WeatherWidgetMapper.cpp` but compared its pointer address against `&Icons::WEATHER_CLOUD` instantiated in `CrowPanelDashboard.ino`.
+
+The bitmap contents and semantic mapping were the same, but the object addresses were not required to be identical across those compilation units. The application therefore falsely failed on the first `UNKNOWN -> WEATHER_CLOUD` test and returned before calling Open-Meteo or staging weather.
+
+The correction keeps the icon pointer identity check inside `WeatherWidgetMapper.cpp`, in the same compilation unit that owns `iconForCondition()`. The application now only consumes the mapper self-check boolean and reports PASS/FAIL.
+
+No WeatherService parsing, TLS behavior, live mapping policy, coalescer behavior, display driver, or E-paper refresh sequence was changed by this correction.
+
