@@ -202,7 +202,7 @@ Phase 6A checkpoints:
 
 Phase 6B checkpoints:
 
-- [ ] Phase 6B-1: Stage live current weather into the existing Weather widget through `DashboardUpdateCoalescer` without letting the service control display refresh.
+- [x] Phase 6B-1: Stage live current weather into the existing Weather widget through `DashboardUpdateCoalescer` without letting the service control display refresh. Live condition/temperature rendering, Weather widget mapping, and coalescing with simultaneous BTC/ETH/HYPE updates were verified on hardware (2026-10-05).
 - [ ] Phase 6B-2: Add the initial 30-minute weather polling flow and verify unchanged-value suppression plus unavailable/recovery behavior while retaining last-valid weather.
 - [ ] Phase 6B-3: Remove temporary diagnostics, run the final Phase 6 regression, document hardware results, and close Phase 6.
 
