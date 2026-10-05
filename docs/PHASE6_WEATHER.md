@@ -1063,3 +1063,112 @@ The fix moves `WeatherStageResult` beside the existing top-level `UpdateResult` 
 
 
 Phase 6B-2 is therefore hardware-verified and complete. The production weather cadence remains 30 minutes, identical visible weather is suppressed by the existing coalescer, transient weather failures preserve the last valid service/UI state, and recovery returns to the normal application-owned staging/refresh path.
+
+## Phase 6B-3 implementation
+
+**Status:** Implementation committed; awaiting final real-hardware regression.
+
+Phase 6B-3 removes the temporary Phase 6B-2 fault-injection/recovery diagnostics and leaves a single cleaned production weather path.
+
+### Removed temporary diagnostics
+
+The firmware no longer contains or calls the Phase 6B-2 diagnostic state machine. Removed test-only behavior includes:
+
+- re-staging the displayed weather solely to prove unchanged suppression
+- copying a diagnostic WeatherSnapshot for comparison
+- injecting invalid coordinates
+- forcing an immediate recovery fetch
+- waiting for a diagnostic recovery display commit
+- full current + five-hour + today/tomorrow Serial dumps on every production poll
+
+Those behaviors were already hardware-verified in Phase 6B-2 and do not belong in the normal application loop.
+
+### Retained production path
+
+The retained weather flow is:
+
+```text
+Wi-Fi connected
+        +
+TimeService synchronized
+        |
+        v
+30-minute application scheduler
+        |
+        v
+WeatherService::fetchLatest()
+        |
+        +-- TLS / HTTP / parse / validation failure
+        |       -> preserve last-valid WeatherSnapshot
+        |       -> stage no fabricated Weather value
+        |
+        +-- validated success
+                |
+                v
+        WeatherWidgetMapper
+                |
+                v
+DashboardUpdateCoalescer::stageWeather()
+                |
+                +-- visible state unchanged
+                |       -> no WEATHER dirty
+                |
+                +-- visible state changed
+                        -> WEATHER dirty
+                        -> existing application flush
+```
+
+`WeatherService` still does not know about Dashboard, widgets, graphics, the coalescer, or E-paper refreshes.
+
+The production scheduler remains exactly 30 minutes and continues to record the poll attempt time before HTTPS, preventing a failed request from creating a tight retry loop.
+
+### Retained lightweight self-checks
+
+The deterministic non-network startup checks remain because they are small, side-effect-free regression guards already consistent with the project's existing Phase 3 startup self-check style:
+
+- all 29 documented WMO code mappings plus UNKNOWN fallback
+- every `WeatherCondition` fits the current Weather widget mapping/buffer contract
+- 30-minute scheduler behavior at initial, pre-due, exact-due, and `millis()` wrap-around boundaries
+
+They perform no test HTTP requests, inject no invalid values, and do not trigger E-paper refreshes.
+
+### Production Serial behavior
+
+Weather polling now emits only operationally useful information:
+
+```text
+Production weather poll starting...
+TLS trust anchor: ISRG Root X1
+Weather polling is 30 minutes; display refresh remains application-owned.
+
+Weather widget mapping: <condition> -> <label> | <temperature>
+Weather staging pending dirty: ...
+
+Weather visible state changed; WEATHER is pending for application flush.
+-- or --
+Weather visible state unchanged; no WEATHER refresh requested.
+
+Weather poll completed ...
+WeatherService did not trigger E-paper refresh directly.
+```
+
+The complete hourly/daily forecast remains stored in `WeatherService`; removing the verbose Serial dump does not remove forecast data from the service model.
+
+### Final hardware regression required
+
+Before Phase 6 can be closed:
+
+1. firmware compiles and uploads
+2. existing Phase 3 state/coalescing self-checks still pass
+3. retained WeatherCondition, WeatherWidgetMapper, and 30-minute cadence self-checks pass
+4. no Phase 6B-2 invalid-coordinate/failure-injection diagnostic runs
+5. the first eligible production weather poll succeeds after Wi-Fi + NTP readiness
+6. live current weather is mapped/staged and appears correctly on the panel
+7. normal Clock, Wi-Fi, and BTC/ETH/HYPE behavior remains intact
+8. weather remains coalesced through the existing application-owned refresh path
+9. no E-paper clarity/refresh regression is observed
+10. no insecure TLS fallback or private coordinates are introduced into the repository
+
+The natural 30-minute re-poll, unchanged suppression, failure hold, and recovery behaviors were already hardware-verified in Phase 6B-2 and do not need a second fault-injection cycle merely to close Phase 6.
+
+Phase 6B-3 remains unchecked in the roadmap until this cleaned production build passes the final hardware regression.
