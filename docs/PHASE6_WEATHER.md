@@ -1019,3 +1019,16 @@ Production weather cadence remains 30 minutes.
 14. E-paper refresh quality remains normal
 
 Phase 6B-2 remains unchecked in the roadmap until these results are confirmed on hardware.
+
+### Phase 6B-2 compile correction
+
+The first compile attempt failed with:
+
+```text
+'WeatherStageResult' does not name a type
+```
+
+The Phase 6B-2 implementation initially declared `WeatherStageResult` immediately before `fetchAndStageLiveWeather()` in the middle of the Arduino `.ino` file. Arduino's sketch preprocessing generates function prototypes ahead of later declarations, so the generated prototype referenced `WeatherStageResult` before that enum type was known.
+
+The fix moves `WeatherStageResult` beside the existing top-level `UpdateResult` enum, before helper function definitions. No polling, WeatherService, UI staging, diagnostic, or E-paper behavior changed.
+
