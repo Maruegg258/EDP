@@ -17,3 +17,5 @@ struct WeatherWidgetPresentation {
 bool buildWeatherWidgetPresentation(
     const WeatherCurrentValue& current,
     WeatherWidgetPresentation& presentation);
+
+bool weatherWidgetMapperSelfCheck();
