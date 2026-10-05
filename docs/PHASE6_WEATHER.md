@@ -519,3 +519,136 @@ Hardware verification confirmed:
 Observed live-data examples also confirmed that the service must keep the raw provider semantics rather than infer UI meaning too early: an instantaneous clear condition can coexist with a more severe daily representative weather code and high daily precipitation probability. Semantic mapping remains Phase 6A-3.
 
 Phase 6A-2 is therefore hardware-verified and complete.
+
+## Phase 6A-3 implementation
+
+**Status:** Implementation committed; awaiting real-hardware verification.
+
+Phase 6A-3 adds a provider-neutral semantic condition beside every retained raw WMO weather code. It remains Serial-only and does not map conditions to icons or stage Weather widget state.
+
+### Normalized condition model
+
+`WeatherCondition` is intentionally independent from `Icons.h`, `WeatherWidget`, Dashboard state, and E-paper code:
+
+```text
+UNKNOWN
+CLEAR
+MAINLY_CLEAR
+PARTLY_CLOUDY
+OVERCAST
+FOG
+DRIZZLE
+FREEZING_DRIZZLE
+RAIN
+FREEZING_RAIN
+SNOW
+SNOW_GRAINS
+RAIN_SHOWERS
+SNOW_SHOWERS
+THUNDERSTORM
+THUNDERSTORM_HAIL
+```
+
+The raw numeric `weatherCode` remains stored beside `condition` in current, future-hour, today, and tomorrow values. This preserves provider detail such as intensity while allowing later application/UI code to consume stable project semantics.
+
+```text
+Open-Meteo WMO code
+        |
+        v
+WeatherCondition mapper
+        |
+        +-- raw weatherCode retained
+        |
+        +-- normalized condition retained
+        |
+        v
+WeatherSnapshot
+```
+
+### WMO mapping baseline
+
+The mapping follows the Open-Meteo WMO interpretation table reviewed for Phase 6A-3:
+
+```text
+0           -> CLEAR
+1           -> MAINLY_CLEAR
+2           -> PARTLY_CLOUDY
+3           -> OVERCAST
+45, 48      -> FOG
+51, 53, 55  -> DRIZZLE
+56, 57      -> FREEZING_DRIZZLE
+61, 63, 65  -> RAIN
+66, 67      -> FREEZING_RAIN
+71, 73, 75  -> SNOW
+77          -> SNOW_GRAINS
+80, 81, 82  -> RAIN_SHOWERS
+85, 86      -> SNOW_SHOWERS
+95, 97      -> THUNDERSTORM
+96, 99      -> THUNDERSTORM_HAIL
+other 0..99 -> UNKNOWN
+```
+
+Intensity remains available through the raw WMO code rather than multiplying the semantic enum into light/moderate/heavy variants. This keeps the application-facing model compact while allowing later UI refinement to distinguish intensity if desired.
+
+`isDay` remains separate from `WeatherCondition`. For example, a future UI can render `CLEAR + isDay=false` as a moon icon without changing the service or WMO mapping.
+
+### Application verification
+
+The Phase 6A-3 application path adds a deterministic mapping self-check before examining the live weather snapshot.
+
+The self-check verifies all 29 WMO codes documented in the reviewed Open-Meteo table:
+
+```text
+0, 1, 2, 3,
+45, 48,
+51, 53, 55,
+56, 57,
+61, 63, 65,
+66, 67,
+71, 73, 75,
+77,
+80, 81, 82,
+85, 86,
+95, 96, 97, 99
+```
+
+It also verifies that undefined codes such as `4` and `98` produce `UNKNOWN`.
+
+The live WeatherService probe then prints both representations, for example:
+
+```text
+weather code: 0 -> CLEAR
+weather code: 51 -> DRIZZLE
+weather code: 95 -> THUNDERSTORM
+```
+
+The Phase 6A-2 invalid-coordinate last-valid regression is retained and now also compares the normalized `condition` fields.
+
+### Architectural boundary
+
+Phase 6A-3 deliberately does **not** decide:
+
+- which bitmap corresponds to a condition
+- whether CLEAR at night uses a moon asset
+- which conditions may share an icon
+- weather label wording
+- dashboard layout for the six weather slots
+- E-paper refresh timing
+
+Those are application/UI concerns. Phase 6B will connect live weather semantics to the existing Weather widget, and richer assets/layout remain appropriate for Phase 8 refinement.
+
+### Required hardware verification
+
+1. firmware compiles and uploads
+2. existing Phase 3 self-checks still pass
+3. WMO mapping self-check reports PASS for all 29 documented codes plus UNKNOWN fallback
+4. live Open-Meteo fetch/parse still succeeds
+5. current weather prints both raw code and expected normalized condition
+6. all five future-hour slots print both raw code and normalized condition
+7. today/tomorrow print both raw code and normalized condition
+8. induced invalid-coordinate failure still preserves the complete last-valid snapshot, including normalized conditions
+9. Phase 5 BTC/ETH/HYPE behavior remains normal
+10. no Weather widget state is staged
+11. no E-paper refresh regression is observed
+
+Phase 6A-3 remains unchecked in the roadmap until these results are confirmed on hardware.
