@@ -185,11 +185,11 @@ No production code should use `setInsecure()`.
 
 Phase 5 is complete. Secure Binance USDⓈ-M market data, independent BTC/ETH/HYPE last-valid state, 60-second polling, live Crypto widget integration, unchanged-value skip behavior, short-failure hold/recovery behavior, and the cleaned production application path have all been verified on hardware. Prolonged outage/staleness UX remains deferred to Phase 9.
 
-**Next step: Phase 6 — Weather**
+**Next step: Phase 7 — Physical button controls**
 
 ## Phase 6 — Weather
 
-**Status: In Progress**
+**Status: Complete (hardware verified 2026-10-05)**
 
 **Goal:** Add weather information without coupling the weather provider to the UI.
 
@@ -204,7 +204,7 @@ Phase 6B checkpoints:
 
 - [x] Phase 6B-1: Stage live current weather into the existing Weather widget through `DashboardUpdateCoalescer` without letting the service control display refresh. Live condition/temperature rendering, Weather widget mapping, and coalescing with simultaneous BTC/ETH/HYPE updates were verified on hardware (2026-10-05).
 - [x] Phase 6B-2: Add the initial 30-minute weather polling flow and verify unchanged-value suppression plus unavailable/recovery behavior while retaining last-valid weather. Deterministic unchanged/failure/recovery diagnostics and a naturally scheduled 30-minute re-poll were verified on hardware (2026-10-05).
-- [ ] Phase 6B-3: Remove temporary diagnostics, run the final Phase 6 regression, document hardware results, and close Phase 6. Production cleanup is committed; final real-hardware regression is pending.
+- [x] Phase 6B-3: Remove temporary diagnostics, run the final Phase 6 regression, document hardware results, and close Phase 6. Cleaned production weather polling, live Weather staging/coalescing, and regression behavior were verified on hardware (2026-10-05).
 
 Planned work:
 
@@ -219,6 +219,8 @@ Planned work:
 - Certificate-validating HTTPS with no `setInsecure()`
 
 See [docs/PHASE6_WEATHER.md](docs/PHASE6_WEATHER.md) for the Phase 6A-0 provider, forecast-data, location, and TLS design review.
+
+Phase 6 is complete. Weather transport, parsing, semantic normalization, current-widget integration, 30-minute polling, unchanged suppression, last-valid failure handling, and the cleaned production path have all been verified on hardware. Forecast-strip and tomorrow-summary presentation remain later UI work.
 
 ## Phase 7 — Physical button controls
 
