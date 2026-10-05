@@ -522,7 +522,7 @@ Phase 6A-2 is therefore hardware-verified and complete.
 
 ## Phase 6A-3 implementation
 
-**Status:** Implementation committed; awaiting real-hardware verification.
+**Status:** PASS on real hardware (2026-10-05).
 
 Phase 6A-3 adds a provider-neutral semantic condition beside every retained raw WMO weather code. It remains Serial-only and does not map conditions to icons or stage Weather widget state.
 
@@ -652,3 +652,32 @@ Those are application/UI concerns. Phase 6B will connect live weather semantics 
 11. no E-paper refresh regression is observed
 
 Phase 6A-3 remains unchecked in the roadmap until these results are confirmed on hardware.
+
+Hardware verification confirmed:
+
+1. Firmware compiled and uploaded successfully.
+2. The deterministic mapping self-check passed all 29 documented WMO weather codes plus UNKNOWN fallback handling.
+3. The live current condition preserved the raw provider code and produced the expected normalized semantic condition.
+4. All five future hourly slots preserved raw codes and produced normalized conditions.
+5. Today/tomorrow daily conditions preserved raw codes and produced normalized conditions independently from the instantaneous current condition.
+6. The live sample exercised several semantic categories in one run, including `DRIZZLE`, `RAIN_SHOWERS`, `OVERCAST`, and `THUNDERSTORM`.
+7. The service crossed local midnight within the five-hour forecast window without breaking condition mapping.
+8. The deliberate invalid-coordinate request still failed as expected and the complete last-valid snapshot, including normalized condition fields, remained unchanged.
+9. The Weather widget remained unchanged; no Weather dirty state was staged in this checkpoint.
+10. Existing market-data and dashboard responsibilities remained independent of the new semantic mapping layer.
+
+The hardware result confirms the intended separation:
+
+```text
+raw WMO provider code
+        +
+normalized WeatherCondition
+        |
+        v
+WeatherSnapshot
+        |
+        v
+application/UI mapping later
+```
+
+Phase 6A-3 is therefore hardware-verified and complete.
