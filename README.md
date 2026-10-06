@@ -47,7 +47,7 @@ CrowPanelDashboard.ino
         +-- drivers/
         |    +-- EpaperBus
         |    +-- CrowEPD579
-        |    +-- ButtonManager       (Phase 7A-2 logical mapping implemented; verification pending)
+        |    +-- ButtonManager       (Phase 7A-2 logical mapping hardware verified)
         |
         +-- graphics/
         |    +-- GraphicsBW          (implemented)
