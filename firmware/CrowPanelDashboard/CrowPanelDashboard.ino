@@ -1233,7 +1233,7 @@ static void queueVisibleWeatherPageRefreshIfNeeded() {
   }
 
   if (hasRenderedWeatherSnapshot &&
-      sameWeatherSnapshot(
+      sameWeatherPageContent(
           lastRenderedWeatherSnapshot,
           *latest)) {
     Serial.println(
