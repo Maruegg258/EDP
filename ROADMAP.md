@@ -226,6 +226,10 @@ Phase 6 is complete. Weather transport, parsing, semantic normalization, current
 
 **Goal:** Make the dashboard locally interactive.
 
+Phase 7A checkpoints:
+
+- [ ] Phase 7A-1: Add a Serial-only hardware input probe for MENU (GPIO2), EXIT (GPIO1), rotary reference UP (GPIO6), and rotary reference DOWN (GPIO4), using active-low input handling and non-blocking debounce. Rotary CONF (GPIO5) remains intentionally unused. No input event may trigger E-paper refresh in this checkpoint. Implementation committed; hardware verification pending (2026-10-06).
+
 Planned work:
 
 - Identify and verify panel button GPIOs
