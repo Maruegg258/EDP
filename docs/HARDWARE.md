@@ -63,3 +63,7 @@ The EDP firmware intentionally assigns application semantics according to the pa
 | Rotary push | 5 | Intentionally unused |
 
 `ButtonManager` now emits provider-independent application events `MENU`, `UP`, `DOWN`, and `EXIT`. Phase 7A-2 remains Serial-only: these events do not yet perform page navigation or trigger an E-paper refresh.
+
+### 2026-10-06 Phase 7A-2 hardware verification
+
+**PASS on the development unit.** GPIO1 produced `MENU`, GPIO4 produced `UP`, GPIO6 produced `DOWN`, and GPIO2 produced `EXIT` through the debounced release-event path. GPIO5 remained intentionally unused. No input event affected the production dashboard or triggered E-paper refresh.
