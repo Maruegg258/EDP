@@ -1220,6 +1220,37 @@ static WeatherStageResult fetchAndStageLiveWeather(
   return WeatherStageResult::CHANGED;
 }
 
+static void queueVisibleWeatherPageRefreshIfNeeded() {
+  if (visiblePage != PageId::WEATHER) {
+    return;
+  }
+
+  const WeatherSnapshot* latest =
+      weatherService.lastValidSnapshot();
+
+  if (latest == nullptr) {
+    return;
+  }
+
+  if (hasRenderedWeatherSnapshot &&
+      sameWeatherSnapshot(
+          lastRenderedWeatherSnapshot,
+          *latest)) {
+    Serial.println(
+        "Weather page snapshot unchanged; "
+        "no physical page refresh queued."
+    );
+    return;
+  }
+
+  visiblePageRefreshPending = true;
+
+  Serial.println(
+      "Weather page snapshot changed; "
+      "application queued one visible-page refresh."
+  );
+}
+
 static void runProductionWeatherPollIfDue() {
   if (!wifiManager.isConnected() ||
       !timeService.isSynchronized()) {
@@ -1279,6 +1310,10 @@ static void runProductionWeatherPollIfDue() {
     Serial.println(
         "Weather poll completed successfully with a visible update staged."
     );
+  }
+
+  if (result != WeatherStageResult::FAILED) {
+    queueVisibleWeatherPageRefreshIfNeeded();
   }
 
   Serial.println(
