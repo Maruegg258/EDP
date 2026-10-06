@@ -228,7 +228,8 @@ Phase 6 is complete. Weather transport, parsing, semantic normalization, current
 
 Phase 7A checkpoints:
 
-- [ ] Phase 7A-1: Add a Serial-only hardware input probe for MENU (GPIO2), EXIT (GPIO1), rotary reference UP (GPIO6), and rotary reference DOWN (GPIO4), using active-low input handling and non-blocking debounce. Rotary CONF (GPIO5) remains intentionally unused. No input event may trigger E-paper refresh in this checkpoint. Implementation committed; hardware verification pending (2026-10-06).
+- [x] Phase 7A-1: Add a Serial-only hardware input probe for MENU (GPIO2), EXIT (GPIO1), rotary reference UP (GPIO6), and rotary reference DOWN (GPIO4), using active-low input handling and non-blocking debounce. Rotary CONF (GPIO5) remains intentionally unused. No input event triggers E-paper refresh in this checkpoint. Input detection and debounce behavior verified on hardware (2026-10-06).
+- [ ] Phase 7A-2: Separate Elecrow reference labels from EDP application semantics and adopt the logical mapping GPIO1=MENU, GPIO4=UP, GPIO6=DOWN, GPIO2=EXIT. Expose only logical `InputEvent` values to the application while preserving the verified active-low 30 ms debounce/release-event path and keeping GPIO5 unused. Serial-only implementation committed; hardware verification pending (2026-10-06).
 
 Planned work:
 
