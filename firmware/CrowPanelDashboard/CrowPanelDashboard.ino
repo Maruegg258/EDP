@@ -1596,7 +1596,7 @@ static void handlePanelInputIfAny() {
   }
 
   Serial.println(
-      "Navigation mode changed without a page change; "
+      "No visible page change; "
       "Phase 7C-1 does not refresh the display."
   );
 }
