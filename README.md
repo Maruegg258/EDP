@@ -49,6 +49,10 @@ CrowPanelDashboard.ino
         |    +-- CrowEPD579
         |    +-- ButtonManager       (Phase 7A-2 logical mapping hardware verified)
         |
+        +-- application/
+        |    +-- InputEvent          (shared logical input vocabulary)
+        |    +-- NavigationController (Phase 7B-1 implemented; hardware verification pending)
+        |
         +-- graphics/
         |    +-- GraphicsBW          (implemented)
         |    +-- BitmapFont          (implemented)
@@ -154,6 +158,12 @@ Phase 5 is complete as of 2026-10-04. The firmware now has hardware-verified cer
 
 Phase 6 is complete as of 2026-10-05. The firmware now has hardware-verified certificate-validating Open-Meteo retrieval, validated current/hourly/daily weather data, provider-neutral weather-condition normalization, live current-weather widget integration, 30-minute production polling, unchanged-value suppression, last-valid failure handling, and application-level refresh coalescing. Temporary Phase 6 diagnostics have been removed from the production path. Richer weather icons and forecast/tomorrow presentation remain later UI work.
 
+
+
+Phase 7A establishes the physical-input boundary. GPIO1/GPIO4/GPIO6/GPIO2 are hardware-verified as the EDP logical MENU/UP/DOWN/EXIT controls through the project-owned active-low, 30 ms debounced release-event path. GPIO5 remains intentionally unused.
+
+Phase 7B-1 introduces an application-owned `NavigationController` and extracts `InputEvent` into a shared application vocabulary so navigation code does not depend on ButtonManager internals. The checkpoint uses three placeholder page slots solely to verify the state machine: UP/DOWN cycle with wraparound in PAGE mode, MENU enters DETAIL, EXIT returns to PAGE, and DETAIL UP/DOWN behavior remains deliberately undefined until real option lists exist. Navigation is Serial-only and cannot request an E-paper refresh in this checkpoint.
+
 ## Current repository structure
 
 ```text
@@ -170,8 +180,11 @@ EDP/
 ├─ firmware/
 │  └─ CrowPanelDashboard/
 │     ├─ CrowPanelDashboard.ino
+│     ├─ InputEvent.h
 │     ├─ ButtonManager.h
 │     ├─ ButtonManager.cpp
+│     ├─ NavigationController.h
+│     ├─ NavigationController.cpp
 │     ├─ WidgetStates.h
 │     ├─ DashboardDirty.h
 │     ├─ WidgetStateCompare.h
