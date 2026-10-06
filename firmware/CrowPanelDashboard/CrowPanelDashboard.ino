@@ -1329,17 +1329,17 @@ static bool flushLiveDashboardIfNeeded() {
   return flushPendingPartial() == UpdateResult::REFRESHED;
 }
 
-static const char* buttonEventName(ButtonEvent event) {
+static const char* inputEventName(InputEvent event) {
   switch (event) {
-    case ButtonEvent::MENU_RELEASED:
-      return "MENU released (GPIO2)";
-    case ButtonEvent::EXIT_RELEASED:
-      return "EXIT released (GPIO1)";
-    case ButtonEvent::ROTARY_UP_STEP:
-      return "ROTARY UP step (GPIO6)";
-    case ButtonEvent::ROTARY_DOWN_STEP:
-      return "ROTARY DOWN step (GPIO4)";
-    case ButtonEvent::NONE:
+    case InputEvent::MENU:
+      return "MENU (GPIO1)";
+    case InputEvent::EXIT:
+      return "EXIT (GPIO2)";
+    case InputEvent::UP:
+      return "UP (GPIO4)";
+    case InputEvent::DOWN:
+      return "DOWN (GPIO6)";
+    case InputEvent::NONE:
       break;
   }
 
@@ -1347,14 +1347,14 @@ static const char* buttonEventName(ButtonEvent event) {
 }
 
 static void reportPanelInputEventIfAny() {
-  const ButtonEvent event = buttonManager.tick();
+  const InputEvent event = buttonManager.tick();
 
-  if (event == ButtonEvent::NONE) {
+  if (event == InputEvent::NONE) {
     return;
   }
 
-  Serial.print("Phase 7A-1 input event: ");
-  Serial.println(buttonEventName(event));
+  Serial.print("Phase 7A-2 input event: ");
+  Serial.println(inputEventName(event));
 }
 
 void setup() {
@@ -1364,11 +1364,11 @@ void setup() {
   buttonManager.begin();
 
   Serial.println();
-  Serial.println("EDP Phase 7A-1: physical input probe");
-  Serial.println("MENU: GPIO2, active LOW.");
-  Serial.println("EXIT: GPIO1, active LOW.");
-  Serial.println("Rotary reference UP: GPIO6, active LOW.");
-  Serial.println("Rotary reference DOWN: GPIO4, active LOW.");
+  Serial.println("EDP Phase 7A-2: logical input mapping");
+  Serial.println("MENU: GPIO1, active LOW.");
+  Serial.println("UP: GPIO4, active LOW.");
+  Serial.println("DOWN: GPIO6, active LOW.");
+  Serial.println("EXIT: GPIO2, active LOW.");
   Serial.println("Rotary CONF GPIO5 is intentionally unused.");
   Serial.println("Input events are Serial-only and do not control the display.");
   Serial.println("Phase 6 production dashboard path remains active.");
