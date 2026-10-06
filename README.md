@@ -51,7 +51,8 @@ CrowPanelDashboard.ino
         |
         +-- application/
         |    +-- InputEvent          (shared logical input vocabulary)
-        |    +-- NavigationController (Phase 7B-1 hardware verified)
+        |    +-- PageModel           (Phase 7B-2 named pages implemented; verification pending)
+        |    +-- NavigationController (Phase 7B-2 named-page navigation implemented; verification pending)
         |
         +-- graphics/
         |    +-- GraphicsBW          (implemented)
@@ -164,6 +165,8 @@ Phase 7A establishes the physical-input boundary. GPIO1/GPIO4/GPIO6/GPIO2 are ha
 
 Phase 7B-1 introduces an application-owned `NavigationController` and extracts `InputEvent` into a shared application vocabulary so navigation code does not depend on ButtonManager internals. The checkpoint uses three placeholder page slots solely to verify the state machine: UP/DOWN cycle with wraparound in PAGE mode, MENU enters DETAIL, EXIT returns to PAGE, and DETAIL UP/DOWN behavior remains deliberately undefined until real option lists exist. The state machine, wraparound behavior, MENU/EXIT transitions, and DETAIL no-op handling were verified on hardware on 2026-10-06. Navigation remains Serial-only and cannot request an E-paper refresh in this checkpoint.
 
+Phase 7B-2 replaces anonymous page numbers with a dedicated `PageId` model. The initial top-level order is `DASHBOARD -> WEATHER -> MARKETS`; this is an application navigation identity, not yet a renderer or final UI-layout commitment. `NavigationState` now exposes both the named page and its index/count, preserving the Phase 7B-1 PAGE/DETAIL state machine and wraparound behavior. Serial self-checks verify the named transitions while E-paper rendering remains untouched.
+
 ## Current repository structure
 
 ```text
@@ -183,6 +186,7 @@ EDP/
 │     ├─ InputEvent.h
 │     ├─ ButtonManager.h
 │     ├─ ButtonManager.cpp
+│     ├─ PageModel.h
 │     ├─ NavigationController.h
 │     ├─ NavigationController.cpp
 │     ├─ WidgetStates.h
