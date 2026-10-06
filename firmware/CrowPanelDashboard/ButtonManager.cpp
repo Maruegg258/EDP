@@ -20,11 +20,11 @@ void ButtonManager::begin() {
   // Match the Elecrow reference example and treat LOW as active.
   pinMode(PIN_MENU, INPUT);
   pinMode(PIN_EXIT, INPUT);
-  pinMode(PIN_ROTARY_UP, INPUT);
-  pinMode(PIN_ROTARY_DOWN, INPUT);
+  pinMode(PIN_UP, INPUT);
+  pinMode(PIN_DOWN, INPUT);
 
   // GPIO5 is the rotary push switch. It is intentionally not used in
-  // Phase 7A-1 because its mechanical reliability has not been accepted
+  // Phase 7 because its mechanical reliability has not been accepted
   // for dashboard navigation.
   pinMode(PIN_ROTARY_CONFIRM, INPUT);
 
@@ -32,11 +32,11 @@ void ButtonManager::begin() {
 
   initializeInput(_menu, nowMs);
   initializeInput(_exit, nowMs);
-  initializeInput(_rotaryUp, nowMs);
-  initializeInput(_rotaryDown, nowMs);
+  initializeInput(_up, nowMs);
+  initializeInput(_down, nowMs);
 }
 
-ButtonEvent ButtonManager::updateInput(
+InputEvent ButtonManager::updateInput(
     InputState& input,
     uint32_t nowMs) {
   const bool pressed = readPressed(input.pin);
@@ -49,43 +49,43 @@ ButtonEvent ButtonManager::updateInput(
   if (pressed == input.stablePressed ||
       static_cast<uint32_t>(nowMs - input.lastRawChangeMs) <
           DEBOUNCE_MS) {
-    return ButtonEvent::NONE;
+    return InputEvent::NONE;
   }
 
   input.stablePressed = pressed;
 
   if (pressed) {
     input.pressSeen = true;
-    return ButtonEvent::NONE;
+    return InputEvent::NONE;
   }
 
   if (!input.pressSeen) {
-    return ButtonEvent::NONE;
+    return InputEvent::NONE;
   }
 
   input.pressSeen = false;
   return input.releaseEvent;
 }
 
-ButtonEvent ButtonManager::tick() {
+InputEvent ButtonManager::tick() {
   const uint32_t nowMs = millis();
 
   // Update every input on every pass so debounce state keeps advancing
   // even if more than one transition happens close together.
-  const ButtonEvent menuEvent = updateInput(_menu, nowMs);
-  const ButtonEvent exitEvent = updateInput(_exit, nowMs);
-  const ButtonEvent upEvent = updateInput(_rotaryUp, nowMs);
-  const ButtonEvent downEvent = updateInput(_rotaryDown, nowMs);
+  const InputEvent menuEvent = updateInput(_menu, nowMs);
+  const InputEvent exitEvent = updateInput(_exit, nowMs);
+  const InputEvent upEvent = updateInput(_up, nowMs);
+  const InputEvent downEvent = updateInput(_down, nowMs);
 
-  if (menuEvent != ButtonEvent::NONE) {
+  if (menuEvent != InputEvent::NONE) {
     return menuEvent;
   }
 
-  if (exitEvent != ButtonEvent::NONE) {
+  if (exitEvent != InputEvent::NONE) {
     return exitEvent;
   }
 
-  if (upEvent != ButtonEvent::NONE) {
+  if (upEvent != InputEvent::NONE) {
     return upEvent;
   }
 
