@@ -1,13 +1,13 @@
 #include "NavigationController.h"
 
-NavigationController::NavigationController(uint8_t pageCount)
-    : _pageCount(pageCount == 0 ? 1 : pageCount) {
+NavigationController::NavigationController() {
 }
 
 NavigationState NavigationController::state() const {
   return {
+    PageModel::pageAt(_pageIndex),
     _pageIndex,
-    _pageCount,
+    PageModel::PAGE_COUNT,
     _mode
   };
 }
@@ -51,7 +51,7 @@ bool NavigationController::handle(InputEvent event) {
 
 void NavigationController::moveUp() {
   if (_pageIndex == 0) {
-    _pageIndex = static_cast<uint8_t>(_pageCount - 1);
+    _pageIndex = static_cast<uint8_t>(PageModel::PAGE_COUNT - 1);
     return;
   }
 
@@ -61,7 +61,7 @@ void NavigationController::moveUp() {
 void NavigationController::moveDown() {
   ++_pageIndex;
 
-  if (_pageIndex >= _pageCount) {
+  if (_pageIndex >= PageModel::PAGE_COUNT) {
     _pageIndex = 0;
   }
 }
