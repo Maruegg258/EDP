@@ -40,8 +40,7 @@ Dashboard dashboard(graphics);
 DashboardUpdateCoalescer updateCoalescer;
 ButtonManager buttonManager;
 
-static constexpr uint8_t NAVIGATION_PAGE_COUNT = 3;
-NavigationController navigationController(NAVIGATION_PAGE_COUNT);
+NavigationController navigationController;
 
 WiFiManager wifiManager;
 TimeService timeService;
@@ -1367,15 +1366,19 @@ static void printNavigationState(
     const NavigationState& state) {
   Serial.print(prefix);
   Serial.print(navigationModeName(state.mode));
-  Serial.print(" page ");
+  Serial.print(" ");
+  Serial.print(PageModel::pageName(state.page));
+  Serial.print(" [");
   Serial.print(static_cast<unsigned int>(state.pageIndex) + 1);
   Serial.print("/");
-  Serial.println(static_cast<unsigned int>(state.pageCount));
+  Serial.print(static_cast<unsigned int>(state.pageCount));
+  Serial.println("]");
 }
 
 static bool expectNavigationState(
     const char* label,
     const NavigationController& controller,
+    PageId expectedPage,
     uint8_t expectedPageIndex,
     NavigationMode expectedMode) {
   const NavigationState actual = controller.state();
@@ -1385,7 +1388,8 @@ static bool expectNavigationState(
   Serial.print(": ");
   printNavigationState("", actual);
 
-  if (actual.pageIndex != expectedPageIndex ||
+  if (actual.page != expectedPage ||
+      actual.pageIndex != expectedPageIndex ||
       actual.mode != expectedMode) {
     Serial.println("FAIL: unexpected navigation state.");
     return false;
@@ -1395,11 +1399,12 @@ static bool expectNavigationState(
 }
 
 static bool runNavigationSelfCheck() {
-  NavigationController controller(3);
+  NavigationController controller;
 
   if (!expectNavigationState(
           "initial",
           controller,
+          PageId::DASHBOARD,
           0,
           NavigationMode::PAGE)) {
     return false;
@@ -1409,6 +1414,7 @@ static bool runNavigationSelfCheck() {
       !expectNavigationState(
           "down",
           controller,
+          PageId::WEATHER,
           1,
           NavigationMode::PAGE)) {
     return false;
@@ -1418,6 +1424,7 @@ static bool runNavigationSelfCheck() {
       !expectNavigationState(
           "up",
           controller,
+          PageId::DASHBOARD,
           0,
           NavigationMode::PAGE)) {
     return false;
@@ -1427,6 +1434,7 @@ static bool runNavigationSelfCheck() {
       !expectNavigationState(
           "up wrap",
           controller,
+          PageId::MARKETS,
           2,
           NavigationMode::PAGE)) {
     return false;
@@ -1436,6 +1444,7 @@ static bool runNavigationSelfCheck() {
       !expectNavigationState(
           "down wrap",
           controller,
+          PageId::DASHBOARD,
           0,
           NavigationMode::PAGE)) {
     return false;
@@ -1445,6 +1454,7 @@ static bool runNavigationSelfCheck() {
       !expectNavigationState(
           "menu enters detail",
           controller,
+          PageId::DASHBOARD,
           0,
           NavigationMode::DETAIL)) {
     return false;
@@ -1455,6 +1465,7 @@ static bool runNavigationSelfCheck() {
       !expectNavigationState(
           "detail ignores up/down",
           controller,
+          PageId::DASHBOARD,
           0,
           NavigationMode::DETAIL)) {
     return false;
@@ -1464,6 +1475,7 @@ static bool runNavigationSelfCheck() {
       !expectNavigationState(
           "exit returns page",
           controller,
+          PageId::DASHBOARD,
           0,
           NavigationMode::PAGE)) {
     return false;
@@ -1474,6 +1486,7 @@ static bool runNavigationSelfCheck() {
       !expectNavigationState(
           "no-op events",
           controller,
+          PageId::DASHBOARD,
           0,
           NavigationMode::PAGE)) {
     return false;
@@ -1489,7 +1502,7 @@ static void handlePanelInputIfAny() {
     return;
   }
 
-  Serial.print("Phase 7B-1 input event: ");
+  Serial.print("Phase 7B-2 input event: ");
   Serial.println(inputEventName(event));
 
   const NavigationState before = navigationController.state();
@@ -1503,7 +1516,7 @@ static void handlePanelInputIfAny() {
   );
 
   Serial.println(
-      "Phase 7B-1 navigation state is Serial-only; "
+      "Phase 7B-2 page/navigation state is Serial-only; "
       "no E-paper action requested."
   );
 }
@@ -1515,21 +1528,21 @@ void setup() {
   buttonManager.begin();
 
   Serial.println();
-  Serial.println("EDP Phase 7B-1: application navigation state");
-  Serial.println("MENU: enter detail for the current logical page.");
-  Serial.println("UP/DOWN: cycle logical pages while in PAGE mode.");
+  Serial.println("EDP Phase 7B-2: named page model");
+  Serial.println("Top-level pages: DASHBOARD -> WEATHER -> MARKETS.");
+  Serial.println("MENU: enter detail for the current PageId.");
+  Serial.println("UP/DOWN: cycle named pages while in PAGE mode.");
   Serial.println("EXIT: return from DETAIL to PAGE mode.");
   Serial.println("DETAIL UP/DOWN selection is intentionally deferred.");
-  Serial.println("Navigation uses 3 placeholder page slots for state-machine verification.");
-  Serial.println("Navigation state is Serial-only and does not control the display.");
+  Serial.println("Page identity is Serial-only and does not control the display.");
   Serial.println("Phase 6 production dashboard path remains active.");
 
   if (!runNavigationSelfCheck()) {
-    Serial.println("FAIL: Phase 7B-1 navigation self-check failed.");
+    Serial.println("FAIL: Phase 7B-2 page/navigation self-check failed.");
     return;
   }
 
-  Serial.println("PASS: Phase 7B-1 navigation self-check.");
+  Serial.println("PASS: Phase 7B-2 page/navigation self-check.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
