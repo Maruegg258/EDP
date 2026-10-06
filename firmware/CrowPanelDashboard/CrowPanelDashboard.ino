@@ -13,6 +13,7 @@
 #include "GraphicsBW.h"
 #include "Icons.h"
 #include "MarketDataService.h"
+#include "NavigationController.h"
 #include "SecureHttpClient.h"
 #include "TimeService.h"
 #include "TlsTrustAnchors.h"
@@ -38,6 +39,10 @@ GraphicsBW graphics(
 Dashboard dashboard(graphics);
 DashboardUpdateCoalescer updateCoalescer;
 ButtonManager buttonManager;
+
+static constexpr uint8_t NAVIGATION_PAGE_COUNT = 3;
+NavigationController navigationController(NAVIGATION_PAGE_COUNT);
+
 WiFiManager wifiManager;
 TimeService timeService;
 SecureHttpClient secureHttpClient(
@@ -1346,15 +1351,161 @@ static const char* inputEventName(InputEvent event) {
   return "NONE";
 }
 
-static void reportPanelInputEventIfAny() {
+static const char* navigationModeName(NavigationMode mode) {
+  switch (mode) {
+    case NavigationMode::PAGE:
+      return "PAGE";
+    case NavigationMode::DETAIL:
+      return "DETAIL";
+  }
+
+  return "UNKNOWN";
+}
+
+static void printNavigationState(
+    const char* prefix,
+    const NavigationState& state) {
+  Serial.print(prefix);
+  Serial.print(navigationModeName(state.mode));
+  Serial.print(" page ");
+  Serial.print(static_cast<unsigned int>(state.pageIndex) + 1);
+  Serial.print("/");
+  Serial.println(static_cast<unsigned int>(state.pageCount));
+}
+
+static bool expectNavigationState(
+    const char* label,
+    const NavigationController& controller,
+    uint8_t expectedPageIndex,
+    NavigationMode expectedMode) {
+  const NavigationState actual = controller.state();
+
+  Serial.print("Navigation self-check ");
+  Serial.print(label);
+  Serial.print(": ");
+  printNavigationState("", actual);
+
+  if (actual.pageIndex != expectedPageIndex ||
+      actual.mode != expectedMode) {
+    Serial.println("FAIL: unexpected navigation state.");
+    return false;
+  }
+
+  return true;
+}
+
+static bool runNavigationSelfCheck() {
+  NavigationController controller(3);
+
+  if (!expectNavigationState(
+          "initial",
+          controller,
+          0,
+          NavigationMode::PAGE)) {
+    return false;
+  }
+
+  if (!controller.handle(InputEvent::DOWN) ||
+      !expectNavigationState(
+          "down",
+          controller,
+          1,
+          NavigationMode::PAGE)) {
+    return false;
+  }
+
+  if (!controller.handle(InputEvent::UP) ||
+      !expectNavigationState(
+          "up",
+          controller,
+          0,
+          NavigationMode::PAGE)) {
+    return false;
+  }
+
+  if (!controller.handle(InputEvent::UP) ||
+      !expectNavigationState(
+          "up wrap",
+          controller,
+          2,
+          NavigationMode::PAGE)) {
+    return false;
+  }
+
+  if (!controller.handle(InputEvent::DOWN) ||
+      !expectNavigationState(
+          "down wrap",
+          controller,
+          0,
+          NavigationMode::PAGE)) {
+    return false;
+  }
+
+  if (!controller.handle(InputEvent::MENU) ||
+      !expectNavigationState(
+          "menu enters detail",
+          controller,
+          0,
+          NavigationMode::DETAIL)) {
+    return false;
+  }
+
+  if (controller.handle(InputEvent::UP) ||
+      controller.handle(InputEvent::DOWN) ||
+      !expectNavigationState(
+          "detail ignores up/down",
+          controller,
+          0,
+          NavigationMode::DETAIL)) {
+    return false;
+  }
+
+  if (!controller.handle(InputEvent::EXIT) ||
+      !expectNavigationState(
+          "exit returns page",
+          controller,
+          0,
+          NavigationMode::PAGE)) {
+    return false;
+  }
+
+  if (controller.handle(InputEvent::EXIT) ||
+      controller.handle(InputEvent::NONE) ||
+      !expectNavigationState(
+          "no-op events",
+          controller,
+          0,
+          NavigationMode::PAGE)) {
+    return false;
+  }
+
+  return true;
+}
+
+static void handlePanelInputIfAny() {
   const InputEvent event = buttonManager.tick();
 
   if (event == InputEvent::NONE) {
     return;
   }
 
-  Serial.print("Phase 7A-2 input event: ");
+  Serial.print("Phase 7B-1 input event: ");
   Serial.println(inputEventName(event));
+
+  const NavigationState before = navigationController.state();
+  const bool changed = navigationController.handle(event);
+  const NavigationState after = navigationController.state();
+
+  printNavigationState("Navigation before: ", before);
+  printNavigationState(
+      changed ? "Navigation after:  " : "Navigation unchanged: ",
+      after
+  );
+
+  Serial.println(
+      "Phase 7B-1 navigation state is Serial-only; "
+      "no E-paper action requested."
+  );
 }
 
 void setup() {
@@ -1364,14 +1515,21 @@ void setup() {
   buttonManager.begin();
 
   Serial.println();
-  Serial.println("EDP Phase 7A-2: logical input mapping");
-  Serial.println("MENU: GPIO1, active LOW.");
-  Serial.println("UP: GPIO4, active LOW.");
-  Serial.println("DOWN: GPIO6, active LOW.");
-  Serial.println("EXIT: GPIO2, active LOW.");
-  Serial.println("Rotary CONF GPIO5 is intentionally unused.");
-  Serial.println("Input events are Serial-only and do not control the display.");
+  Serial.println("EDP Phase 7B-1: application navigation state");
+  Serial.println("MENU: enter detail for the current logical page.");
+  Serial.println("UP/DOWN: cycle logical pages while in PAGE mode.");
+  Serial.println("EXIT: return from DETAIL to PAGE mode.");
+  Serial.println("DETAIL UP/DOWN selection is intentionally deferred.");
+  Serial.println("Navigation uses 3 placeholder page slots for state-machine verification.");
+  Serial.println("Navigation state is Serial-only and does not control the display.");
   Serial.println("Phase 6 production dashboard path remains active.");
+
+  if (!runNavigationSelfCheck()) {
+    Serial.println("FAIL: Phase 7B-1 navigation self-check failed.");
+    return;
+  }
+
+  Serial.println("PASS: Phase 7B-1 navigation self-check.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1407,7 +1565,7 @@ void setup() {
 }
 
 void loop() {
-  reportPanelInputEventIfAny();
+  handlePanelInputIfAny();
 
   wifiManager.tick();
   reportWiFiManagerStatus();
