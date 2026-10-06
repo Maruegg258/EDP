@@ -14,6 +14,7 @@
 #include "Icons.h"
 #include "MarketDataService.h"
 #include "NavigationController.h"
+#include "PageRenderer.h"
 #include "SecureHttpClient.h"
 #include "TimeService.h"
 #include "TlsTrustAnchors.h"
@@ -37,10 +38,13 @@ GraphicsBW graphics(
 );
 
 Dashboard dashboard(graphics);
+PageRenderer pageRenderer(graphics, dashboard);
 DashboardUpdateCoalescer updateCoalescer;
 ButtonManager buttonManager;
 
 NavigationController navigationController;
+PageId visiblePage = PageId::DASHBOARD;
+bool visiblePageRefreshPending = false;
 
 WiFiManager wifiManager;
 TimeService timeService;
@@ -1323,6 +1327,10 @@ static bool stageLiveClockIfMinuteChanged(bool& minuteChanged) {
 }
 
 static bool flushLiveDashboardIfNeeded() {
+  if (navigationController.state().page != PageId::DASHBOARD) {
+    return true;
+  }
+
   if (!updateCoalescer.hasPendingUpdate()) {
     return true;
   }
@@ -1331,6 +1339,70 @@ static bool flushLiveDashboardIfNeeded() {
   printDirtyMask(updateCoalescer.pendingDirty());
 
   return flushPendingPartial() == UpdateResult::REFRESHED;
+}
+
+static bool flushVisiblePageChangeIfNeeded() {
+  if (!visiblePageRefreshPending) {
+    return true;
+  }
+
+  const NavigationState navigationState =
+      navigationController.state();
+  const PageId targetPage = navigationState.page;
+
+  const DashboardState& dashboardState =
+      updateCoalescer.hasPendingUpdate()
+          ? updateCoalescer.pendingState()
+          : updateCoalescer.displayedState();
+
+  Serial.print("Phase 7C-1 rendering page: ");
+  Serial.println(PageModel::pageName(targetPage));
+
+  if (!pageRenderer.render(targetPage, dashboardState)) {
+    Serial.println("FAIL: page renderer rejected selected page.");
+    return false;
+  }
+
+  if (!display.begin()) {
+    Serial.println("FAIL: page-switch display wake/reset timed out.");
+    return false;
+  }
+
+  if (!display.restoreFrameStateForPartial(previousFrameBuffer)) {
+    Serial.println("FAIL: page-switch previous-frame restore timed out.");
+    return false;
+  }
+
+  if (!display.displayPartialFrame(frameBuffer)) {
+    Serial.println("FAIL: page-switch partial refresh timed out.");
+    return false;
+  }
+
+  memcpy(
+      previousFrameBuffer,
+      frameBuffer,
+      CrowEPD579::FRAMEBUFFER_BYTES
+  );
+
+  if (targetPage == PageId::DASHBOARD &&
+      updateCoalescer.hasPendingUpdate()) {
+    if (!updateCoalescer.commitPending()) {
+      display.sleep();
+      Serial.println(
+          "FAIL: dashboard state commit after page switch failed."
+      );
+      return false;
+    }
+  }
+
+  display.sleep();
+
+  visiblePage = targetPage;
+  visiblePageRefreshPending = false;
+
+  Serial.print("Phase 7C-1 visible page is now: ");
+  Serial.println(PageModel::pageName(visiblePage));
+  return true;
 }
 
 static const char* inputEventName(InputEvent event) {
@@ -1502,7 +1574,7 @@ static void handlePanelInputIfAny() {
     return;
   }
 
-  Serial.print("Phase 7B-2 input event: ");
+  Serial.print("Phase 7C-1 input event: ");
   Serial.println(inputEventName(event));
 
   const NavigationState before = navigationController.state();
@@ -1515,9 +1587,17 @@ static void handlePanelInputIfAny() {
       after
   );
 
+  if (changed && before.page != after.page) {
+    visiblePageRefreshPending = true;
+
+    Serial.print("Visible page refresh queued: ");
+    Serial.println(PageModel::pageName(after.page));
+    return;
+  }
+
   Serial.println(
-      "Phase 7B-2 page/navigation state is Serial-only; "
-      "no E-paper action requested."
+      "Navigation mode changed without a page change; "
+      "Phase 7C-1 does not refresh the display."
   );
 }
 
@@ -1528,21 +1608,20 @@ void setup() {
   buttonManager.begin();
 
   Serial.println();
-  Serial.println("EDP Phase 7B-2: named page model");
-  Serial.println("Top-level pages: DASHBOARD -> WEATHER -> MARKETS.");
-  Serial.println("MENU: enter detail for the current PageId.");
-  Serial.println("UP/DOWN: cycle named pages while in PAGE mode.");
-  Serial.println("EXIT: return from DETAIL to PAGE mode.");
-  Serial.println("DETAIL UP/DOWN selection is intentionally deferred.");
-  Serial.println("Page identity is Serial-only and does not control the display.");
-  Serial.println("Phase 6 production dashboard path remains active.");
+  Serial.println("EDP Phase 7C-1: first visible page switching");
+  Serial.println("DASHBOARD keeps the production dashboard renderer.");
+  Serial.println("WEATHER and MARKETS use minimal placeholder renderers.");
+  Serial.println("UP/DOWN page changes request one full-frame partial refresh.");
+  Serial.println("MENU/EXIT mode changes do not refresh the display in 7C-1.");
+  Serial.println("Background data staging continues on non-dashboard pages.");
+  Serial.println("Background dashboard dirty state cannot overwrite a non-dashboard page.");
 
   if (!runNavigationSelfCheck()) {
-    Serial.println("FAIL: Phase 7B-2 page/navigation self-check failed.");
+    Serial.println("FAIL: Phase 7C-1 page/navigation self-check failed.");
     return;
   }
 
-  Serial.println("PASS: Phase 7B-2 page/navigation self-check.");
+  Serial.println("PASS: Phase 7C-1 page/navigation self-check.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1611,6 +1690,12 @@ void loop() {
       delay(1000);
       return;
     }
+  }
+
+  if (!flushVisiblePageChangeIfNeeded()) {
+    Serial.println("FAIL: visible page refresh failed.");
+    delay(1000);
+    return;
   }
 
   if (!flushLiveDashboardIfNeeded()) {
