@@ -54,9 +54,6 @@ CrowPanelDashboard.ino
         |    +-- PageModel           (Phase 7B-2 named pages hardware verified)
         |    +-- NavigationController (Phase 7B-2 named-page navigation hardware verified)
         |
-        +-- ui/
-        |    +-- PageRenderer        (Phase 7C-1 implemented; hardware verification pending)
-        |
         +-- graphics/
         |    +-- GraphicsBW          (implemented)
         |    +-- BitmapFont          (implemented)
@@ -76,6 +73,7 @@ CrowPanelDashboard.ino
         |    +-- MarketDataService   (BTC/ETH/HYPE polling hardware verified)
         |
         +-- ui/
+             +-- PageRenderer        (Phase 7C-1 implemented; hardware verification pending)
              +-- WidgetStates        (implemented)
              +-- DashboardDirty      (implemented)
              +-- WidgetStateCompare  (implemented)
