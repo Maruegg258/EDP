@@ -4,12 +4,16 @@
 #include "DashboardState.h"
 #include "GraphicsBW.h"
 #include "PageModel.h"
+#include "WeatherPage.h"
+#include "WeatherService.h"
 
 class PageRenderer {
 public:
   PageRenderer(GraphicsBW& graphics, Dashboard& dashboard);
 
-  bool render(PageId page, const DashboardState& dashboardState);
+  bool render(PageId page,
+              const DashboardState& dashboardState,
+              const WeatherSnapshot* weatherSnapshot);
 
 private:
   bool renderPlaceholder(const char* title);
@@ -17,4 +21,5 @@ private:
 
   GraphicsBW& _graphics;
   Dashboard& _dashboard;
+  WeatherPage _weatherPage;
 };
