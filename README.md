@@ -51,7 +51,7 @@ CrowPanelDashboard.ino
         |
         +-- application/
         |    +-- InputEvent          (shared logical input vocabulary)
-        |    +-- NavigationController (Phase 7B-1 implemented; hardware verification pending)
+        |    +-- NavigationController (Phase 7B-1 hardware verified)
         |
         +-- graphics/
         |    +-- GraphicsBW          (implemented)
@@ -162,7 +162,7 @@ Phase 6 is complete as of 2026-10-05. The firmware now has hardware-verified cer
 
 Phase 7A establishes the physical-input boundary. GPIO1/GPIO4/GPIO6/GPIO2 are hardware-verified as the EDP logical MENU/UP/DOWN/EXIT controls through the project-owned active-low, 30 ms debounced release-event path. GPIO5 remains intentionally unused.
 
-Phase 7B-1 introduces an application-owned `NavigationController` and extracts `InputEvent` into a shared application vocabulary so navigation code does not depend on ButtonManager internals. The checkpoint uses three placeholder page slots solely to verify the state machine: UP/DOWN cycle with wraparound in PAGE mode, MENU enters DETAIL, EXIT returns to PAGE, and DETAIL UP/DOWN behavior remains deliberately undefined until real option lists exist. Navigation is Serial-only and cannot request an E-paper refresh in this checkpoint.
+Phase 7B-1 introduces an application-owned `NavigationController` and extracts `InputEvent` into a shared application vocabulary so navigation code does not depend on ButtonManager internals. The checkpoint uses three placeholder page slots solely to verify the state machine: UP/DOWN cycle with wraparound in PAGE mode, MENU enters DETAIL, EXIT returns to PAGE, and DETAIL UP/DOWN behavior remains deliberately undefined until real option lists exist. The state machine, wraparound behavior, MENU/EXIT transitions, and DETAIL no-op handling were verified on hardware on 2026-10-06. Navigation remains Serial-only and cannot request an E-paper refresh in this checkpoint.
 
 ## Current repository structure
 
