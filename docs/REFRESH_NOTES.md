@@ -61,3 +61,23 @@ The final synchronization step is intentionally retained so later normal updates
 **PASS on the development panel.** The maintenance operation completed correctly and three ordinary partial updates immediately afterward remained sharp, with no obvious blurred/doubled text or residual square artifacts.
 
 This custom-driver maintenance sequence is now the hardware-verified cleanup path for the project.
+
+
+## Phase 7C-1 full-page navigation verification
+
+### 2026-10-06 hardware verification
+
+**PASS on the development panel.** Top-level page changes between the production DASHBOARD and deliberately sparse WEATHER / MARKETS placeholder frames were performed with the existing full-frame partial path:
+
+```text
+begin / reset
+-> restore previous physical frame into controller RAM
+-> write newly rendered full framebuffer
+-> partial refresh
+-> synchronize previous RAM to the new visible frame
+-> sleep
+```
+
+Forward and reverse page cycling were both stable. Leaving a non-dashboard page visible while background Clock / Wi-Fi / Market / Weather data continued to stage did not cause the dashboard to overwrite the selected page. Returning to DASHBOARD rendered the newest pending dashboard state.
+
+No additional Full Refresh was required for page switching, and the hardware test did not reveal a need to change the existing refresh strategy. The established rule remains: do not add periodic or page-change Full Refresh behavior without new hardware evidence.
