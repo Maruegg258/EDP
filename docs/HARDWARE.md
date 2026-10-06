@@ -28,3 +28,22 @@ These values are hardware facts used to bootstrap our own driver. Controller com
 ## Flash state
 
 The development unit was fully erased with esptool before this repository was initialized. The complete 8 MB pre-erase flash image was backed up separately and is not stored in this public repository.
+
+
+## Phase 7 physical controls — reference mapping
+
+The following mapping is taken from the Elecrow 5.79-inch board documentation and its `5.79_key` Arduino example. It is a **vendor/reference fact pending verification on our development unit** for Phase 7A-1.
+
+| Control | GPIO | Reference behavior | Phase 7A-1 use |
+| --- | ---: | --- | --- |
+| MENU | 2 | Active LOW | Serial event probe |
+| EXIT | 1 | Active LOW | Serial event probe |
+| Rotary UP | 6 | Active LOW | Serial event probe |
+| Rotary DOWN | 4 | Active LOW | Serial event probe |
+| Rotary CONF / push | 5 | Active LOW | Intentionally unused |
+
+The board circuitry provides pull-up resistors for these inputs. The Elecrow example configures them as `INPUT` and treats LOW as active.
+
+Phase 7A-1 uses a non-blocking 30 ms software debounce and reports one event after a stable release. It deliberately retains Elecrow's `UP` / `DOWN` naming until physical clockwise/counter-clockwise or left/right direction is verified on our unit.
+
+No Phase 7A-1 input event controls the dashboard or triggers E-paper refresh. GPIO5 is initialized as an input but produces no application event.
