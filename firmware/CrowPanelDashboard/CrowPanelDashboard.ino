@@ -19,6 +19,7 @@
 #include "TimeService.h"
 #include "TlsTrustAnchors.h"
 #include "WeatherService.h"
+#include "WeatherSnapshotCompare.h"
 #include "WeatherWidgetMapper.h"
 #include "WiFiManager.h"
 #include "config.h"
@@ -45,6 +46,9 @@ ButtonManager buttonManager;
 NavigationController navigationController;
 PageId visiblePage = PageId::DASHBOARD;
 bool visiblePageRefreshPending = false;
+
+WeatherSnapshot lastRenderedWeatherSnapshot{};
+bool hasRenderedWeatherSnapshot = false;
 
 WiFiManager wifiManager;
 TimeService timeService;
@@ -1355,10 +1359,16 @@ static bool flushVisiblePageChangeIfNeeded() {
           ? updateCoalescer.pendingState()
           : updateCoalescer.displayedState();
 
-  Serial.print("Phase 7C-1 rendering page: ");
+  const WeatherSnapshot* weatherSnapshot =
+      weatherService.lastValidSnapshot();
+
+  Serial.print("Phase 7C-2 rendering page: ");
   Serial.println(PageModel::pageName(targetPage));
 
-  if (!pageRenderer.render(targetPage, dashboardState)) {
+  if (!pageRenderer.render(
+          targetPage,
+          dashboardState,
+          weatherSnapshot)) {
     Serial.println("FAIL: page renderer rejected selected page.");
     return false;
   }
@@ -1400,7 +1410,25 @@ static bool flushVisiblePageChangeIfNeeded() {
   visiblePage = targetPage;
   visiblePageRefreshPending = false;
 
-  Serial.print("Phase 7C-1 visible page is now: ");
+  if (targetPage == PageId::WEATHER) {
+    if (weatherSnapshot != nullptr) {
+      lastRenderedWeatherSnapshot = *weatherSnapshot;
+      hasRenderedWeatherSnapshot = true;
+
+      Serial.println(
+          "Weather page rendered from the current last-valid snapshot."
+      );
+    } else {
+      hasRenderedWeatherSnapshot = false;
+
+      Serial.println(
+          "Weather page rendered DATA NOT READY; "
+          "no last-valid snapshot exists yet."
+      );
+    }
+  }
+
+  Serial.print("Phase 7C-2 visible page is now: ");
   Serial.println(PageModel::pageName(visiblePage));
   return true;
 }
@@ -1574,7 +1602,7 @@ static void handlePanelInputIfAny() {
     return;
   }
 
-  Serial.print("Phase 7C-1 input event: ");
+  Serial.print("Phase 7C-2 input event: ");
   Serial.println(inputEventName(event));
 
   const NavigationState before = navigationController.state();
@@ -1597,7 +1625,7 @@ static void handlePanelInputIfAny() {
 
   Serial.println(
       "No visible page change; "
-      "Phase 7C-1 does not refresh the display."
+      "Phase 7C-2 does not refresh the display."
   );
 }
 
@@ -1608,20 +1636,20 @@ void setup() {
   buttonManager.begin();
 
   Serial.println();
-  Serial.println("EDP Phase 7C-1: first visible page switching");
+  Serial.println("EDP Phase 7C-2: live weather page");
   Serial.println("DASHBOARD keeps the production dashboard renderer.");
-  Serial.println("WEATHER and MARKETS use minimal placeholder renderers.");
-  Serial.println("UP/DOWN page changes request one full-frame partial refresh.");
-  Serial.println("MENU/EXIT mode changes do not refresh the display in 7C-1.");
-  Serial.println("Background data staging continues on non-dashboard pages.");
-  Serial.println("Background dashboard dirty state cannot overwrite a non-dashboard page.");
+  Serial.println("WEATHER renders current, five future hours, and tomorrow.");
+  Serial.println("MARKETS remains the Phase 7C-1 placeholder.");
+  Serial.println("UP/DOWN page changes use the verified full-frame partial path.");
+  Serial.println("MENU/EXIT mode changes remain non-rendering.");
+  Serial.println("WeatherService remains data-only; application owns page refresh.");
 
   if (!runNavigationSelfCheck()) {
-    Serial.println("FAIL: Phase 7C-1 page/navigation self-check failed.");
+    Serial.println("FAIL: Phase 7C-2 page/navigation self-check failed.");
     return;
   }
 
-  Serial.println("PASS: Phase 7C-1 page/navigation self-check.");
+  Serial.println("PASS: Phase 7C-2 page/navigation self-check.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
