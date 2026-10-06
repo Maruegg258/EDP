@@ -2,29 +2,31 @@
 
 #include <Arduino.h>
 
-enum class ButtonEvent : uint8_t {
+enum class InputEvent : uint8_t {
   NONE,
-  MENU_RELEASED,
-  EXIT_RELEASED,
-  ROTARY_UP_STEP,
-  ROTARY_DOWN_STEP
+  MENU,
+  EXIT,
+  UP,
+  DOWN
 };
 
 class ButtonManager {
 public:
-  static constexpr uint8_t PIN_MENU = 2;
-  static constexpr uint8_t PIN_EXIT = 1;
-  static constexpr uint8_t PIN_ROTARY_UP = 6;
-  static constexpr uint8_t PIN_ROTARY_DOWN = 4;
+  // EDP application mapping. These names describe dashboard semantics,
+  // not the labels used by the Elecrow reference example.
+  static constexpr uint8_t PIN_MENU = 1;
+  static constexpr uint8_t PIN_UP = 4;
+  static constexpr uint8_t PIN_DOWN = 6;
+  static constexpr uint8_t PIN_EXIT = 2;
   static constexpr uint8_t PIN_ROTARY_CONFIRM = 5;
 
   void begin();
-  ButtonEvent tick();
+  InputEvent tick();
 
 private:
   struct InputState {
     uint8_t pin;
-    ButtonEvent releaseEvent;
+    InputEvent releaseEvent;
     bool rawPressed;
     bool stablePressed;
     bool pressSeen;
@@ -35,7 +37,7 @@ private:
 
   InputState _menu{
     PIN_MENU,
-    ButtonEvent::MENU_RELEASED,
+    InputEvent::MENU,
     false,
     false,
     false,
@@ -44,25 +46,25 @@ private:
 
   InputState _exit{
     PIN_EXIT,
-    ButtonEvent::EXIT_RELEASED,
+    InputEvent::EXIT,
     false,
     false,
     false,
     0
   };
 
-  InputState _rotaryUp{
-    PIN_ROTARY_UP,
-    ButtonEvent::ROTARY_UP_STEP,
+  InputState _up{
+    PIN_UP,
+    InputEvent::UP,
     false,
     false,
     false,
     0
   };
 
-  InputState _rotaryDown{
-    PIN_ROTARY_DOWN,
-    ButtonEvent::ROTARY_DOWN_STEP,
+  InputState _down{
+    PIN_DOWN,
+    InputEvent::DOWN,
     false,
     false,
     false,
@@ -71,5 +73,5 @@ private:
 
   static bool readPressed(uint8_t pin);
   static void initializeInput(InputState& input, uint32_t nowMs);
-  static ButtonEvent updateInput(InputState& input, uint32_t nowMs);
+  static InputEvent updateInput(InputState& input, uint32_t nowMs);
 };
