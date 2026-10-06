@@ -15,18 +15,20 @@ PageRenderer::PageRenderer(
     GraphicsBW& graphics,
     Dashboard& dashboard)
     : _graphics(graphics),
-      _dashboard(dashboard) {
+      _dashboard(dashboard),
+      _weatherPage(graphics) {
 }
 
 bool PageRenderer::render(
     PageId page,
-    const DashboardState& dashboardState) {
+    const DashboardState& dashboardState,
+    const WeatherSnapshot* weatherSnapshot) {
   switch (page) {
     case PageId::DASHBOARD:
       return _dashboard.render(dashboardState);
 
     case PageId::WEATHER:
-      return renderPlaceholder("WEATHER");
+      return _weatherPage.render(weatherSnapshot);
 
     case PageId::MARKETS:
       return renderPlaceholder("MARKETS");
