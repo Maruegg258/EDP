@@ -73,7 +73,8 @@ CrowPanelDashboard.ino
         |    +-- MarketDataService   (BTC/ETH/HYPE polling hardware verified)
         |
         +-- ui/
-             +-- PageRenderer        (Phase 7C-1 hardware verified)
+             +-- PageRenderer        (Phase 7C-2 weather dispatch implemented; verification pending)
+             +-- WeatherPage         (Phase 7C-2 implemented; hardware verification pending)
              +-- WidgetStates        (implemented)
              +-- DashboardDirty      (implemented)
              +-- WidgetStateCompare  (implemented)
@@ -170,6 +171,8 @@ Phase 7B-2 replaces anonymous page numbers with a dedicated `PageId` model. The 
 
 Phase 7C-1 introduces the first physical page switching. `PageRenderer` dispatches DASHBOARD back to the existing production dashboard renderer and draws intentionally minimal WEATHER / MARKETS placeholder frames. A top-level page change queues one full-frame partial refresh through the already verified restore-and-partial sequence; MENU/EXIT mode-only transitions still do not refresh. Background services continue staging dashboard data while another page is visible, but application-level dashboard flushes are suppressed until DASHBOARD is selected again. Returning to DASHBOARD renders the newest pending dashboard state and commits it only after the page-switch refresh succeeds. Forward/reverse page cycling, non-dashboard hold behavior across background updates, return-to-latest-dashboard behavior, and clear page-transition refresh quality were verified on hardware on 2026-10-06.
 
+Phase 7C-2 replaces the WEATHER placeholder with a functional `WeatherPage`. It reads the existing last-valid `WeatherSnapshot` produced by Phase 6 and renders current conditions, all five future hourly slots, and tomorrow high/low/condition/precipitation information using the existing project-owned 1-bit font system. A missing snapshot produces a safe `DATA NOT READY` page. The application stores the last physically rendered weather snapshot and compares the complete current/hourly/daily contract before queueing an in-place WEATHER refresh, so forecast-only changes are not missed and unchanged 30-minute polls do not cause unnecessary E-paper activity. `WeatherService` remains independent of display control. Hardware verification is pending.
+
 ## Current repository structure
 
 ```text
@@ -194,6 +197,9 @@ EDP/
 │     ├─ NavigationController.cpp
 │     ├─ PageRenderer.h
 │     ├─ PageRenderer.cpp
+│     ├─ WeatherPage.h
+│     ├─ WeatherPage.cpp
+│     ├─ WeatherSnapshotCompare.h
 │     ├─ WidgetStates.h
 │     ├─ DashboardDirty.h
 │     ├─ WidgetStateCompare.h
