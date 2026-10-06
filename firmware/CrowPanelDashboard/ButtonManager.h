@@ -2,13 +2,7 @@
 
 #include <Arduino.h>
 
-enum class InputEvent : uint8_t {
-  NONE,
-  MENU,
-  EXIT,
-  UP,
-  DOWN
-};
+#include "InputEvent.h"
 
 class ButtonManager {
 public:
