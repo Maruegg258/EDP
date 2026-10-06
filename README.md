@@ -73,7 +73,7 @@ CrowPanelDashboard.ino
         |    +-- MarketDataService   (BTC/ETH/HYPE polling hardware verified)
         |
         +-- ui/
-             +-- PageRenderer        (Phase 7C-1 implemented; hardware verification pending)
+             +-- PageRenderer        (Phase 7C-1 hardware verified)
              +-- WidgetStates        (implemented)
              +-- DashboardDirty      (implemented)
              +-- WidgetStateCompare  (implemented)
@@ -168,7 +168,7 @@ Phase 7B-1 introduces an application-owned `NavigationController` and extracts `
 
 Phase 7B-2 replaces anonymous page numbers with a dedicated `PageId` model. The initial top-level order is `DASHBOARD -> WEATHER -> MARKETS`; this is an application navigation identity, not yet a renderer or final UI-layout commitment. `NavigationState` now exposes both the named page and its index/count, preserving the Phase 7B-1 PAGE/DETAIL state machine and wraparound behavior. Named-page transitions, wraparound, and MENU/EXIT retention of the current PageId were verified on hardware on 2026-10-06. E-paper rendering remains untouched.
 
-Phase 7C-1 introduces the first physical page switching. `PageRenderer` dispatches DASHBOARD back to the existing production dashboard renderer and draws intentionally minimal WEATHER / MARKETS placeholder frames. A top-level page change queues one full-frame partial refresh through the already verified restore-and-partial sequence; MENU/EXIT mode-only transitions still do not refresh. Background services continue staging dashboard data while another page is visible, but application-level dashboard flushes are suppressed until DASHBOARD is selected again. Returning to DASHBOARD renders the newest pending dashboard state and commits it only after the page-switch refresh succeeds. Hardware verification is pending.
+Phase 7C-1 introduces the first physical page switching. `PageRenderer` dispatches DASHBOARD back to the existing production dashboard renderer and draws intentionally minimal WEATHER / MARKETS placeholder frames. A top-level page change queues one full-frame partial refresh through the already verified restore-and-partial sequence; MENU/EXIT mode-only transitions still do not refresh. Background services continue staging dashboard data while another page is visible, but application-level dashboard flushes are suppressed until DASHBOARD is selected again. Returning to DASHBOARD renders the newest pending dashboard state and commits it only after the page-switch refresh succeeds. Forward/reverse page cycling, non-dashboard hold behavior across background updates, return-to-latest-dashboard behavior, and clear page-transition refresh quality were verified on hardware on 2026-10-06.
 
 ## Current repository structure
 
