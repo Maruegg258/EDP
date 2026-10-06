@@ -32,7 +32,9 @@ The development unit was fully erased with esptool before this repository was in
 
 ## Phase 7 physical controls — reference mapping
 
-The following mapping is taken from the Elecrow 5.79-inch board documentation and its `5.79_key` Arduino example. It is a **vendor/reference fact pending verification on our development unit** for Phase 7A-1.
+The following mapping is taken from the Elecrow 5.79-inch board documentation and its `5.79_key` Arduino example. It is retained as the **vendor/reference naming**, separate from the EDP application's logical control mapping.
+
+Phase 7A-1 hardware testing on 2026-10-06 verified that GPIO1, GPIO2, GPIO4, and GPIO6 produce stable active-low input events on the development unit with the project-owned 30 ms debounce path.
 
 | Control | GPIO | Reference behavior | Phase 7A-1 use |
 | --- | ---: | --- | --- |
@@ -44,6 +46,20 @@ The following mapping is taken from the Elecrow 5.79-inch board documentation an
 
 The board circuitry provides pull-up resistors for these inputs. The Elecrow example configures them as `INPUT` and treats LOW as active.
 
-Phase 7A-1 uses a non-blocking 30 ms software debounce and reports one event after a stable release. It deliberately retains Elecrow's `UP` / `DOWN` naming until physical clockwise/counter-clockwise or left/right direction is verified on our unit.
+Phase 7A-1 uses a non-blocking 30 ms software debounce and reports one event after a stable release. The four tested inputs behaved normally on hardware.
 
 No Phase 7A-1 input event controls the dashboard or triggers E-paper refresh. GPIO5 is initialized as an input but produces no application event.
+
+## Phase 7A-2 EDP logical control mapping
+
+The EDP firmware intentionally assigns application semantics according to the panel's actual physical use rather than preserving Elecrow's example labels. This is a software mapping only; the board wiring is unchanged.
+
+| EDP logical action | GPIO | Intended UI meaning |
+| --- | ---: | --- |
+| MENU | 1 | Confirm / enter / open details |
+| UP | 4 | Previous page / previous option |
+| DOWN | 6 | Next page / next option |
+| EXIT | 2 | Cancel / return to previous level |
+| Rotary push | 5 | Intentionally unused |
+
+`ButtonManager` now emits provider-independent application events `MENU`, `UP`, `DOWN`, and `EXIT`. Phase 7A-2 remains Serial-only: these events do not yet perform page navigation or trigger an E-paper refresh.
