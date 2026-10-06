@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <cstring>
 
+#include "ButtonManager.h"
 #include "CrowEPD579.h"
 #include "Dashboard.h"
 #include "DashboardDirty.h"
@@ -36,6 +37,7 @@ GraphicsBW graphics(
 
 Dashboard dashboard(graphics);
 DashboardUpdateCoalescer updateCoalescer;
+ButtonManager buttonManager;
 WiFiManager wifiManager;
 TimeService timeService;
 SecureHttpClient secureHttpClient(
@@ -1327,16 +1329,49 @@ static bool flushLiveDashboardIfNeeded() {
   return flushPendingPartial() == UpdateResult::REFRESHED;
 }
 
+static const char* buttonEventName(ButtonEvent event) {
+  switch (event) {
+    case ButtonEvent::MENU_RELEASED:
+      return "MENU released (GPIO2)";
+    case ButtonEvent::EXIT_RELEASED:
+      return "EXIT released (GPIO1)";
+    case ButtonEvent::ROTARY_UP_STEP:
+      return "ROTARY UP step (GPIO6)";
+    case ButtonEvent::ROTARY_DOWN_STEP:
+      return "ROTARY DOWN step (GPIO4)";
+    case ButtonEvent::NONE:
+      break;
+  }
+
+  return "NONE";
+}
+
+static void reportPanelInputEventIfAny() {
+  const ButtonEvent event = buttonManager.tick();
+
+  if (event == ButtonEvent::NONE) {
+    return;
+  }
+
+  Serial.print("Phase 7A-1 input event: ");
+  Serial.println(buttonEventName(event));
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
+  buttonManager.begin();
+
   Serial.println();
-  Serial.println("EDP Phase 6B-3: cleaned production weather path");
-  Serial.println("Phase 5 production BTC/ETH/HYPE path remains active.");
-  Serial.println("Weather polling target: 30 minutes.");
-  Serial.println("Temporary Phase 6B-2 weather diagnostics are removed.");
-  Serial.println("WeatherService remains separate from UI and display refresh.");
+  Serial.println("EDP Phase 7A-1: physical input probe");
+  Serial.println("MENU: GPIO2, active LOW.");
+  Serial.println("EXIT: GPIO1, active LOW.");
+  Serial.println("Rotary reference UP: GPIO6, active LOW.");
+  Serial.println("Rotary reference DOWN: GPIO4, active LOW.");
+  Serial.println("Rotary CONF GPIO5 is intentionally unused.");
+  Serial.println("Input events are Serial-only and do not control the display.");
+  Serial.println("Phase 6 production dashboard path remains active.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -1372,6 +1407,8 @@ void setup() {
 }
 
 void loop() {
+  reportPanelInputEventIfAny();
+
   wifiManager.tick();
   reportWiFiManagerStatus();
 
