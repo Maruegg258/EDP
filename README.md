@@ -47,7 +47,7 @@ CrowPanelDashboard.ino
         +-- drivers/
         |    +-- EpaperBus
         |    +-- CrowEPD579
-        |    +-- ButtonManager       (planned)
+        |    +-- ButtonManager       (Phase 7A-1 implemented; hardware verification pending)
         |
         +-- graphics/
         |    +-- GraphicsBW          (implemented)
@@ -170,6 +170,8 @@ EDP/
 ├─ firmware/
 │  └─ CrowPanelDashboard/
 │     ├─ CrowPanelDashboard.ino
+│     ├─ ButtonManager.h
+│     ├─ ButtonManager.cpp
 │     ├─ WidgetStates.h
 │     ├─ DashboardDirty.h
 │     ├─ WidgetStateCompare.h
