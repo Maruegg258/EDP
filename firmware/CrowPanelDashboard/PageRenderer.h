@@ -3,6 +3,8 @@
 #include "Dashboard.h"
 #include "DashboardState.h"
 #include "GraphicsBW.h"
+#include "MarketPage.h"
+#include "MarketPageState.h"
 #include "PageModel.h"
 #include "WeatherPage.h"
 #include "WeatherService.h"
@@ -13,7 +15,8 @@ public:
 
   bool render(PageId page,
               const DashboardState& dashboardState,
-              const WeatherSnapshot* weatherSnapshot);
+              const WeatherSnapshot* weatherSnapshot,
+              const MarketPageState& marketState);
 
 private:
   bool renderPlaceholder(const char* title);
@@ -22,4 +25,5 @@ private:
   GraphicsBW& _graphics;
   Dashboard& _dashboard;
   WeatherPage _weatherPage;
+  MarketPage _marketPage;
 };
