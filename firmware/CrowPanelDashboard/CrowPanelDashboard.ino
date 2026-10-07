@@ -13,6 +13,7 @@
 #include "GraphicsBW.h"
 #include "Icons.h"
 #include "MarketDataService.h"
+#include "MarketPageState.h"
 #include "NavigationController.h"
 #include "PageRenderer.h"
 #include "SecureHttpClient.h"
@@ -49,6 +50,9 @@ bool visiblePageRefreshPending = false;
 
 WeatherSnapshot lastRenderedWeatherSnapshot{};
 bool hasRenderedWeatherSnapshot = false;
+
+MarketPageState lastRenderedMarketPageState{};
+bool hasRenderedMarketPageState = false;
 
 WiFiManager wifiManager;
 TimeService timeService;
@@ -871,6 +875,79 @@ static void printMarketValue(
   }
 }
 
+static bool copyMarketPagePrice(
+    char* destination,
+    size_t capacity,
+    const char* symbol) {
+  if (destination == nullptr || capacity == 0 ||
+      symbol == nullptr) {
+    return false;
+  }
+
+  const MarketPriceValue* value =
+      marketDataService.lastValidValue(symbol);
+  const char* source =
+      value != nullptr ? value->price : "--";
+
+  if (strlen(source) >= capacity) {
+    return false;
+  }
+
+  strcpy(destination, source);
+  return true;
+}
+
+static bool buildLiveMarketPageState(
+    MarketPageState& state) {
+  initializeMarketPageState(state);
+
+  return copyMarketPagePrice(
+             state.btcPrice,
+             sizeof(state.btcPrice),
+             "BTCUSDT") &&
+         copyMarketPagePrice(
+             state.ethPrice,
+             sizeof(state.ethPrice),
+             "ETHUSDT") &&
+         copyMarketPagePrice(
+             state.hypePrice,
+             sizeof(state.hypePrice),
+             "HYPEUSDT");
+}
+
+static void queueVisibleMarketPageRefreshIfNeeded() {
+  if (visiblePage != PageId::MARKETS) {
+    return;
+  }
+
+  MarketPageState latest{};
+
+  if (!buildLiveMarketPageState(latest)) {
+    Serial.println(
+        "FAIL: could not build visible Market page state."
+    );
+    return;
+  }
+
+  if (hasRenderedMarketPageState &&
+      sameMarketPageContent(
+          lastRenderedMarketPageState,
+          latest)) {
+    Serial.println(
+        "Market page prices unchanged; "
+        "no physical page refresh queued."
+    );
+    return;
+  }
+
+  visiblePageRefreshPending = true;
+
+  Serial.println(
+      "Market page prices changed; "
+      "application queued one visible-page refresh."
+  );
+}
+
 static bool stageLiveMarketWidget(
     const MarketPriceValue& value) {
   const CryptoWidgetState widgetState = {
@@ -1005,6 +1082,8 @@ static void runPhase5B3MarketPollIfDue() {
   Serial.println(
       "Market-data code does not trigger E-paper refresh directly."
   );
+  queueVisibleMarketPageRefreshIfNeeded();
+
   Serial.println(
       "The existing application flush handles staged market changes on the next loop."
   );
@@ -1397,13 +1476,20 @@ static bool flushVisiblePageChangeIfNeeded() {
   const WeatherSnapshot* weatherSnapshot =
       weatherService.lastValidSnapshot();
 
-  Serial.print("Phase 7C-2 rendering page: ");
+  MarketPageState marketState{};
+  if (!buildLiveMarketPageState(marketState)) {
+    Serial.println("FAIL: could not build Market page state.");
+    return false;
+  }
+
+  Serial.print("Phase 7C-3 rendering page: ");
   Serial.println(PageModel::pageName(targetPage));
 
   if (!pageRenderer.render(
           targetPage,
           dashboardState,
-          weatherSnapshot)) {
+          weatherSnapshot,
+          marketState)) {
     Serial.println("FAIL: page renderer rejected selected page.");
     return false;
   }
@@ -1463,7 +1549,16 @@ static bool flushVisiblePageChangeIfNeeded() {
     }
   }
 
-  Serial.print("Phase 7C-2 visible page is now: ");
+  if (targetPage == PageId::MARKETS) {
+    lastRenderedMarketPageState = marketState;
+    hasRenderedMarketPageState = true;
+
+    Serial.println(
+        "Market page rendered from current per-symbol last-valid prices."
+    );
+  }
+
+  Serial.print("Phase 7C-3 visible page is now: ");
   Serial.println(PageModel::pageName(visiblePage));
   return true;
 }
@@ -1637,7 +1732,7 @@ static void handlePanelInputIfAny() {
     return;
   }
 
-  Serial.print("Phase 7C-2 input event: ");
+  Serial.print("Phase 7C-3 input event: ");
   Serial.println(inputEventName(event));
 
   const NavigationState before = navigationController.state();
@@ -1660,7 +1755,7 @@ static void handlePanelInputIfAny() {
 
   Serial.println(
       "No visible page change; "
-      "Phase 7C-2 does not refresh the display."
+      "Phase 7C-3 does not refresh the display."
   );
 }
 
@@ -1671,20 +1766,20 @@ void setup() {
   buttonManager.begin();
 
   Serial.println();
-  Serial.println("EDP Phase 7C-2: live weather page");
+  Serial.println("EDP Phase 7C-3: live market page");
   Serial.println("DASHBOARD keeps the production dashboard renderer.");
-  Serial.println("WEATHER renders current, five future hours, and tomorrow.");
-  Serial.println("MARKETS remains the Phase 7C-1 placeholder.");
+  Serial.println("WEATHER keeps the Phase 7C-2 live forecast page.");
+  Serial.println("MARKETS renders BTC / ETH / HYPE last-valid prices.");
   Serial.println("UP/DOWN page changes use the verified full-frame partial path.");
   Serial.println("MENU/EXIT mode changes remain non-rendering.");
-  Serial.println("WeatherService remains data-only; application owns page refresh.");
+  Serial.println("MarketDataService remains data-only; application owns page refresh.");
 
   if (!runNavigationSelfCheck()) {
-    Serial.println("FAIL: Phase 7C-2 page/navigation self-check failed.");
+    Serial.println("FAIL: Phase 7C-3 page/navigation self-check failed.");
     return;
   }
 
-  Serial.println("PASS: Phase 7C-2 page/navigation self-check.");
+  Serial.println("PASS: Phase 7C-3 page/navigation self-check.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
