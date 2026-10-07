@@ -19,9 +19,6 @@ public:
               const MarketPageState& marketState);
 
 private:
-  bool renderPlaceholder(const char* title);
-  int16_t centeredTextX(const char* text, uint8_t scale) const;
-
   GraphicsBW& _graphics;
   Dashboard& _dashboard;
   WeatherPage _weatherPage;
