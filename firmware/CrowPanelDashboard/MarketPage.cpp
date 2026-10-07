@@ -29,6 +29,30 @@ bool MarketPage::renderRow(
     return false;
   }
 
+  static constexpr uint16_t PRICE_RIGHT_X = 760;
+  const uint16_t availableWidth =
+      static_cast<uint16_t>(PRICE_RIGHT_X - PRICE_X);
+
+  uint8_t priceScale = 3;
+
+  while (priceScale > 1 &&
+         _graphics.textWidth(
+             Font5x7::FONT,
+             price,
+             priceScale) > availableWidth) {
+    --priceScale;
+  }
+
+  const uint16_t priceWidth =
+      _graphics.textWidth(
+          Font5x7::FONT,
+          price,
+          priceScale);
+
+  if (priceWidth == 0 || priceWidth > availableWidth) {
+    return false;
+  }
+
   return _graphics.drawText(
              Font5x7::FONT,
              label,
@@ -41,7 +65,7 @@ bool MarketPage::renderRow(
              price,
              PRICE_X,
              y,
-             3,
+             priceScale,
              true);
 }
 
