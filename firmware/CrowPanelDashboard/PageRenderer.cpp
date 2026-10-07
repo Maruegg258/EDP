@@ -16,13 +16,15 @@ PageRenderer::PageRenderer(
     Dashboard& dashboard)
     : _graphics(graphics),
       _dashboard(dashboard),
-      _weatherPage(graphics) {
+      _weatherPage(graphics),
+      _marketPage(graphics) {
 }
 
 bool PageRenderer::render(
     PageId page,
     const DashboardState& dashboardState,
-    const WeatherSnapshot* weatherSnapshot) {
+    const WeatherSnapshot* weatherSnapshot,
+    const MarketPageState& marketState) {
   switch (page) {
     case PageId::DASHBOARD:
       return _dashboard.render(dashboardState);
@@ -31,7 +33,7 @@ bool PageRenderer::render(
       return _weatherPage.render(weatherSnapshot);
 
     case PageId::MARKETS:
-      return renderPlaceholder("MARKETS");
+      return _marketPage.render(marketState);
   }
 
   return false;
