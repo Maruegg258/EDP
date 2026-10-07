@@ -73,8 +73,10 @@ CrowPanelDashboard.ino
         |    +-- MarketDataService   (BTC/ETH/HYPE polling hardware verified)
         |
         +-- ui/
-             +-- PageRenderer        (Phase 7C-2 weather dispatch hardware verified)
+             +-- PageRenderer        (Phase 7C-3 page dispatch implemented; verification pending)
              +-- WeatherPage         (Phase 7C-2 hardware verified)
+             +-- MarketPage          (Phase 7C-3 implemented; hardware verification pending)
+             +-- MarketPageState     (provider-neutral visible price state)
              +-- WidgetStates        (implemented)
              +-- DashboardDirty      (implemented)
              +-- WidgetStateCompare  (implemented)
@@ -173,6 +175,8 @@ Phase 7C-1 introduces the first physical page switching. `PageRenderer` dispatch
 
 Phase 7C-2 replaces the WEATHER placeholder with a functional `WeatherPage`. It reads the existing last-valid `WeatherSnapshot` produced by Phase 6 and renders current conditions, all five future hourly slots, and tomorrow high/low/condition/precipitation information using the existing project-owned 1-bit font system. A missing snapshot produces a safe `DATA NOT READY` page. The application stores the last physically rendered weather snapshot and compares exactly the WEATHER-page-visible current/hourly/tomorrow fields before queueing an in-place WEATHER refresh, so forecast-only changes are not missed while provider-only or unchanged values do not cause unnecessary E-paper activity. `WeatherService` remains independent of display control. Live Weather page rendering, switching between DASHBOARD / WEATHER / MARKETS, snapshot-change refresh gating, and clear refresh quality were verified on hardware on 2026-10-07.
 
+Phase 7C-3 replaces the MARKETS placeholder with a functional `MarketPage`. The application converts the Phase 5 per-symbol last-valid BTCUSDT / ETHUSDT / HYPEUSDT values into a provider-neutral `MarketPageState`; each missing value renders independently as `--`. Only the three visible price strings participate in Market-page dirty detection, so Binance source-time metadata cannot cause an unnecessary E-paper update. While MARKETS is visible, a successful production market poll queues one page refresh only if at least one displayed price changes. The page uses the existing 1-bit font system and automatically reduces price text scale if a valid price string would otherwise exceed its available row width. `MarketDataService` remains independent of display control. Hardware verification is pending.
+
 ## Current repository structure
 
 ```text
@@ -200,6 +204,9 @@ EDP/
 │     ├─ WeatherPage.h
 │     ├─ WeatherPage.cpp
 │     ├─ WeatherSnapshotCompare.h
+│     ├─ MarketPage.h
+│     ├─ MarketPage.cpp
+│     ├─ MarketPageState.h
 │     ├─ WidgetStates.h
 │     ├─ DashboardDirty.h
 │     ├─ WidgetStateCompare.h
