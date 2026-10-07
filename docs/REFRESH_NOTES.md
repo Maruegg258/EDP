@@ -81,3 +81,14 @@ begin / reset
 Forward and reverse page cycling were both stable. Leaving a non-dashboard page visible while background Clock / Wi-Fi / Market / Weather data continued to stage did not cause the dashboard to overwrite the selected page. Returning to DASHBOARD rendered the newest pending dashboard state.
 
 No additional Full Refresh was required for page switching, and the hardware test did not reveal a need to change the existing refresh strategy. The established rule remains: do not add periodic or page-change Full Refresh behavior without new hardware evidence.
+
+
+## Phase 7C-3 live market page verification
+
+### 2026-10-07 hardware verification
+
+**PASS on the development panel.** The MARKETS page displayed live last-valid BTC / ETH / HYPE prices and refreshed in place when the visible price strings changed during the existing 60-second production market polling flow.
+
+The application continued to own all display decisions: `MarketDataService` updated data only, visible-price comparison decided whether the current MARKETS page needed a refresh, and the physical update used the existing verified full-frame partial path. Market updates did not force a return to DASHBOARD, and returning to DASHBOARD restored the newest pending dashboard state correctly.
+
+Repeated page switching and in-place market refreshes remained visually clear in hardware testing. No new Full Refresh behavior was required.
