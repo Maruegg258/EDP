@@ -1,6 +1,6 @@
 # Phase 7D — Dashboard DETAIL system actions
 
-**Implementation committed; hardware verification pending (2026-10-08).**
+**Hardware Verified / PASS on the development panel (2026-10-08).**
 
 ## Scope
 
@@ -24,7 +24,7 @@ No timer wake is armed; normal polling, networking and firmware `loop()` stop du
 
 On GPIO1/GPIO2 wake, ESP32-S3 resets/restarts the sketch. Every firmware boot (including an EN/reset-button restart while the device is asleep) first configures GPIO7 LOW and releases any retained deep-sleep hold, then performs normal Dashboard startup, Wi-Fi reconnect and service synchronization. A short wake-button release guard prevents treating the waking press as an ordinary MENU selection when possible.
 
-**Important hardware qualification:** the E-paper visual persistence, GPIO7 power-gate polarity, EXT1 button wake response, retention of the wake-pin pull-ups while asleep, and real sleep current are **not yet verified in this checkpoint**. GPIO1/GPIO2 fall within the documented ESP32-S3 RTC GPIO 0–21 range, and the board's external pull-ups were previously verified for active-low button use in normal operation. The electrical sleep-current and external pull-up behavior still require practical testing. A USB-connected development board may draw more than bare ESP32 deep-sleep current.
+**Hardware qualification after functional PASS:** the crescent-moon screen, standby behavior, and MENU/EXIT wake-up path have been confirmed working on the development unit. This functional result does **not** prove the exact retained voltage on GPIO7, the current through the panel power rail, the external pull-up resistance in sleep, or the entire USB-powered board's deep-sleep current. Those electrical measurements remain outstanding. GPIO1/GPIO2 are the configured wake sources, and the sketch does not start BLE.
 
 ## DISPLAY CLEAN
 
@@ -42,7 +42,7 @@ fast-mode reset/init
 
 The Application updates its saved physical framebuffer after success and commits pending Dashboard state only after the physical operation succeeds. It returns to PAGE DASHBOARD without reboot or extra E-paper refresh. The existing no-periodic-Full-Refresh rule remains unchanged.
 
-## Regression checks requested
+## Hardware verification and regression checklist
 
 - From PAGE DASHBOARD, MENU displays two items; UP/DOWN select; EXIT returns to newest Dashboard.
 - Leave DETAIL visible across a scheduled clock/market update: it should not be overwritten automatically.
@@ -53,4 +53,6 @@ The Application updates its saved physical framebuffer after success and commits
 - Recheck transition to WEATHER/MARKETS after wake; ensure no stale framebuffer artifacts.
 - Measure sleep power independently if low-current verification is required.
 
-Do not mark hardware PASS until the above hardware tests have been observed.
+### 2026-10-08 hardware result
+
+**PASS — user reported real-panel tests normal** after testing the Phase 7D integration. Dashboard DETAIL navigation, manual DISPLAY CLEAN, crescent-moon standby/wake and continued normal operation are accepted as the functional baseline. The input/deep-sleep/wake and E-paper paths should retain regression coverage in future firmware changes. There are no board-current or rail-voltage measurements in this result; do not equate functional standby with a quantified low-power rating.
