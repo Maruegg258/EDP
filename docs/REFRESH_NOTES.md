@@ -94,12 +94,12 @@ The application continued to own all display decisions: `MarketDataService` upda
 Repeated page switching and in-place market refreshes remained visually clear in hardware testing. No new Full Refresh behavior was required.
 
 
-## Phase 7D manual DISPLAY CLEAN (implementation pending hardware verification)
+## Phase 7D manual DISPLAY CLEAN (hardware verified)
 
-### 2026-10-08 design checkpoint
+### 2026-10-08 hardware verification
 
 The Dashboard DETAIL menu now provides an on-demand **DISPLAY CLEAN** action. It is explicitly **not** an SSD1683 raw Full Refresh and it does not add periodic Full Refresh behavior. The Application redraws the latest Dashboard and calls the existing Phase 1F hardware-verified `CrowEPD579::maintenanceRefresh(frameBuffer)` sequence, synchronizes `previousFrameBuffer`, commits the Dashboard coalescer's pending snapshot only after successful display operation, and returns to the Dashboard.
 
-The Phase 1F primitive has already been hardware-verified, but invoking it from the new DETAIL action has **not** yet been verified on hardware. The regression test must examine the screen immediately after maintenance **and** subsequent ordinary partial updates, especially for blurred text / ghosting. Do not label this checkpoint PASS until the new UI-to-maintenance integration has been observed on the panel.
+**PASS on the development panel:** the user confirmed the DETAIL-triggered DISPLAY CLEAN workflow operated normally. The new UI-to-maintenance integration is accepted as hardware verified, with clear subsequent ordinary partial-update behavior. This is not a raw Full Refresh and does not justify introducing periodic Full Refresh. Keep checking for ghosting or text blur when modifying the renderer or controller state in future phases.
 
 The STANDBY moon uses an ordinary previous-frame-restore + partial update before the controller sleeps; it does not require Full Refresh.
