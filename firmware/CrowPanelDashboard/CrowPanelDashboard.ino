@@ -1979,17 +1979,17 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
+  // Always release a possible retained GPIO7 hold before driver init.
+  // This covers EXT1 wake as well as an EN/reset-button restart while asleep.
+  pinMode(CrowEPD579::PIN_PANEL_POWER, OUTPUT);
+  digitalWrite(CrowEPD579::PIN_PANEL_POWER, LOW);
+  gpio_deep_sleep_hold_dis();
+  gpio_hold_dis(
+      static_cast<gpio_num_t>(CrowEPD579::PIN_PANEL_POWER));
+
   const esp_sleep_wakeup_cause_t wakeCause =
       esp_sleep_get_wakeup_cause();
   if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
-    // GPIO7 was held LOW to keep the panel power rail disabled.
-    // Update its output configuration to LOW before releasing the hold;
-    // CrowEPD579::begin() will enable the panel on demand later.
-    pinMode(CrowEPD579::PIN_PANEL_POWER, OUTPUT);
-    digitalWrite(CrowEPD579::PIN_PANEL_POWER, LOW);
-    gpio_deep_sleep_hold_dis();
-    gpio_hold_dis(
-        static_cast<gpio_num_t>(CrowEPD579::PIN_PANEL_POWER));
     Serial.println("Wake reason: EXT1 MENU/EXIT, restarting Dashboard.");
     const uint64_t pins = esp_sleep_get_ext1_wakeup_status();
     Serial.printf(
