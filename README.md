@@ -53,7 +53,7 @@ CrowPanelDashboard.ino
         |    +-- InputEvent          (shared logical input vocabulary)
         |    +-- PageModel           (Phase 7B-2 named pages hardware verified)
         |    +-- NavigationController (Phase 7B-2 named-page navigation hardware verified)
-        |    +-- DashboardActionMenu (Phase 7D implementation; hardware verification pending)
+        |    +-- DashboardActionMenu (Phase 7D hardware verified)
         |
         +-- graphics/
         |    +-- GraphicsBW          (implemented)
@@ -77,7 +77,7 @@ CrowPanelDashboard.ino
              +-- PageRenderer        (Phase 7C-3 page dispatch hardware verified)
              +-- WeatherPage         (Phase 7C-2 hardware verified)
              +-- MarketPage          (Phase 7C-3 hardware verified)
-             +-- SystemPages         (Phase 7D DETAIL menu and moon standby view; hardware verification pending)
+             +-- SystemPages         (Phase 7D DETAIL menu and moon standby view hardware verified)
              +-- MarketPageState     (provider-neutral visible price state)
              +-- WidgetStates        (implemented)
              +-- DashboardDirty      (implemented)
@@ -181,7 +181,7 @@ Phase 7C-3 replaces the MARKETS placeholder with a functional `MarketPage`. The 
 
 With Phase 7C-3 verified, all three current top-level pages now have real renderers: `DASHBOARD`, `WEATHER`, and `MARKETS`. The navigation, service/data, application refresh ownership, and E-paper page-switch paths are all hardware-verified at this baseline.
 
-Phase 7D introduces Dashboard-only DETAIL actions (implementation committed; hardware tests pending). MENU opens a two-choice `STANDBY` / `DISPLAY CLEAN` page. UP/DOWN select, MENU executes, and EXIT closes the menu. While DETAIL is visible, application-level Dashboard dirty flushes remain suppressed; EXIT restores the newest Dashboard snapshot. STANDBY composes a small crescent moon, refreshes once via the verified partial path, puts the display controller to sleep, holds GPIO7 LOW to disable panel power during ESP32-S3 Deep Sleep, and turns off Wi-Fi. GPIO1 / GPIO2 alone are armed as EXT1 ANY_LOW wake sources; wake reboots to normal production startup. DISPLAY CLEAN instead refreshes the latest Dashboard through the existing hardware-verified `maintenanceRefresh()`, not a raw Full Refresh or periodic maintenance routine. Sleep/wake behavior, GPIO7 hold, panel current, and menu operation are not yet hardware-verified. See [Phase 7D system actions](docs/PHASE7_SYSTEM_ACTIONS.md) for test details.
+Phase 7D introduces Dashboard-only DETAIL actions (hardware verified on the development panel, 2026-10-08). MENU opens a two-choice `STANDBY` / `DISPLAY CLEAN` page. UP/DOWN select, MENU executes, and EXIT closes the menu. While DETAIL is visible, application-level Dashboard dirty flushes remain suppressed; EXIT restores the newest Dashboard snapshot. STANDBY composes a small crescent moon, refreshes once via the verified partial path, puts the display controller to sleep, holds GPIO7 LOW to disable panel power during ESP32-S3 Deep Sleep, and turns off Wi-Fi. GPIO1 / GPIO2 alone are armed as EXT1 ANY_LOW wake sources; wake reboots to normal production startup. DISPLAY CLEAN instead refreshes the latest Dashboard through the existing hardware-verified `maintenanceRefresh()`, not a raw Full Refresh or periodic maintenance routine. DETAIL selection/exit, crescent-moon standby, deep-sleep wake with the configured MENU/EXIT buttons, resume of the dashboard workflow, and manual DISPLAY CLEAN with continued clear partial updates were functionally verified on hardware. GPIO7 rail voltage and full-board deep-sleep current have not been electrically measured; numerical power-saving claims remain unverified. See [Phase 7D system actions](docs/PHASE7_SYSTEM_ACTIONS.md) for test details.
 
 ## Current repository structure
 
