@@ -18,13 +18,13 @@ bool SystemPages::renderMenu(DashboardAction selection) {
              Font5x7::FONT, "DETAIL", 28, 22, 3, true) &&
          _graphics.drawText(
              Font5x7::FONT,
-             selection == DashboardAction::STANDBY ? ">" : " ",
+             selection == DashboardAction::STANDBY ? "+" : " ",
              LEFT - 34, 89, 3, true) &&
          _graphics.drawText(
              Font5x7::FONT, "STANDBY", LEFT, 89, 3, true) &&
          _graphics.drawText(
              Font5x7::FONT,
-             selection == DashboardAction::DISPLAY_CLEAN ? ">" : " ",
+             selection == DashboardAction::DISPLAY_CLEAN ? "+" : " ",
              LEFT - 34, 153, 3, true) &&
          _graphics.drawText(
              Font5x7::FONT, "DISPLAY CLEAN", LEFT, 153, 3, true) &&
