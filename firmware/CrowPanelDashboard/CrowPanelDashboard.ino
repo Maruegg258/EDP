@@ -1753,38 +1753,211 @@ static bool runNavigationSelfCheck() {
   return true;
 }
 
+static bool enterStandbyDeepSleep() {
+  // Input events arrive only after a stable release. Recheck both wake
+  // pins before arming level-sensitive ANY_LOW wakeup.
+  if (digitalRead(ButtonManager::PIN_MENU) != HIGH ||
+      digitalRead(ButtonManager::PIN_EXIT) != HIGH) {
+    Serial.println("STANDBY cancelled: release MENU and EXIT first.");
+    return false;
+  }
+
+  const uint64_t wakeMask =
+      (1ULL << ButtonManager::PIN_MENU) |
+      (1ULL << ButtonManager::PIN_EXIT);
+
+  const esp_err_t wakeConfigResult =
+      esp_sleep_enable_ext1_wakeup(
+          wakeMask, ESP_EXT1_WAKEUP_ANY_LOW);
+
+  if (wakeConfigResult != ESP_OK) {
+    Serial.printf(
+        "STANDBY cancelled: EXT1 wake configuration failed (%d).\\n",
+        static_cast<int>(wakeConfigResult));
+    return false;
+  }
+
+  // SystemPages owns pixels only; the application performs physical I/O.
+  systemPages.renderStandby();
+
+  if (!display.begin() ||
+      !display.restoreFrameStateForPartial(previousFrameBuffer) ||
+      !display.displayPartialFrame(frameBuffer)) {
+    display.sleep();
+    Serial.println(
+        "STANDBY cancelled: moon frame could not be refreshed.");
+    return false;
+  }
+
+  memcpy(previousFrameBuffer,
+         frameBuffer,
+         CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+
+  // The verified board driver powers the E-paper rail via GPIO7 HIGH.
+  // Disable it only after the controller has finished the final frame.
+  digitalWrite(CrowEPD579::PIN_PANEL_POWER, LOW);
+
+  // No data polling or application loop executes during deep sleep.
+  WiFi.mode(WIFI_OFF);
+  Serial.println(
+      "STANDBY: moon displayed, panel power off, Wi-Fi off.");
+  Serial.println(
+      "STANDBY: MENU (GPIO1) or EXIT (GPIO2) wakes by EXT1 ANY_LOW.");
+  Serial.flush();
+  esp_deep_sleep_start();
+  return false;  // esp_deep_sleep_start() does not normally return.
+}
+
+static bool runDisplayClean() {
+  const DashboardState& latestDashboard =
+      updateCoalescer.hasPendingUpdate()
+          ? updateCoalescer.pendingState()
+          : updateCoalescer.displayedState();
+
+  // Never clean the menu framebuffer: rebuild the actual Dashboard.
+  if (!dashboard.render(latestDashboard)) {
+    Serial.println("DISPLAY CLEAN failed: Dashboard render.");
+    return false;
+  }
+
+  Serial.println(
+      "DISPLAY CLEAN: starting verified maintenanceRefresh().");
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    display.sleep();
+    Serial.println("DISPLAY CLEAN failed: maintenanceRefresh().");
+    return false;
+  }
+
+  memcpy(previousFrameBuffer,
+         frameBuffer,
+         CrowEPD579::FRAMEBUFFER_BYTES);
+
+  bool committed = true;
+  if (updateCoalescer.hasPendingUpdate()) {
+    committed = updateCoalescer.commitPending();
+  }
+
+  display.sleep();
+
+  // The physical screen now shows Dashboard, not the old DETAIL menu.
+  navigationController.handle(InputEvent::EXIT);
+  visiblePage = PageId::DASHBOARD;
+  visiblePageRefreshPending = false;
+
+  if (!committed) {
+    Serial.println(
+        "DISPLAY CLEAN: physical refresh succeeded, but state commit failed.");
+    return false;
+  }
+
+  Serial.println(
+      "DISPLAY CLEAN PASS: maintenance path complete; PAGE DASHBOARD.");
+  return true;
+}
+
+static bool processPendingSystemAction() {
+  const PendingSystemAction action = pendingSystemAction;
+  pendingSystemAction = PendingSystemAction::NONE;
+
+  switch (action) {
+    case PendingSystemAction::NONE:
+      return true;
+    case PendingSystemAction::STANDBY:
+      return enterStandbyDeepSleep();
+    case PendingSystemAction::DISPLAY_CLEAN:
+      return runDisplayClean();
+  }
+
+  return false;
+}
+
+static bool runDashboardMenuSelfCheck() {
+  DashboardActionMenu test;
+  if (test.selected() != DashboardAction::STANDBY ||
+      !test.handle(InputEvent::DOWN) ||
+      test.selected() != DashboardAction::DISPLAY_CLEAN ||
+      !test.handle(InputEvent::UP) ||
+      test.selected() != DashboardAction::STANDBY ||
+      !test.handle(InputEvent::UP) ||
+      test.selected() != DashboardAction::DISPLAY_CLEAN ||
+      test.handle(InputEvent::MENU)) {
+    Serial.println("FAIL: Phase 7D DETAIL menu self-check.");
+    return false;
+  }
+  test.reset();
+  if (test.selected() != DashboardAction::STANDBY) {
+    Serial.println("FAIL: DETAIL menu reset.");
+    return false;
+  }
+  Serial.println(
+      "PASS: Phase 7D DETAIL menu selection self-check.");
+  return true;
+}
+
 static void handlePanelInputIfAny() {
   const InputEvent event = buttonManager.tick();
-
   if (event == InputEvent::NONE) {
     return;
   }
 
-  Serial.print("Phase 7C-3 input event: ");
+  Serial.print("Phase 7D input event: ");
   Serial.println(inputEventName(event));
-
   const NavigationState before = navigationController.state();
+
+  // Dashboard owns its two DETAIL options; other pages retain the
+  // Phase 7C mode-only behavior without creating their own menus.
+  if (before.page == PageId::DASHBOARD &&
+      before.mode == NavigationMode::DETAIL) {
+    if (event == InputEvent::UP || event == InputEvent::DOWN) {
+      if (dashboardActionMenu.handle(event)) {
+        visiblePageRefreshPending = true;
+        Serial.println("DETAIL selection changed; redraw queued.");
+      }
+      return;
+    }
+
+    if (event == InputEvent::MENU) {
+      pendingSystemAction =
+          dashboardActionMenu.selected() == DashboardAction::STANDBY
+              ? PendingSystemAction::STANDBY
+              : PendingSystemAction::DISPLAY_CLEAN;
+      Serial.println(
+          pendingSystemAction == PendingSystemAction::STANDBY
+              ? "DETAIL selected: STANDBY"
+              : "DETAIL selected: DISPLAY CLEAN");
+      return;
+    }
+
+    if (event == InputEvent::EXIT) {
+      navigationController.handle(InputEvent::EXIT);
+      visiblePageRefreshPending = true;
+      Serial.println("DETAIL exit: Dashboard redraw queued.");
+      return;
+    }
+  }
+
   const bool changed = navigationController.handle(event);
   const NavigationState after = navigationController.state();
-
   printNavigationState("Navigation before: ", before);
   printNavigationState(
       changed ? "Navigation after:  " : "Navigation unchanged: ",
-      after
-  );
+      after);
 
   if (changed && before.page != after.page) {
     visiblePageRefreshPending = true;
-
     Serial.print("Visible page refresh queued: ");
     Serial.println(PageModel::pageName(after.page));
     return;
   }
 
-  Serial.println(
-      "No visible page change; "
-      "Phase 7C-3 does not refresh the display."
-  );
+  if (changed && before.page == PageId::DASHBOARD &&
+      before.mode == NavigationMode::PAGE &&
+      after.mode == NavigationMode::DETAIL) {
+    dashboardActionMenu.reset();
+    visiblePageRefreshPending = true;
+    Serial.println("Dashboard DETAIL menu refresh queued.");
+  }
 }
 
 void setup() {
