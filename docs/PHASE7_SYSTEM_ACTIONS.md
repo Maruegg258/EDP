@@ -22,7 +22,7 @@ The UI layer draws a small monochrome crescent moon in a new framebuffer and mak
 
 No timer wake is armed; normal polling, networking and firmware `loop()` stop during Deep Sleep. Bluetooth was not enabled in the production firmware and is not started as part of this feature.
 
-On GPIO1/GPIO2 wake, ESP32-S3 resets/restarts the sketch. Firmware releases GPIO7's deep-sleep hold after configuring the output LOW, then performs normal Dashboard startup, Wi-Fi reconnect and service synchronization. A short wake-button release guard prevents treating the waking press as an ordinary MENU selection when possible.
+On GPIO1/GPIO2 wake, ESP32-S3 resets/restarts the sketch. Every firmware boot (including an EN/reset-button restart while the device is asleep) first configures GPIO7 LOW and releases any retained deep-sleep hold, then performs normal Dashboard startup, Wi-Fi reconnect and service synchronization. A short wake-button release guard prevents treating the waking press as an ordinary MENU selection when possible.
 
 **Important hardware qualification:** the E-paper visual persistence, GPIO7 power-gate polarity, EXT1 button wake response, retention of the wake-pin pull-ups while asleep, and real sleep current are **not yet verified in this checkpoint**. GPIO1/GPIO2 fall within the documented ESP32-S3 RTC GPIO 0–21 range, and the board's external pull-ups were previously verified for active-low button use in normal operation. The electrical sleep-current and external pull-up behavior still require practical testing. A USB-connected development board may draw more than bare ESP32 deep-sleep current.
 
