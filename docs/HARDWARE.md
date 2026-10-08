@@ -67,3 +67,13 @@ The EDP firmware intentionally assigns application semantics according to the pa
 ### 2026-10-06 Phase 7A-2 hardware verification
 
 **PASS on the development unit.** GPIO1 produced `MENU`, GPIO4 produced `UP`, GPIO6 produced `DOWN`, and GPIO2 produced `EXIT` through the debounced release-event path. GPIO5 remained intentionally unused. No input event affected the production dashboard or triggered E-paper refresh.
+
+
+## Phase 7D standby / wake wiring plan (NOT YET hardware verified)
+
+- **GPIO1 (EDP MENU) and GPIO2 (EDP EXIT)**: selected ESP32-S3 EXT1 `ANY_LOW` deep-sleep wake pins. These two pins are in the ESP32-S3 RTC-GPIO 0–21 range. Board-normal active-low events and button pull-ups were verified in Phase 7A, but external wake behavior and pull-up retention during sleep have not yet been validated.
+- **GPIO4 / GPIO6 rotary input and GPIO5 push**: intentionally excluded from deep-sleep wake.
+- **GPIO7 E-paper power enable**: project driver powers the panel with HIGH during normal operation. Phase 7D proposes LOW during deep sleep with `gpio_hold_en` + `gpio_deep_sleep_hold_en`, then unconditionally clears the hold on every boot. Actual deep-sleep rail voltage/current and retention of LOW require measurement or hardware observation.
+- USB-powered full-board standby current may differ substantially from ESP32-S3 chip-only deep-sleep current.
+
+These are implementation targets/SDK-supported behaviors, **not new hardware verification claims**. See [PHASE7_SYSTEM_ACTIONS.md](PHASE7_SYSTEM_ACTIONS.md).
