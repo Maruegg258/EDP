@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <cstring>
 #include "esp_sleep.h"
+#include "driver/gpio.h"
 
 #include "ButtonManager.h"
 #include "CrowEPD579.h"
@@ -1772,7 +1773,7 @@ static bool enterStandbyDeepSleep() {
 
   if (wakeConfigResult != ESP_OK) {
     Serial.printf(
-        "STANDBY cancelled: EXT1 wake configuration failed (%d).\\n",
+        "STANDBY cancelled: EXT1 wake configuration failed (%d).\n",
         static_cast<int>(wakeConfigResult));
     return false;
   }
@@ -1797,6 +1798,17 @@ static bool enterStandbyDeepSleep() {
   // The verified board driver powers the E-paper rail via GPIO7 HIGH.
   // Disable it only after the controller has finished the final frame.
   digitalWrite(CrowEPD579::PIN_PANEL_POWER, LOW);
+  const gpio_num_t powerPin =
+      static_cast<gpio_num_t>(CrowEPD579::PIN_PANEL_POWER);
+  const esp_err_t holdResult = gpio_hold_en(powerPin);
+  if (holdResult != ESP_OK) {
+    // Do not sleep without guaranteeing panel-power pin state.
+    digitalWrite(CrowEPD579::PIN_PANEL_POWER, HIGH);
+    visiblePageRefreshPending = true;
+    Serial.println("STANDBY cancelled: E-paper power GPIO hold failed.");
+    return false;
+  }
+  gpio_deep_sleep_hold_en();
 
   // No data polling or application loop executes during deep sleep.
   WiFi.mode(WIFI_OFF);
@@ -1967,10 +1979,18 @@ void setup() {
   const esp_sleep_wakeup_cause_t wakeCause =
       esp_sleep_get_wakeup_cause();
   if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
+    // GPIO7 was held LOW to keep the panel power rail disabled.
+    // Update its output configuration to LOW before releasing the hold;
+    // CrowEPD579::begin() will enable the panel on demand later.
+    pinMode(CrowEPD579::PIN_PANEL_POWER, OUTPUT);
+    digitalWrite(CrowEPD579::PIN_PANEL_POWER, LOW);
+    gpio_deep_sleep_hold_dis();
+    gpio_hold_dis(
+        static_cast<gpio_num_t>(CrowEPD579::PIN_PANEL_POWER));
     Serial.println("Wake reason: EXT1 MENU/EXIT, restarting Dashboard.");
     const uint64_t pins = esp_sleep_get_ext1_wakeup_status();
     Serial.printf(
-        "EXT1 wake pin mask: 0x%llX\\n",
+        "EXT1 wake pin mask: 0x%llX\n",
         static_cast<unsigned long long>(pins));
 
     // Avoid treating the wake press release as a new MENU/EXIT event.
