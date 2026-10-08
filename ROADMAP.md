@@ -245,17 +245,13 @@ Phase 7D checkpoints (hardware verified on the development panel, 2026-10-08):
 
 See [docs/PHASE7_SYSTEM_ACTIONS.md](docs/PHASE7_SYSTEM_ACTIONS.md) for the safety boundaries and practical verification checklist.
 
-Planned work:
+Phase 7 accepted scope is complete as of 2026-10-08: the hardware buttons, debounced short-press navigation, three real pages, Dashboard DETAIL menu, moon STANDBY/Deep Sleep wake, and on-demand DISPLAY CLEAN are hardware-verified.
 
-- Identify and verify panel button GPIOs
-- Debouncing
-- Short press
-- Long press
-- Double press if reliable
-- Page switching
-- Manual data refresh
-- Status/settings view
-- Optional controlled network/reset actions
+Scope decisions (2026-10-08):
+
+- **Manual data refresh: deferred, not a Phase 7 acceptance requirement.** The existing minute-level market/clock and 30-minute weather polling is sufficient for current use. For an exceptional malfunction the user prefers the device's hardware Reset/restart over an extra UI command; reset is not being treated as a substitute for DISPLAY CLEAN.
+- **Deep Sleep current / power consumption measurement: explicitly out of scope for this USB-powered, no-battery configuration.** Standby/wake functionality is verified, but power rail voltage and sleep current are not measured and must not be presented as numerical evidence of low power. No measurement is required to close Phase 7.
+- Long-press / double-press and extended settings/network controls remain optional future ideas, not blockers for Phase 8.
 
 ## Phase 8 — UI refinement
 
