@@ -1781,8 +1781,11 @@ static bool enterStandbyDeepSleep() {
   // SystemPages owns pixels only; the application performs physical I/O.
   systemPages.renderStandby();
 
-  if (!display.begin() ||
-      !display.restoreFrameStateForPartial(previousFrameBuffer) ||
+  if (!display.begin()) {
+    Serial.println("STANDBY cancelled: display begin failed.");
+    return false;
+  }
+  if (!display.restoreFrameStateForPartial(previousFrameBuffer) ||
       !display.displayPartialFrame(frameBuffer)) {
     display.sleep();
     Serial.println(
