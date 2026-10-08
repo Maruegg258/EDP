@@ -24,7 +24,7 @@ No timer wake is armed; normal polling, networking and firmware `loop()` stop du
 
 On GPIO1/GPIO2 wake, ESP32-S3 resets/restarts the sketch. Every firmware boot (including an EN/reset-button restart while the device is asleep) first configures GPIO7 LOW and releases any retained deep-sleep hold, then performs normal Dashboard startup, Wi-Fi reconnect and service synchronization. A short wake-button release guard prevents treating the waking press as an ordinary MENU selection when possible.
 
-**Hardware qualification after functional PASS:** the crescent-moon screen, standby behavior, and MENU/EXIT wake-up path have been confirmed working on the development unit. This functional result does **not** prove the exact retained voltage on GPIO7, the current through the panel power rail, the external pull-up resistance in sleep, or the entire USB-powered board's deep-sleep current. Those electrical measurements remain outstanding. GPIO1/GPIO2 are the configured wake sources, and the sketch does not start BLE.
+**Hardware qualification after functional PASS:** the crescent-moon screen, standby behavior, and MENU/EXIT wake-up path have been confirmed working on the development unit. This functional result does **not** prove the exact retained voltage on GPIO7, the current through the panel power rail, the external pull-up resistance in sleep, or the entire USB-powered board's deep-sleep current. Those electrical values remain unmeasured. The user has explicitly excluded power measurement from the present USB-only/no-battery project scope (2026-10-08); it is not a required test or blocker. GPIO1/GPIO2 are the configured wake sources, and the sketch does not start BLE.
 
 ## DISPLAY CLEAN
 
@@ -51,8 +51,8 @@ The Application updates its saved physical framebuffer after success and commits
 - Confirm that UP/DOWN cannot wake from Deep Sleep.
 - Confirm wake restores production Dashboard, Wi-Fi, NTP and weather/market retrieval.
 - Recheck transition to WEATHER/MARKETS after wake; ensure no stale framebuffer artifacts.
-- Measure sleep power independently if low-current verification is required.
+- Power measurement is **not required for the current USB-powered project** (scope decision, 2026-10-08). Only perform electrical measurements if a future battery/energy-budget goal makes them necessary.
 
 ### 2026-10-08 hardware result
 
-**PASS — user reported real-panel tests normal** after testing the Phase 7D integration. Dashboard DETAIL navigation, manual DISPLAY CLEAN, crescent-moon standby/wake and continued normal operation are accepted as the functional baseline. The input/deep-sleep/wake and E-paper paths should retain regression coverage in future firmware changes. There are no board-current or rail-voltage measurements in this result; do not equate functional standby with a quantified low-power rating.
+**PASS — user reported real-panel tests normal** after testing the Phase 7D integration. Dashboard DETAIL navigation, manual DISPLAY CLEAN, crescent-moon standby/wake and continued normal operation are accepted as the functional baseline. The input/deep-sleep/wake and E-paper paths should retain regression coverage in future firmware changes. There are no board-current or rail-voltage measurements in this result; do not equate functional standby with a quantified low-power rating. The user has accepted functional Deep Sleep behavior without electrical current measurements and has deferred manual data-refresh controls (2026-10-08).
