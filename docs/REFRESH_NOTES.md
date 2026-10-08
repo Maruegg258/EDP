@@ -92,3 +92,14 @@ No additional Full Refresh was required for page switching, and the hardware tes
 The application continued to own all display decisions: `MarketDataService` updated data only, visible-price comparison decided whether the current MARKETS page needed a refresh, and the physical update used the existing verified full-frame partial path. Market updates did not force a return to DASHBOARD, and returning to DASHBOARD restored the newest pending dashboard state correctly.
 
 Repeated page switching and in-place market refreshes remained visually clear in hardware testing. No new Full Refresh behavior was required.
+
+
+## Phase 7D manual DISPLAY CLEAN (implementation pending hardware verification)
+
+### 2026-10-08 design checkpoint
+
+The Dashboard DETAIL menu now provides an on-demand **DISPLAY CLEAN** action. It is explicitly **not** an SSD1683 raw Full Refresh and it does not add periodic Full Refresh behavior. The Application redraws the latest Dashboard and calls the existing Phase 1F hardware-verified `CrowEPD579::maintenanceRefresh(frameBuffer)` sequence, synchronizes `previousFrameBuffer`, commits the Dashboard coalescer's pending snapshot only after successful display operation, and returns to the Dashboard.
+
+The Phase 1F primitive has already been hardware-verified, but invoking it from the new DETAIL action has **not** yet been verified on hardware. The regression test must examine the screen immediately after maintenance **and** subsequent ordinary partial updates, especially for blurred text / ghosting. Do not label this checkpoint PASS until the new UI-to-maintenance integration has been observed on the panel.
+
+The STANDBY moon uses an ordinary previous-frame-restore + partial update before the controller sleeps; it does not require Full Refresh.
