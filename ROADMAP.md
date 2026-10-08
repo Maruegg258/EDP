@@ -236,6 +236,15 @@ Phase 7A checkpoints:
 - [x] Phase 7C-2: Replace the WEATHER placeholder with a functional weather page backed by the existing Phase 6 `WeatherService::lastValidSnapshot()` contract. Render current conditions, the five future hourly slots, and tomorrow summary with functional 1-bit typography only; keep MARKETS as a placeholder. If no last-valid weather exists, render a safe DATA NOT READY state. Track the last physically rendered weather snapshot and queue a WEATHER page refresh only when the visible snapshot actually changes, including hourly/tomorrow-only changes that may not dirty the compact Dashboard Weather widget. WeatherService remains data-only and never controls E-paper refresh directly. Live Weather page rendering, page switching, snapshot-change refresh gating, and refresh quality were verified on hardware (2026-10-07).
 - [x] Phase 7C-3: Replace the MARKETS placeholder with a functional market page backed by Phase 5 BTCUSDT / ETHUSDT / HYPEUSDT last-valid values. Keep each symbol independent: unavailable symbols render `--` while valid symbols keep their last-valid price. Render only provider-neutral BTC / ETH / HYPE labels and visible price strings; Binance source-time metadata is intentionally not part of the page dirty contract. Track the last physically rendered Market page state and queue a MARKETS refresh only when at least one visible price string changes. MarketDataService remains data-only and never controls E-paper refresh directly. Live market rendering, in-place price refresh, page switching, return-to-dashboard behavior, and refresh quality were verified on hardware (2026-10-07).
 
+
+Phase 7D checkpoints (implementation committed; hardware verification pending):
+
+- [ ] Phase 7D-1: Make Dashboard MENU show a real two-option DETAIL page with STANDBY and DISPLAY CLEAN. UP/DOWN switch selection, MENU confirms, EXIT returns to the newest Dashboard. Application suppresses background Dashboard flushes while DETAIL is visible. Preserve existing WEATHER / MARKETS navigation and refresh paths (2026-10-08).
+- [ ] Phase 7D-2: STANDBY draws a small 1-bit crescent moon, performs one verified partial page update, puts the E-paper controller to sleep, disables GPIO7 panel power with deep-sleep GPIO hold, disables Wi-Fi, and enters ESP32-S3 Deep Sleep. EXT1 ANY_LOW wake is restricted to GPIO1=MENU or GPIO2=EXIT; waking restarts production firmware. Sleep/wake/power-gate hardware behavior remains unverified (2026-10-08).
+- [ ] Phase 7D-3: DISPLAY CLEAN recomposes the latest Dashboard and performs one user-requested, Phase 1F-verified maintenanceRefresh (fast clear → physical white → previous RAM white → new frame → partial refresh → RAM sync), not raw Full Refresh. Commit pending dashboard state only after a successful refresh; verify later partial updates remain crisp (2026-10-08).
+
+See [docs/PHASE7_SYSTEM_ACTIONS.md](docs/PHASE7_SYSTEM_ACTIONS.md) for the safety boundaries and practical verification checklist.
+
 Planned work:
 
 - Identify and verify panel button GPIOs
