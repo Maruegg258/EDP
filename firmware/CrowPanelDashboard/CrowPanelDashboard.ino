@@ -1,9 +1,12 @@
 #include <Arduino.h>
+#include <WiFi.h>
 #include <cstring>
+#include "esp_sleep.h"
 
 #include "ButtonManager.h"
 #include "CrowEPD579.h"
 #include "Dashboard.h"
+#include "DashboardActionMenu.h"
 #include "DashboardDirty.h"
 #include "DashboardState.h"
 #include "DashboardStateCompare.h"
@@ -17,6 +20,7 @@
 #include "NavigationController.h"
 #include "PageRenderer.h"
 #include "SecureHttpClient.h"
+#include "SystemPages.h"
 #include "TimeService.h"
 #include "TlsTrustAnchors.h"
 #include "WeatherService.h"
@@ -41,12 +45,21 @@ GraphicsBW graphics(
 
 Dashboard dashboard(graphics);
 PageRenderer pageRenderer(graphics, dashboard);
+SystemPages systemPages(graphics);
+DashboardActionMenu dashboardActionMenu;
 DashboardUpdateCoalescer updateCoalescer;
 ButtonManager buttonManager;
 
 NavigationController navigationController;
 PageId visiblePage = PageId::DASHBOARD;
 bool visiblePageRefreshPending = false;
+
+enum class PendingSystemAction : uint8_t {
+  NONE,
+  STANDBY,
+  DISPLAY_CLEAN
+};
+PendingSystemAction pendingSystemAction = PendingSystemAction::NONE;
 
 WeatherSnapshot lastRenderedWeatherSnapshot{};
 bool hasRenderedWeatherSnapshot = false;
