@@ -1964,23 +1964,46 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
+  const esp_sleep_wakeup_cause_t wakeCause =
+      esp_sleep_get_wakeup_cause();
+  if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
+    Serial.println("Wake reason: EXT1 MENU/EXIT, restarting Dashboard.");
+    const uint64_t pins = esp_sleep_get_ext1_wakeup_status();
+    Serial.printf(
+        "EXT1 wake pin mask: 0x%llX\\n",
+        static_cast<unsigned long long>(pins));
+
+    // Avoid treating the wake press release as a new MENU/EXIT event.
+    pinMode(ButtonManager::PIN_MENU, INPUT);
+    pinMode(ButtonManager::PIN_EXIT, INPUT);
+    const uint32_t releasedWaitStart = millis();
+    while ((digitalRead(ButtonManager::PIN_MENU) == LOW ||
+            digitalRead(ButtonManager::PIN_EXIT) == LOW) &&
+           static_cast<uint32_t>(
+               millis() - releasedWaitStart) < 5000U) {
+      delay(10);
+    }
+    delay(50);
+  }
+
   buttonManager.begin();
 
   Serial.println();
-  Serial.println("EDP Phase 7C-3: live market page");
-  Serial.println("DASHBOARD keeps the production dashboard renderer.");
-  Serial.println("WEATHER keeps the Phase 7C-2 live forecast page.");
-  Serial.println("MARKETS renders BTC / ETH / HYPE last-valid prices.");
-  Serial.println("UP/DOWN page changes use the verified full-frame partial path.");
-  Serial.println("MENU/EXIT mode changes remain non-rendering.");
-  Serial.println("MarketDataService remains data-only; application owns page refresh.");
+  Serial.println("EDP Phase 7D: Dashboard DETAIL system actions");
+  Serial.println("DASHBOARD MENU opens STANDBY / DISPLAY CLEAN.");
+  Serial.println("DETAIL UP/DOWN selects; MENU executes; EXIT returns.");
+  Serial.println("STANDBY draws a small moon then enters ESP32-S3 deep sleep.");
+  Serial.println("GPIO1 MENU or GPIO2 EXIT wakes the chip; no timer wake.");
+  Serial.println("DISPLAY CLEAN uses verified maintenanceRefresh(), not raw Full Refresh.");
+  Serial.println("WEATHER/MARKETS render and polling paths remain unchanged.");
 
-  if (!runNavigationSelfCheck()) {
-    Serial.println("FAIL: Phase 7C-3 page/navigation self-check failed.");
+  if (!runNavigationSelfCheck() ||
+      !runDashboardMenuSelfCheck()) {
+    Serial.println("FAIL: Phase 7D navigation/menu self-checks.");
     return;
   }
 
-  Serial.println("PASS: Phase 7C-3 page/navigation self-check.");
+  Serial.println("PASS: Phase 7D navigation/menu self-checks.");
 
   if (!runDirtySelfCheck() ||
       !runSnapshotSelfCheck() ||
@@ -2017,6 +2040,12 @@ void setup() {
 
 void loop() {
   handlePanelInputIfAny();
+
+  if (!processPendingSystemAction()) {
+    Serial.println("FAIL: selected DETAIL action did not complete.");
+    delay(500);
+    return;
+  }
 
   wifiManager.tick();
   reportWiFiManagerStatus();
