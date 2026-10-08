@@ -1458,7 +1458,12 @@ static bool stageLiveClockIfMinuteChanged(bool& minuteChanged) {
 }
 
 static bool flushLiveDashboardIfNeeded() {
-  if (navigationController.state().page != PageId::DASHBOARD) {
+  const NavigationState nav = navigationController.state();
+  // While the DETAIL menu is visible, data may accumulate but must not
+  // paint the production dashboard over the menu.
+  if (nav.page != PageId::DASHBOARD ||
+      nav.mode != NavigationMode::PAGE ||
+      visiblePageRefreshPending) {
     return true;
   }
 
@@ -1495,15 +1500,22 @@ static bool flushVisiblePageChangeIfNeeded() {
     return false;
   }
 
-  Serial.print("Phase 7C-3 rendering page: ");
-  Serial.println(PageModel::pageName(targetPage));
+  const bool dashboardMenuVisible =
+      targetPage == PageId::DASHBOARD &&
+      navigationState.mode == NavigationMode::DETAIL;
 
-  if (!pageRenderer.render(
-          targetPage,
-          dashboardState,
-          weatherSnapshot,
-          marketState)) {
-    Serial.println("FAIL: page renderer rejected selected page.");
+  Serial.print("Phase 7D-1 rendering: ");
+  Serial.println(dashboardMenuVisible
+      ? "DASHBOARD DETAIL"
+      : PageModel::pageName(targetPage));
+
+  const bool rendered = dashboardMenuVisible
+      ? systemPages.renderMenu(dashboardActionMenu.selected())
+      : pageRenderer.render(
+            targetPage, dashboardState, weatherSnapshot, marketState);
+
+  if (!rendered) {
+    Serial.println("FAIL: selected page rendering failed.");
     return false;
   }
 
@@ -1529,6 +1541,7 @@ static bool flushVisiblePageChangeIfNeeded() {
   );
 
   if (targetPage == PageId::DASHBOARD &&
+      navigationState.mode == NavigationMode::PAGE &&
       updateCoalescer.hasPendingUpdate()) {
     if (!updateCoalescer.commitPending()) {
       display.sleep();
@@ -1571,8 +1584,10 @@ static bool flushVisiblePageChangeIfNeeded() {
     );
   }
 
-  Serial.print("Phase 7C-3 visible page is now: ");
-  Serial.println(PageModel::pageName(visiblePage));
+  Serial.print("Phase 7D-1 visible content now: ");
+  Serial.println(dashboardMenuVisible
+      ? "DASHBOARD DETAIL"
+      : PageModel::pageName(visiblePage));
   return true;
 }
 
