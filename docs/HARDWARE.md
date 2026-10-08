@@ -78,4 +78,4 @@ The EDP firmware intentionally assigns application semantics according to the pa
 
 ### 2026-10-08 hardware verification
 
-**Functional PASS:** the user confirmed the Phase 7D standby/wake tests were normal on the development panel. EXT1 MENU/EXIT wake and restoration of the application are treated as functionally verified, while GPIO7 rail voltage, wake-pin electrical levels, and complete-board sleep current remain **unmeasured**. See [PHASE7_SYSTEM_ACTIONS.md](PHASE7_SYSTEM_ACTIONS.md).
+**Functional PASS:** the user confirmed the Phase 7D standby/wake tests were normal on the development panel. EXT1 MENU/EXIT wake and restoration of the application are treated as functionally verified, while GPIO7 rail voltage, wake-pin electrical levels, and complete-board sleep current remain **unmeasured**. On 2026-10-08, the user explicitly excluded electrical power measurement from the current USB-powered, no-battery scope; it is not a pending acceptance requirement. No quantitative power-consumption claim is supported. See [PHASE7_SYSTEM_ACTIONS.md](PHASE7_SYSTEM_ACTIONS.md).
