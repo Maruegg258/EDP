@@ -149,6 +149,6 @@ Changes solely in `Phase8A1Preview.cpp`:
 - Content strings, letter heights, icon designs, header date/time/Wi-Fi coordinates, market logos/prices/labels and all vertical forecast anchors `y=200/209/243` are **unchanged**. No attempt to reflow crypto groups until separate Rev-D2.
 - Code uses `GraphicsBW::textWidth()` to center elements and returns `false` on unsupported glyphs/overflow. Static bounds audit of all six columns, 14px summary and 17px labels passed. No changes to font data, `GraphicsBW`, `CrowEPD579`, network, navigation or maintenance refresh.
 
-**Device test:** with local `EDP_PHASE8A1_PREVIEW=1` and `EDP_PHASE8_FONT_TEST` disabled, compile/upload the sketch and inspect the resulting full 792×272 static mock. Focus on upper divider clearance, uniform six-day group alignment and 13? **No**: the bottom numbers should still be approved **14px**, seam x=396, clip/ghosting behavior and consistency with the Rev-C4 reference. Request explicit user approval before Rev-D2.
+**Device test:** with local `EDP_PHASE8A1_PREVIEW=1` and `EDP_PHASE8_FONT_TEST` disabled, compile/upload the sketch and inspect the resulting full 792×272 static mock. Focus on upper-divider clearance, uniformly centered six-day groups, the already accepted **14px** forecast numerals, seam x=396, clipping/ghosting and consistency with the Rev-C4 reference. Request explicit user approval before Rev-D2.
 
 The printed prices/weather are mock values; live data and production Dashboard are still not connected to this layout.
