@@ -52,3 +52,37 @@ The display is black/white with no grayscale promise. Numeric glyphs in `Phase8A
 - [ ] User acceptance of revised artwork before any production data integration.
 
 After receiving the hardware results, refine typography and logo masks before production data integration. Six genuine daily forecasts require a later WeatherService contract update and must not be represented as already implemented by this mock.
+
+
+## Phase 8A-1 Rev-B / Step 1 — Font & Logo Assets (2026-10-10)
+
+**Scope:** Asset-only revision on `phase8a1-static-prototype`. No positioning changes and no production integration. Local Arduino compile and revised hardware visual approval remain pending.
+
+### Evidence and changes
+
+- User's revised on-device photograph showed broken `10 OCT` / `SUNDAY` letters, irregular BTC/ETH/HYPE outlines, and coarse, visibly pixel-doubled large numbers.
+- The former `Phase8A1HeaderFont.h` had missing/near-empty letter masks (notably C, S, D). The old glyph-generator lookup selected ambiguous source glyph name prefixes. Replaced with **37 explicitly addressed 17px glyphs** (A–Z, 0–9, space), to support future calendar strings beyond the fixed demonstration date. Inter Display Medium (SIL OFL 1.1) was rasterized as packed 1-bit bitmaps; no font file is committed.
+- The old large numeric glyph metadata used widths of 14px with advances of 12px. Adjacent glyph logical cells overlapped. Replaced `Phase8A1Digits.h` with **native 34px tall** 1-bit digits/symbols; normal digits are 21px wide with 22px advances. Punctuation is compact and all glyph advances are at least their actual widths. Large text in the preview is now drawn at `scale=1` instead of doubling a 17px raster.
+- Rebuilt `Phase8A1SmallFont.h` from the exact-name, already verified project-owned `Font5x7` assets into **7×11px** native masks; this removes the previous inconsistent spacing and protects against accidentally selecting prefix-matching glyph definitions.
+- Replaced `Phase8A1Logos.h` with directly composed **30×30px** native black/white outline geometry for ETH, BTC, HYPE. There is no longer a resize of prior 48px assets. Small-logo readability, symmetry, and trademark recognizability require device review.
+- Corrected the packing of the 6px header space glyph to one byte per row (17 bytes), consistent with the generic `BitmapFont` contract.
+
+### Static source/readback checks
+
+- Verified byte count `height × ceil(width/8)` for each raster, glyph non-empty masks except space, right-edge padding bit cleanliness, and `xAdvance >= width`.
+- Re-read source to confirm the preview now draws large numerals at native scale.
+- Checked current fixed example text widths (ETH 141px, BTC 141px, HYPE 119px, six-day summary 86px) against existing preview coordinates.
+- The divider positions remain **y=81** / **y=181**, and the 6-day pitch remains 128px: Rev-B Step 2 will address layout, including moving the top divider to y=77.
+- No changes to `CrowEPD579`, `GraphicsBW`, Network / Market / Weather services, navigation, or the opt-in preview boot logic.
+
+**Verification caveat:** Static byte/metrics checks are not a substitute for compiling under Arduino ESP32-S3 and inspecting the resulting panel. The earlier prototype passed hardware testing; **Rev-B Step 1 has not yet been tested on hardware**.
+
+### Step 1 acceptance checklist
+
+- [x] Fix corrupt header masks and cover all basic calendar uppercase characters.
+- [x] Convert large numeric rendering to non-overlapping native 34px glyphs.
+- [x] Improve small numeric bitmap data and its spacing.
+- [x] Redraw all three 30px crypto logos without bitmap rescaling.
+- [x] Commit changes and read back critical font/logo data.
+- [ ] Arduino IDE / ESP32-S3 compilation on local developer setup.
+- [ ] Physical confirmation of repaired `10 OCT` / `SUNDAY`, cleaner price digits, ETH/BTC/HYPE outline quality.
