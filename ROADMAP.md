@@ -274,10 +274,17 @@ Phase 8A-1 Rev-B (2026-10-10): user hardware feedback confirms the second static
 - [x] Rev-B Step 1 compiled/uploaded and checked on-panel by the user (2026-10-10 photo): repaired text looks improved, but uneven font size/weight remains; visual acceptance is **not** yet complete.
 - [x] Rev-B typography correction: unify native bitmap style to 34px numbers, 17px header/captions/weekday, and 13px weather numerals. No changes to layout or production drivers.
 - [ ] Recompile/reflash revised typography and confirm consistent visual weight and readability in the next photo.
-- [ ] **Rev-B Step 2 — Layout:** upper divider y=81 → y=77; rebalance three market groups and center all six weather columns with uniform spacing.
+- [ ] **Rev-B Step 2 — Layout (deferred until Rev-C fonts are accepted):** upper divider y=81 → y=77; rebalance three market groups and center all six weather columns with uniform spacing.
 - [ ] **Rev-B Step 3 — Hardware acceptance:** verify readable glyphs/logos, absence of overlap/clipping, seam quality and partial refresh stability before live-data integration.
 
-See [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
+Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
+
+- [x] **Rev-C1:** Specify stable fixed-cell fonts (34px 22×34, 17px 12×17, 13px 8×13), exact glyph coverage, identical advance per font, and design/maintenance contract.
+- [x] **Rev-C2:** Create readable `fonts_src/DashboardFont*.glyphs` and generated `DashboardFont*.h` files plus `tools/generate_dashboard_fonts.py`. Readback/static re-encoding of all 75 glyphs passed.
+- [ ] **Rev-C3:** Run generator --check in developer environment; build font-only preview, Arduino compile, and obtain on-panel typography approval.
+- [ ] **Rev-C4:** Integrate approved fonts into static Dashboard; then resume deferred layout and production-data work.
+
+See [Rev-C font design notes](docs/PHASE8_FONT_REVC.md) and [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
 
 Planned work:
 
