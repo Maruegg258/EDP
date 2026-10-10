@@ -291,8 +291,9 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 - [x] **Rev-D1 layout code committed (device validation pending):** Move top divider y=81 → y=77 and truly center all six 128px forecast columns across 792px, placing each icon+17px weekday unit and 14px summary by measured bitmap widths. All other positions, fonts, icons, refresh, services and production firmware untouched. Geometry check PASS.
 - [x] **Rev-D1 on-panel display check (2026-10-10):** User reports the revised static Dashboard displays normally on hardware. The user requested one follow-up visual spacing adjustment in the six-day forecast summary before closing Rev-D1 completely.
 - [x] **Rev-D1a text-spacing adjustment (source committed):** All six mock summaries changed from `25-29 / 10 %` to `25-29/ 10%`, retaining the original 14px font and dynamic centering in 128px columns. No other layout or hardware behavior was changed.
-- [ ] **Rev-D1a hardware acceptance:** Compile/upload and confirm the six revised summaries are readable and remain centered, without clipping or refresh artifacts.
-- [ ] **Rev-D2 proposed:** Independently rebalance ETH/BTC/HYPE horizontal groups only after D1 hardware feedback; avoid changing them simultaneously.
+- [x] **Rev-D1a hardware acceptance (2026-10-10):** User confirms the updated `25-29/ 10%` text appears OK on the physical E-paper panel.
+- [x] **Rev-D2 implementation (hardware pending):** Remove the middle-region ETH/BTC/HYPE logos and `USDT PERP` footers in the opt-in static Dashboard preview. Show 17px ETH/BTC/HYPE above their corresponding 34px prices, with independent centering in three equal 248px columns and no changes to fonts, dividers, header, bottom forecast or display drivers.
+- [ ] **Rev-D2 hardware validation:** Compile and upload static preview, verify the text-only three-column market row, alignment and seam readability; await user approval before further layout work.
 
 See [Rev-C font design notes](docs/PHASE8_FONT_REVC.md) and [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
 
