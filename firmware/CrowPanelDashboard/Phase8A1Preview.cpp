@@ -4,6 +4,7 @@
 #include "Font5x7.h"
 #include "Icons.h"
 #include "Phase8A1Digits.h"
+#include "Phase8A1HeaderFont.h"
 #include "Phase8A1Logos.h"
 #include "Phase8A1SmallFont.h"
 
@@ -86,14 +87,13 @@ bool drawHeader(GraphicsBW& g) {
   }
 
   // Compose date / diamond / time / diamond / weekday as a centered group.
-  // Date and weekday letters are 14px high (~41% of 34px-high time glyphs,
-  // approximating the user's visual 50% requirement within native font sizes).
+  // Date/weekday are 17px tall, precisely 50% of the 34px clock height.
   const char* date = "10 OCT";
   const char* time = "12:59";
   const char* weekday = "SUNDAY";
-  const uint16_t dateWidth = g.textWidth(Font5x7::FONT, date, 2);
+  const uint16_t dateWidth = g.textWidth(Phase8A1HeaderFont::FONT, date, 1);
   const uint16_t timeWidth = g.textWidth(Phase8A1Digits::FONT, time, 2);
-  const uint16_t dayWidth = g.textWidth(Font5x7::FONT, weekday, 2);
+  const uint16_t dayWidth = g.textWidth(Phase8A1HeaderFont::FONT, weekday, 1);
   if (dateWidth == 0 || timeWidth == 0 || dayWidth == 0) {
     return false;
   }
@@ -117,11 +117,11 @@ bool drawHeader(GraphicsBW& g) {
       timeX + timeWidth + DIAMOND_SECTION_WIDTH / 2);
 
   // All three have a common vertical center at y=42.
-  if (!g.drawText(Font5x7::FONT, date, startX, 35, 2, true) ||
+  if (!g.drawText(Phase8A1HeaderFont::FONT, date, startX, 34, 1, true) ||
       !g.drawText(Phase8A1Digits::FONT, time,
                   timeX, 25, 2, true) ||
-      !g.drawText(Font5x7::FONT, weekday,
-                  dayX, 35, 2, true) ||
+      !g.drawText(Phase8A1HeaderFont::FONT, weekday,
+                  dayX, 34, 1, true) ||
       !g.drawBitmap(Icons::WIFI_STRONG, 738, 25, true)) {
     return false;
   }
