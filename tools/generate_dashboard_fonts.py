@@ -22,8 +22,9 @@ REQUIRED = {
     "34": set("0123456789.:-+ "),
     "17": set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -/.:+%"),
     "13": set("0123456789.-/%+C "),
+    "14": set("0123456789.-/%+C "),
 }
-SIZES = {"34": (22, 34), "17": (12, 17), "13": (8, 13)}
+SIZES = {"34": (22, 34), "17": (12, 17), "13": (8, 13), "14": (9, 14)}
 
 
 def parse_source(path: Path, size: str) -> tuple[str, int, int, dict[str, list[str]]]:
@@ -125,7 +126,7 @@ def render_header(name: str, width: int, height: int, glyphs: dict[str, list[str
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Verify checked-in header files match sources")
-    parser.add_argument("--font", choices=["all", "34", "17", "13"], default="all")
+    parser.add_argument("--font", choices=["all", "34", "17", "13", "14"], default="all")
     args = parser.parse_args()
     fonts = tuple(SIZES) if args.font == "all" else (args.font,)
     errors = 0

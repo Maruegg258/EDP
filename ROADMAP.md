@@ -283,7 +283,10 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 - [x] **Rev-C2:** Create readable `fonts_src/DashboardFont*.glyphs` and generated `DashboardFont*.h` files plus `tools/generate_dashboard_fonts.py`. Readback/static re-encoding of all 75 glyphs passed.
 - [x] **Rev-C3 implementation:** Add four dedicated font-only pages with opt-in local config and Serial Monitor page selection; use only the existing verified maintenance refresh, preserving all production paths. Static sample glyph/bounds checks passed.
 - [x] **Rev-C3-JB1 font source adoption (code committed, hardware pending):** Replace isolated Rev-C3 hand-drawn raster glyphs with official JetBrains Mono Medium-derived 34/17/13px 1-bit glyphs. Preserve all four test pages and fixed-cell metrics; no Rev-C4 layout integration.
-- [ ] **Rev-C3 validation:** Run generator --check in the checked-out repository, compile in Arduino IDE, upload, and photograph/approve all four font pages on CrowPanel.
+- [x] **Rev-C3-JB1 hardware typography feedback:** User finds the JetBrains Mono 34px and 17px samples excellent; 13px appears too small (2026-10-10). This does not close all Phase 8 acceptance criteria.
+- [x] **Rev-C3-JB2 implementation (hardware pending):** Add independently rasterized 9×14px JetBrains Mono Medium (17 glyphs) alongside unchanged 13/17/34px assets; extend isolated Serial diagnostics to five pages (4=14px, 5=13-vs-14). Update generator and docs; production rendering remains unchanged.
+- [ ] **Rev-C3-JB2 validation:** Compile/upload new firmware, inspect 14px page 4 and direct 13/14 comparison page 5 on CrowPanel; accept or refine before Rev-C4. Optional local `python3 tools/generate_dashboard_fonts.py --check` (independent source/header readback already checked).
+
 - [ ] **Rev-C4:** Integrate approved fonts into static Dashboard; then resume deferred layout and production-data work.
 
 See [Rev-C font design notes](docs/PHASE8_FONT_REVC.md) and [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.

@@ -1,6 +1,6 @@
 # Phase 8A-1 Rev-C — Dashboard Font Reset
 
-**Status (2026-10-10):** Rev-C3-JB1 adopts JetBrains Mono Medium glyphs for the isolated four-page test. Native assets prepared; Arduino compilation, generator check on local checkout, and hardware acceptance are pending. Earlier Rev-C1/C2 notes below remain as historical context.
+**Status (2026-10-10):** Rev-C3-JB2: user visually accepted JetBrains Mono 34px/17px and found 13px too small. A separate 9x14 candidate and five-page isolated test are committed, pending 14px compile/device evaluation. Earlier Rev-C1/C2/C3-JB1 notes below are retained as history.
 
 ## Rationale
 
@@ -155,3 +155,38 @@ python3 tools/generate_dashboard_fonts.py --check
 ```
 
 In local ignored `config.h`, enable `#define EDP_PHASE8_FONT_TEST 1` and disable `EDP_PHASE8A1_PREVIEW`; Arduino compile/upload, then send `1`, `2`, `3`, `4` over 115200-baud Serial Monitor. Note whether glyphs/counters read clearly, the 17px uppercase `Q` tail and `/` survive, the 13px decimal and percent remain distinct, and text crosses x=396 cleanly. Capture all four sheets. **Do not mark the revision hardware-verified from source checks alone.**
+
+## Rev-C3-JB2 — 14px candidate and side-by-side comparison (2026-10-10)
+
+### Hardware feedback and scope
+
+The user reports **34px and 17px JetBrains Mono appearance are excellent** after actual Rev-C3-JB1 panel testing; **13px is legible enough to evaluate but looks too small**. This is a visual acceptance of the two larger sizes, **not** approval of the full Dashboard layout or a completed regression matrix.
+
+Keep the original 34, 17 and 13px pixels **byte-for-byte unchanged**. Generate an independent JetBrains Mono **Medium** 1-bit 9×14px candidate (9px monospaced advance, 14px cell height, no runtime scaling). The source is the same upstream official TTF blob recorded in Rev-C3-JB1; 4×4 outline coverage sampling, threshold 6/16, TrueType scale 0.01415 and baseline y=12.0 within the 14px cell. It is **not** derived by scaling 13px bitmaps. Its 17 glyphs match the 13px coverage: `0123456789.-/%+C `.
+
+Files: `fonts_src/DashboardFont14.glyphs` is the editable 1-bit source, `DashboardFont14.h` is generated to the existing `BitmapFont` contract; the standard library-only `tools/generate_dashboard_fonts.py` now supports `--font 14` and includes 14px in `--check`.
+
+### Five-page diagnostic (Serial 115200)
+
+In ignored local `config.h`, enable `#define EDP_PHASE8_FONT_TEST 1` and ensure `EDP_PHASE8A1_PREVIEW` is not also enabled. Compile and upload `firmware/CrowPanelDashboard/CrowPanelDashboard.ino` from `phase8a1-static-prototype`; page 1 appears at boot. Send a single ASCII digit:
+
+| Serial | Page | Notes |
+| --- | --- | --- |
+| `1` | 34px | Unchanged JetBrains Mono numbers (user visual PASS) |
+| `2` | 17px | Unchanged JetBrains Mono capitals (user visual PASS) |
+| `3` | 13px | Unchanged small-weather reference (user reports too small) |
+| `4` | 14px | New 9×14px weather/number sample in the same positions as page 3 |
+| `5` | 13 vs 14px | Identical strings side by side: 13px left / 14px right, with center divider at x=396 |
+
+Page 5 shows identical digit, temperature, forecast, negative-temperature and percent patterns. Specifically compare decimal-point strength, `1/7`, percent, long-value fit, and legibility at usual viewing distance. Also inspect ghosting across successive page changes. Repeated same-page commands do not trigger physical refresh. The existing `maintenanceRefresh()` remains the **only** physical refresh path; no raw full refresh or extra background network services were added.
+
+### Verification / status
+
+- [x] Added 14px glyph matrices and generated 1-bit header, fixed width/advance 9px and line height 14px.
+- [x] Static glyph/source/header and page bounds checks (code-level).
+- [x] Updated five-page Serial selection and checked no 34/17/13 data were modified in this commit.
+- [ ] Arduino ESP32-S3 compile/upload of JB2 revision.
+- [ ] User hardware inspection of pages 4 and 5, then visual approval/rejection.
+- [ ] Rev-C4 production/static Dashboard integration **only after user approval**.
+
+The Python generator check is optional for user convenience; it is not required for Arduino IDE compile/upload. The 14px visual result and firmware compilation **cannot** be inferred from these static checks.

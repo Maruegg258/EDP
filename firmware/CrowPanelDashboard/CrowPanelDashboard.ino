@@ -2002,8 +2002,8 @@ void setup() {
   // Rev-C3 FONT-ONLY preview. Explicit opt-in, no network or production services.
   // Display each sheet using the already verified maintenanceRefresh sequence.
 #if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
-  Serial.println("EDP Phase 8A-1 Rev-C3 FONT TEST: native 1-bit 34/17/13px.");
-  Serial.println("Send 1, 2, 3, or 4 via Serial Monitor to choose a font sheet.");
+  Serial.println("EDP Phase 8A-1 Rev-C3-JB2 FONT TEST: native 1-bit 34/17/13/14px.");
+  Serial.println("Send 1, 2, 3, 4, or 5 via Serial Monitor to choose a font sheet.");
   if (!DashboardFontTest::render(graphics, diagnosticFontPage)) {
     Serial.println("FAIL: font diagnostic composition failed.");
     return;
@@ -2014,7 +2014,7 @@ void setup() {
   }
   memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
   display.sleep();
-  Serial.println("PASS: Rev-C3 font sheet 1/4 rendered; Wi-Fi/APIs disabled.");
+  Serial.println("PASS: Rev-C3-JB2 font sheet 1/5 rendered; Wi-Fi/APIs disabled.");
   return;
 #endif
 
@@ -2118,7 +2118,7 @@ void loop() {
   // Unknown bytes (including newline) are ignored; no automatic refresh.
   while (Serial.available() > 0) {
     const char command = static_cast<char>(Serial.read());
-    if (command < '1' || command > '4') {
+    if (command < '1' || command > '5') {
       continue;
     }
     const uint8_t requestedPage = static_cast<uint8_t>(command - '0');
@@ -2126,7 +2126,7 @@ void loop() {
       continue;
     }
 
-    Serial.printf("Rev-C3 rendering font sheet %u/4...\n", requestedPage);
+    Serial.printf("Rev-C3-JB2 rendering font sheet %u/5...\n", requestedPage);
     if (!DashboardFontTest::render(graphics, requestedPage)) {
       Serial.println("FAIL: font sheet composition failed.");
       continue;
@@ -2138,7 +2138,7 @@ void loop() {
     memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
     display.sleep();
     diagnosticFontPage = requestedPage;
-    Serial.printf("PASS: font sheet %u/4 displayed.\n", diagnosticFontPage);
+    Serial.printf("PASS: font sheet %u/5 displayed.\n", diagnosticFontPage);
   }
   delay(30);
   return;

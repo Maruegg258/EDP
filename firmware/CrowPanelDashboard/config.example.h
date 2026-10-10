@@ -20,7 +20,8 @@
 
 // Rev-C3 font-only diagnostic mode (feature branch only).
 // Add to LOCAL ignored config.h and upload once. On boot, font page 1 displays.
-// Use Arduino Serial Monitor at 115200 baud, send 1/2/3/4 to change pages.
+// Use Arduino Serial Monitor at 115200 baud, send 1/2/3/4/5 to change pages.
+// 1:34px, 2:17px, 3:13px, 4:14px, 5:13px-vs-14px.
 // This runs without Wi-Fi, live data, navigation or timed refresh.
 // Do NOT enable simultaneously with EDP_PHASE8A1_PREVIEW.
 // #define EDP_PHASE8_FONT_TEST 1
