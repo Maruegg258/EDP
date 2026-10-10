@@ -7,6 +7,7 @@
 #include "ButtonManager.h"
 #include "CrowEPD579.h"
 #include "Dashboard.h"
+#include "DashboardFontTest.h"
 #include "DashboardActionMenu.h"
 #include "DashboardDirty.h"
 #include "DashboardState.h"
@@ -31,7 +32,17 @@
 #include "WiFiManager.h"
 #include "config.h"
 
+// These isolated boot modes must never be active simultaneously.
+#if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1) && \
+    defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)
+#error "Choose one preview mode: EDP_PHASE8_FONT_TEST or EDP_PHASE8A1_PREVIEW."
+#endif
+
 CrowEPD579 display;
+
+#if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
+static uint8_t diagnosticFontPage = 1;
+#endif
 
 uint8_t frameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
 uint8_t previousFrameBuffer[CrowEPD579::FRAMEBUFFER_BYTES];
@@ -1988,6 +1999,25 @@ void setup() {
   gpio_hold_dis(
       static_cast<gpio_num_t>(CrowEPD579::PIN_PANEL_POWER));
 
+  // Rev-C3 FONT-ONLY preview. Explicit opt-in, no network or production services.
+  // Display each sheet using the already verified maintenanceRefresh sequence.
+#if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
+  Serial.println("EDP Phase 8A-1 Rev-C3 FONT TEST: native 1-bit 34/17/13px.");
+  Serial.println("Send 1, 2, 3, or 4 via Serial Monitor to choose a font sheet.");
+  if (!DashboardFontTest::render(graphics, diagnosticFontPage)) {
+    Serial.println("FAIL: font diagnostic composition failed.");
+    return;
+  }
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    Serial.println("FAIL: font diagnostic E-paper refresh failed.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  Serial.println("PASS: Rev-C3 font sheet 1/4 rendered; Wi-Fi/APIs disabled.");
+  return;
+#endif
+
   // Isolated Phase 8A-1 ONE-SHOT preview; never contacts Wi-Fi or data APIs.
   // Enabled only when local ignored config.h explicitly defines:
   // #define EDP_PHASE8A1_PREVIEW 1
@@ -2083,6 +2113,36 @@ void setup() {
 }
 
 void loop() {
+#if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
+  // USB Serial commands are exclusively enabled in this local test mode.
+  // Unknown bytes (including newline) are ignored; no automatic refresh.
+  while (Serial.available() > 0) {
+    const char command = static_cast<char>(Serial.read());
+    if (command < '1' || command > '4') {
+      continue;
+    }
+    const uint8_t requestedPage = static_cast<uint8_t>(command - '0');
+    if (requestedPage == diagnosticFontPage) {
+      continue;
+    }
+
+    Serial.printf("Rev-C3 rendering font sheet %u/4...\n", requestedPage);
+    if (!DashboardFontTest::render(graphics, requestedPage)) {
+      Serial.println("FAIL: font sheet composition failed.");
+      continue;
+    }
+    if (!display.maintenanceRefresh(frameBuffer)) {
+      Serial.println("FAIL: font sheet E-paper refresh failed.");
+      continue;
+    }
+    memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+    display.sleep();
+    diagnosticFontPage = requestedPage;
+    Serial.printf("PASS: font sheet %u/4 displayed.\n", diagnosticFontPage);
+  }
+  delay(30);
+  return;
+#endif
 #if defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)
   // Deliberately static. No buttons, polling, Wi-Fi, or background refresh.
   delay(1000);
