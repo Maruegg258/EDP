@@ -48,7 +48,7 @@ bool heading(GraphicsBW& g, const char* label, uint8_t page) {
 }
 
 bool page34(GraphicsBW& g) {
-  if (!heading(g, "FONT 34", 1)) return false;
+  if (!heading(g, "JB MONO 34", 1)) return false;
   rule(g, 36);
 
   return text(g, DashboardFont34::FONT, "0123456789", 38, 48) &&
@@ -61,7 +61,7 @@ bool page34(GraphicsBW& g) {
 }
 
 bool page17(GraphicsBW& g) {
-  if (!heading(g, "FONT 17", 2)) return false;
+  if (!heading(g, "JB MONO 17", 2)) return false;
   rule(g, 36);
 
   return text(g, DashboardFont17::FONT, "ABCDEFGHIJKLM", 38, 49) &&
@@ -74,7 +74,7 @@ bool page17(GraphicsBW& g) {
 }
 
 bool page13(GraphicsBW& g) {
-  if (!heading(g, "FONT 13", 3)) return false;
+  if (!heading(g, "JB MONO 13", 3)) return false;
   rule(g, 36);
 
   return text(g, DashboardFont13::FONT, "0123456789", 38, 53) &&
@@ -86,7 +86,7 @@ bool page13(GraphicsBW& g) {
 }
 
 bool comparison(GraphicsBW& g) {
-  if (!heading(g, "FONT COMPARE", 4)) return false;
+  if (!heading(g, "JB MONO CHECK", 4)) return false;
   rule(g, 36);
 
   return text(g, DashboardFont17::FONT, "34 PX", 35, 54) &&

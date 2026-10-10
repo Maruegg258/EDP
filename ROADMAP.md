@@ -282,6 +282,7 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 - [x] **Rev-C1:** Specify stable fixed-cell fonts (34px 22×34, 17px 12×17, 13px 8×13), exact glyph coverage, identical advance per font, and design/maintenance contract.
 - [x] **Rev-C2:** Create readable `fonts_src/DashboardFont*.glyphs` and generated `DashboardFont*.h` files plus `tools/generate_dashboard_fonts.py`. Readback/static re-encoding of all 75 glyphs passed.
 - [x] **Rev-C3 implementation:** Add four dedicated font-only pages with opt-in local config and Serial Monitor page selection; use only the existing verified maintenance refresh, preserving all production paths. Static sample glyph/bounds checks passed.
+- [x] **Rev-C3-JB1 font source adoption (code committed, hardware pending):** Replace isolated Rev-C3 hand-drawn raster glyphs with official JetBrains Mono Medium-derived 34/17/13px 1-bit glyphs. Preserve all four test pages and fixed-cell metrics; no Rev-C4 layout integration.
 - [ ] **Rev-C3 validation:** Run generator --check in the checked-out repository, compile in Arduino IDE, upload, and photograph/approve all four font pages on CrowPanel.
 - [ ] **Rev-C4:** Integrate approved fonts into static Dashboard; then resume deferred layout and production-data work.
 

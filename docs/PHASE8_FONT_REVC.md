@@ -1,6 +1,6 @@
 # Phase 8A-1 Rev-C — Dashboard Font Reset
 
-**Status (2026-10-10):** Rev-C1 typography specification and Rev-C2 new font assets are committed on `phase8a1-static-prototype`. Static source/header validation PASS. **Not yet compiled on ESP32-S3 or visually accepted on the device.**
+**Status (2026-10-10):** Rev-C3-JB1 adopts JetBrains Mono Medium glyphs for the isolated four-page test. Native assets prepared; Arduino compilation, generator check on local checkout, and hardware acceptance are pending. Earlier Rev-C1/C2 notes below remain as historical context.
 
 ## Rationale
 
@@ -137,3 +137,21 @@ To exit test mode, remove/comment the local `EDP_PHASE8_FONT_TEST` flag and refl
 ## Scope and safety
 
 The three new font families are **used only in the opt-in diagnostic renderer**, not by the normal static Dashboard preview or by production services. Existing `Phase8A1Preview.cpp` and Rev-B fonts remain unchanged. The `main` branch, E-paper driver, maintenance refresh sequence and all network services are unchanged. No Wi-Fi secrets or external font files were added.
+
+## Rev-C3-JB1 — JetBrains Mono font adoption (2026-10-10)
+
+**Status: font assets and four-sheet test renderer prepared; Arduino compile, upload, and on-panel acceptance remain unverified.** This replaces only the Rev-C2 hand-drawn diagnostic font **assets** on the existing `phase8a1-static-prototype` branch. The tested 34/17/13px fixed-cell `BitmapFont` interface and the Rev-C3 four-sheet Serial page selector remain the same. No production Dashboard, normal static preview, E-paper driver, network service, or refresh sequence changes.
+
+Font provenance: [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), **Medium** weight, official `fonts/ttf/JetBrainsMono-Medium.ttf` blob SHA `dc2e5d08677d603b6755dc6c34fc8ad9aa6fc8a5` on its `master` branch at import. Copyright 2020 The JetBrains Mono Project Authors; SIL Open Font License 1.1. The exact upstream license text is retained in `fonts_src/OFL-JetBrainsMono.txt`. **No TTF/OTF font files are committed.** The original upstream typeface is not the earlier generative comparison illustration.
+
+The glyphs are rasterized from actual TrueType outlines (quadratic contours and counters), using 4×4 supersampling and a binary black/white coverage threshold. Stored outputs are **pure 1-bit** ASCII matrices in `fonts_src/DashboardFont*.glyphs` and row-major MSB-first `DashboardFont*.h`. Grid sizes/advances remain 22×34, 12×17, and 8×13 respectively; the underlying typeface is uniformly scaled and centered within each existing cell. Raster baseline/scale configuration: 34: baseline 30, scale 22/600; 17: baseline 13.5, scale 0.018; 13: baseline 11, scale 0.013 (upstream font metrics: 1000 units/em, 600-unit mono advance). The 17px slash may touch the upper edge, so inspect punctuation on the real panel.
+
+**Existing Rev-C3 coverage is deliberately preserved:** 34px digits/time punctuation (15), 17px uppercase/date/market text (43), 13px numeric/weather characters (17). Lowercase and extra symbols from the earlier *comparison mock* have **not** yet been introduced into firmware; extending the font contract is a separate later change. These three fonts are currently diagnostic-only until user approval and the later Rev-C4 migration.
+
+Validation to perform on the developer checkout:
+
+```bash
+python3 tools/generate_dashboard_fonts.py --check
+```
+
+In local ignored `config.h`, enable `#define EDP_PHASE8_FONT_TEST 1` and disable `EDP_PHASE8A1_PREVIEW`; Arduino compile/upload, then send `1`, `2`, `3`, `4` over 115200-baud Serial Monitor. Note whether glyphs/counters read clearly, the 17px uppercase `Q` tail and `/` survive, the 13px decimal and percent remain distinct, and text crosses x=396 cleanly. Capture all four sheets. **Do not mark the revision hardware-verified from source checks alone.**
