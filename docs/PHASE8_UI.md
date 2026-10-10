@@ -136,3 +136,19 @@ To view the new static Dashboard, use local `config.h` with `#define EDP_PHASE8A
 The user confirms the **actual CrowPanel 5.79-inch display** running the Rev-C4 34/17/14px JetBrains Mono static Dashboard is visually **acceptable**. This is an on-panel visual approval of the unchanged Rev-C4 font-integrated mock, not a claim that all possible refresh/staleness/long-duration conditions have been tested. No additional photo or detailed Serial log was supplied at this handoff. The last Rev-C4 source is commit `c821ce3b6ea34078c9b10390242ff3d0102f0537`, retained in history for rollback.
 
 **Next controlled step: Rev-D1 layout-only test.** Move only the top diamond-ended horizontal divider from y=81 to y=77; center icon/weekday group and 14px forecast numerical summary independently inside all six equal 128px cells. Preserve 34/17/14px font assets, all header content, three market groups, icons/logos, second divider (y=181), network/production path and `maintenanceRefresh()`. Rev-D2 market-group balancing is deferred until D1 is physically reviewed.
+
+## Phase 8A-1 Rev-D1 — First layout-only alignment pass (2026-10-10)
+
+**Status:** Source change committed, geometry bounds checked, **not yet compiled/uploaded or physically approved**. Baseline: user-approved Rev-C4 visual appearance. Keep the `phase8a1-static-prototype` feature branch and isolated `EDP_PHASE8A1_PREVIEW` mode.
+
+Changes solely in `Phase8A1Preview.cpp`:
+
+- Upper diamond-ended divider moves from `y=81` to **`y=77`**. The lower divider stays at `y=181`.
+- Six forecast columns are each **128px**, spanning `x=12…780` in a centered grid with 12px outer margins on a 792px screen. Column origins are `12, 140, 268, 396, 524, 652`; the split at visible x=396 falls exactly between third/fourth columns.
+- Each 32px outline-sun and 17px weekday label is centered **as a combined group**, retaining their 8px gap: the 76px group starts at `columnLeft+26`, and its weekday begins at `columnLeft+66`. Six-day `25-29 / 10 %` in the accepted 9×14px font measures 108px and begins at `columnLeft+10`, leaving symmetrical 10px internal margins.
+- Content strings, letter heights, icon designs, header date/time/Wi-Fi coordinates, market logos/prices/labels and all vertical forecast anchors `y=200/209/243` are **unchanged**. No attempt to reflow crypto groups until separate Rev-D2.
+- Code uses `GraphicsBW::textWidth()` to center elements and returns `false` on unsupported glyphs/overflow. Static bounds audit of all six columns, 14px summary and 17px labels passed. No changes to font data, `GraphicsBW`, `CrowEPD579`, network, navigation or maintenance refresh.
+
+**Device test:** with local `EDP_PHASE8A1_PREVIEW=1` and `EDP_PHASE8_FONT_TEST` disabled, compile/upload the sketch and inspect the resulting full 792×272 static mock. Focus on upper divider clearance, uniform six-day group alignment and 13? **No**: the bottom numbers should still be approved **14px**, seam x=396, clip/ghosting behavior and consistency with the Rev-C4 reference. Request explicit user approval before Rev-D2.
+
+The printed prices/weather are mock values; live data and production Dashboard are still not connected to this layout.

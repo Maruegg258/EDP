@@ -18,12 +18,17 @@ namespace {
 // Phase 8A-1 layout anchors deliberately unchanged in this font-only pass.
 // Physical pixel dimensions: 792x272; opt-in static-only composition.
 static constexpr int16_t WIDTH = 792;
-static constexpr int16_t HEADER_DIVIDER_Y = 81;
+static constexpr int16_t HEADER_DIVIDER_Y = 77;
 static constexpr int16_t FORECAST_DIVIDER_Y = 181;
 static constexpr int16_t MARKET_LOGO_Y = 112;
 static constexpr int16_t MARKET_PRICE_Y = 106;
 static constexpr int16_t MARKET_LABEL_Y = 149;
 static constexpr int16_t FORECAST_COLUMN_PITCH = 128;
+static constexpr int16_t FORECAST_COLUMN_COUNT = 6;
+static constexpr int16_t FORECAST_GRID_LEFT = static_cast<int16_t>(
+    (WIDTH - FORECAST_COLUMN_COUNT * FORECAST_COLUMN_PITCH) / 2);
+static constexpr int16_t FORECAST_ICON_SIZE = 32;
+static constexpr int16_t FORECAST_ICON_LABEL_GAP = 8;
 
 struct PreviewForecast {
   const char* day;
@@ -163,23 +168,39 @@ bool drawMarkets(GraphicsBW& g) {
 }
 
 bool drawSixDayForecast(GraphicsBW& g) {
-  // Icon + weekday on one row; temperature range / precipitation on one line.
-  for (uint8_t index = 0; index < 6; ++index) {
-    const int16_t x = static_cast<int16_t>(
-        16 + index * FORECAST_COLUMN_PITCH);
-    drawOutlineSun(g, x, 200);
-    if (!g.drawText(DashboardFont17::FONT, FORECAST[index].day,
-                    x + 40, 209, 1, true) ||
-        !g.drawText(DashboardFont14::FONT,
-                    FORECAST[index].summary,
-                    x, 243, 1, true)) {
+  // Six equal columns centered across the 792px screen.
+  // Center the 32px icon + weekday as one unit and the 14px summary
+  // independently; never approximate text widths or stretch the glyphs.
+  for (uint8_t index = 0; index < FORECAST_COLUMN_COUNT; ++index) {
+    const int16_t columnLeft = static_cast<int16_t>(
+        FORECAST_GRID_LEFT + index * FORECAST_COLUMN_PITCH);
+    const uint16_t weekdayWidth = g.textWidth(
+        DashboardFont17::FONT, FORECAST[index].day, 1);
+    const uint16_t summaryWidth = g.textWidth(
+        DashboardFont14::FONT, FORECAST[index].summary, 1);
+    const uint16_t iconAndWeekdayWidth = static_cast<uint16_t>(
+        FORECAST_ICON_SIZE + FORECAST_ICON_LABEL_GAP + weekdayWidth);
+
+    // Leave a minimum 6px inset on either side of the summary.
+    if (weekdayWidth == 0 || summaryWidth == 0 ||
+        iconAndWeekdayWidth > FORECAST_COLUMN_PITCH ||
+        summaryWidth > FORECAST_COLUMN_PITCH - 12) {
       return false;
     }
 
-    // Strictly reserve each segment's width to avoid six-column collisions.
-    if (g.textWidth(DashboardFont14::FONT,
-                    FORECAST[index].summary, 1) >
-        FORECAST_COLUMN_PITCH - 12) {
+    const int16_t iconX = static_cast<int16_t>(
+        columnLeft + (FORECAST_COLUMN_PITCH - iconAndWeekdayWidth) / 2);
+    const int16_t weekdayX = static_cast<int16_t>(
+        iconX + FORECAST_ICON_SIZE + FORECAST_ICON_LABEL_GAP);
+    const int16_t summaryX = static_cast<int16_t>(
+        columnLeft + (FORECAST_COLUMN_PITCH - summaryWidth) / 2);
+
+    drawOutlineSun(g, iconX, 200);
+    if (!g.drawText(DashboardFont17::FONT, FORECAST[index].day,
+                    weekdayX, 209, 1, true) ||
+        !g.drawText(DashboardFont14::FONT,
+                    FORECAST[index].summary,
+                    summaryX, 243, 1, true)) {
       return false;
     }
   }
