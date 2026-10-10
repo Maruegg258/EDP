@@ -162,3 +162,15 @@ The printed prices/weather are mock values; live data and production Dashboard a
 With approved `DashboardFont14::FONT` (9px fixed advance), the string decreases from **12 glyphs / 108px** to **10 glyphs / 90px**. The existing `textWidth()`-based center algorithm recomputes the starting offset for each 128px forecast cell from **+10px** to **+19px**. This preserves equal margins, the x=396 seam alignment and all other coordinates automatically. The source-level width check passes (`90 <= 128 - 12`). No 34/17/14 font glyphs, dividers, logos, header/market groups, services, E-paper driver or refresh procedure have changed.
 
 **Hardware test remaining:** use the existing isolated static preview flag (`EDP_PHASE8A1_PREVIEW=1` and font test disabled); compile/upload and inspect the six compact `25-29/ 10%` labels. Confirm exact spacing and centering on the E-paper, then accept Rev-D1a before proceeding to Rev-D2 market spacing.
+
+## Phase 8A-1 Rev-D2 — Text-only market row (2026-10-10)
+
+**Confirmed preceding checkpoint:** The user reports that Rev-D1a's compact six-day `25-29/ 10%` forecast text looks OK on hardware. Mark Rev-D1a visually accepted.
+
+**Rev-D2 user-requested layout:** In the **opt-in static** `Phase8A1Preview.cpp` only, completely remove the three 30px ETH/BTC/HYPE logo drawings and the three `USDT PERP` footer labels. Replace each former logo+price+footer cluster with a 17px JetBrains Mono Medium uppercase symbol **above** its 34px price. Keep left-to-right ETH, BTC, HYPE order and the existing illustrative prices `2493.56`, `82750.1`, `84.154` (not live market data).
+
+All three market groups occupy centered 248px-wide columns with x=24–272, 272–520, 520–768 and centers x=148, 396, 644. The symbol text starts at y=101 and numeric price at y=126. Labels and prices are independently centered using `GraphicsBW::textWidth()`. For fixed mock values, symbol/price x coordinates are ETH=130/71, BTC=378/319, HYPE=620/578. Every text box lies within its respective column, with padding and no vertical overlap into the diamond dividers at y=77 and y=181.
+
+The static renderer no longer includes `Phase8A1Logos.h`, but the asset file remains on GitHub for rollback. Accepted 34/17/14px glyph bitmaps, header, Wi-Fi, weather, lower six-day strip, driver, services, networking and maintenance-refresh sequence remain unchanged.
+
+**Status:** Code and source geometry checks only; full Rev-D2 compile/upload and physical inspection are **pending**. With `EDP_PHASE8A1_PREVIEW=1` and `EDP_PHASE8_FONT_TEST` disabled in local ignored `config.h`, compile/upload and review label-over-price alignment, visual spacing, legibility across the x=396 controller seam, and absence of clipping/ghosting. Do not mark Rev-D2 hardware-accepted until the user's explicit approval.
