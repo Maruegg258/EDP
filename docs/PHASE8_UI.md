@@ -115,3 +115,10 @@ Rev-B's attempted font polishing was stopped at the user's request because the r
 - [ ] Rev-C4 — replace fonts inside static Dashboard only after user visually accepts the independent font sample. No screen divider or data service changes before that.
 
 Design/implementation notes: [PHASE8_FONT_REVC.md](PHASE8_FONT_REVC.md). This phase has **not** been declared hardware-verified. `Phase8A1Preview.cpp` still uses the prior font assets and keeps its original demo frame unchanged.
+
+
+## Phase 8A-1 Rev-C3 — Font-only test pages (2026-10-10)
+
+The three new Rev-C fonts are intentionally **not yet** used by `Phase8A1Preview.cpp`. An isolated `DashboardFontTest.cpp/.h` module now provides four pages (34px, 17px, 13px, side-by-side comparison). Compile with local `#define EDP_PHASE8_FONT_TEST 1` and make sure `EDP_PHASE8A1_PREVIEW` is disabled. At 115200 baud, send `1`/`2`/`3`/`4` in Arduino Serial Monitor to switch pages without reflashing; no Wi-Fi/HTTP/services or background refresh are active. The existing maintenance refresh is preserved. Source-level glyph coverage and pixel-bounds validation passed; **Arduino compile and device approval are pending**.
+
+For complete instructions and sample strings see [PHASE8_FONT_REVC.md](PHASE8_FONT_REVC.md). Continue to Rev-C4 only after the user confirms acceptable weight/spacing on the physical panel.
