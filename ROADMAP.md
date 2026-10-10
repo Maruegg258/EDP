@@ -255,7 +255,18 @@ Scope decisions (2026-10-08):
 
 ## Phase 8 — UI refinement
 
+**Status: In progress (Phase 8A-1 static prototype committed on feature branch; hardware validation pending)**
+
 **Goal:** Improve readability and visual quality without sacrificing E-paper stability.
+
+Phase 8A-1 checkpoints:
+
+- [x] Build an opt-in static 792×272 dashboard proof of layout, using the user's PDF: weather/date-time/Wi-Fi, ETH/BTC/HYPE, and six mock daily weather slots. Use exploratory tabular numeric bitmap glyphs, detailed 1-bit logo samples, sparkle separators and diamond-ended dividing lines.
+- [x] Keep preview off by default and isolated from all production data/polling; use the existing verified maintenance refresh once when explicitly enabled through ignored local config.h.
+- [ ] Compile with Arduino ESP32-S3 toolchain and verify final layout on hardware, including x=396 seam, pixel clipping, icon clarity and refresh artifacts.
+- [ ] Capture user feedback, refine assets and record hardware results before integrating live dashboard data.
+
+See [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
 
 Planned work:
 
