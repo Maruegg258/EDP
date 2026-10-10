@@ -86,3 +86,20 @@ After receiving the hardware results, refine typography and logo masks before pr
 - [x] Commit changes and read back critical font/logo data.
 - [ ] Arduino IDE / ESP32-S3 compilation on local developer setup.
 - [ ] Physical confirmation of repaired `10 OCT` / `SUNDAY`, cleaner price digits, ETH/BTC/HYPE outline quality.
+
+## Phase 8A-1 Rev-B — Typography consistency pass (2026-10-10)
+
+**Trigger:** The user supplied a new on-panel photograph (`IMG_5981.jpeg`). Their observation: characters and numbers became more attractive and the earlier date/weekday corruption disappeared, but different sections showed visibly inconsistent font sizes and stroke weights. This is visual feedback, not a complete Rev-B acceptance.
+
+**Root cause confirmed by source:** Large time/price numerals already used an Inter-inspired 34px native bitmap, and 17px date/weekday letters used another raster of the same family; however, SUNNY, USDT PERP, and forecast weekdays were rendered using 5x7 bitmap glyphs at scale=2 (14px, doubled square pixels). Forecast numeric labels/temperature used a third 11px pixel-scaled font. Mixed families and resampling accounted for visible weight/shape mismatches.
+
+**Changes (opt-in static preview only):**
+- Establish intentional visual hierarchy: **34px** native time / prices, **17px** native date / day / uppercase English labels, **13px** native weather temperature / 6-day compact numbers.
+- Use `Phase8A1HeaderFont::FONT` with `scale=1` for SUNNY, USDT PERP, MON–SAT, and the existing date/weekday labels. Remove `Font5x7` from this prototype renderer; core `Font5x7` file remains untouched.
+- Rebuild `Phase8A1SmallFont.h` at 7×13 pixels: numeric/C glyphs down-rasterized from the existing 17px Inter-family bitmap by fractional area coverage; punctuation hand-designed at final pixel size; advance widths remain 8px (space 5px). Render at scale=1.
+- Retain existing 34px numeric raster; it already shares the Inter visual family. Correct the remaining price-renderer zero-width guard to measure at scale=1, consistent with the actual draw scale.
+- **No position changes.** Both divider lines are still at y=81 and y=181, and crypto/forecast item anchors remain fixed. y=77 and grid re-centering are reserved for Rev-B Step 2.
+
+**Readback and validation:** All 16 small glyphs have correct row-major byte lengths and non-overlapping advances. Header (37 glyphs) and large numerals (16 glyphs) were independently rechecked. Calculated fixed demo values fit in existing text bounds: `SUNNY` 64px, `USDT PERP` 112px, forecast `25-29 / 10 %` 86px. New caption and day label heights fit their static zones. Data services, E-paper driver, maintenance sequence, and optional preview mode remain unchanged.
+
+**Still required:** Compile/upload to hardware, inspect text shape and perceived stroke balance at normal viewing distance. The user has not yet accepted this new typography revision; do not mark it as hardware-verified.
