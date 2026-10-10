@@ -255,7 +255,7 @@ Scope decisions (2026-10-08):
 
 ## Phase 8 — UI refinement
 
-**Status: In progress (first static prototype hardware-verified; approved visual revision committed on feature branch, awaiting revised hardware check)**
+**Status: In progress (Rev-B fonts/logos observed on hardware; typography uniformity refined, awaiting new device verification)**
 
 **Goal:** Improve readability and visual quality without sacrificing E-paper stability.
 
@@ -271,7 +271,9 @@ Phase 8A-1 checkpoints:
 Phase 8A-1 Rev-B (2026-10-10): user hardware feedback confirms the second static prototype exposes broken calendar glyphs, unbalanced spacing, low-quality logos and coarse large numerals.
 
 - [x] **Rev-B Step 1 — Font & Logo Assets (source committed, software data checks passed):** repair 17px date/day glyph atlas, use native 34px non-overlapping numeric glyphs, refine 11px forecast numerals, and manually redraw native 30px 1-bit ETH/BTC/HYPE outlines. `main` and production data/refresh code are untouched.
-- [ ] Rev-B Step 1 Arduino compilation and updated on-panel visual check.
+- [x] Rev-B Step 1 compiled/uploaded and checked on-panel by the user (2026-10-10 photo): repaired text looks improved, but uneven font size/weight remains; visual acceptance is **not** yet complete.
+- [x] Rev-B typography correction: unify native bitmap style to 34px numbers, 17px header/captions/weekday, and 13px weather numerals. No changes to layout or production drivers.
+- [ ] Recompile/reflash revised typography and confirm consistent visual weight and readability in the next photo.
 - [ ] **Rev-B Step 2 — Layout:** upper divider y=81 → y=77; rebalance three market groups and center all six weather columns with uniform spacing.
 - [ ] **Rev-B Step 3 — Hardware acceptance:** verify readable glyphs/logos, absence of overlap/clipping, seam quality and partial refresh stability before live-data integration.
 
