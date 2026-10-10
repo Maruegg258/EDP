@@ -1,6 +1,6 @@
 # Phase 8A-1 Rev-C — Dashboard Font Reset
 
-**Status (2026-10-10):** Rev-C3-JB2: user visually accepted JetBrains Mono 34px/17px and found 13px too small. A separate 9x14 candidate and five-page isolated test are committed, pending 14px compile/device evaluation. Earlier Rev-C1/C2/C3-JB1 notes below are retained as history.
+**Status (2026-10-10):** Rev-C3-JB2 font choice accepted by user after on-panel testing: **JetBrains Mono Medium 34/17/14px**. Rev-C4 static Dashboard integration is now implemented on the feature branch, with compile/upload and full layout visual approval pending. Older notes below are historical snapshots of earlier checkpoints.
 
 ## Rationale
 
@@ -190,3 +190,29 @@ Page 5 shows identical digit, temperature, forecast, negative-temperature and pe
 - [ ] Rev-C4 production/static Dashboard integration **only after user approval**.
 
 The Python generator check is optional for user convenience; it is not required for Arduino IDE compile/upload. The 14px visual result and firmware compilation **cannot** be inferred from these static checks.
+
+## Rev-C3-JB2 hardware decision and Rev-C4 static-preview integration (2026-10-10)
+
+### Accepted bitmap font system
+
+The user explicitly confirmed hardware testing of the Rev-C3-JB2 preview was satisfactory and selected the **JetBrains Mono Medium 34/17/14px** set. The earlier 34/17px pass still holds; **14px 9×14** supersedes **13px 8×13** for Dashboard small-print text. This is evidence for **font appearance/size**, not evidence that the updated full Dashboard layout is already hardware verified. The 13px font remains available for comparison in the isolated diagnostics; it is not deleted or modified.
+
+| Static preview role | Accepted font | Cell / advance |
+| --- | --- | --- |
+| Header clock and 3 market prices | `DashboardFont34::FONT` | 22×34, advance 22 |
+| Date/weekday, SUNNY, USDT PERP, forecast day | `DashboardFont17::FONT` | 12×17, advance 12 |
+| Current temperature, six-day range/precipitation | `DashboardFont14::FONT` | 9×14, advance 9 |
+
+**Rev-C4 implementation:** `Phase8A1Preview.cpp` now includes and draws only these three `DashboardFont*.h` families at `scale=1`. Obsolete `Phase8A1Digits::FONT`, `Phase8A1HeaderFont::FONT`, and `Phase8A1SmallFont::FONT` are removed **from this preview renderer only**; legacy files remain in the repo for rollback. The 792×272 fixed mock still uses the same coordinates, sample values, 30px crypto logos, Wi-Fi graphic, 32px outline weather icons, two diamond-ended separators at y=81/181, and 6×128px forecast pitch. No 34/17/14 glyph pixel assets were changed.
+
+**Static source checks:** exact new-header reference audit, actual glyph-set coverage, 1× native cell bounds, width-based layout checks for all fixture strings (including `SUNDAY`, `SUNNY`, `USDT PERP`, `26.9 C`, `25-29 / 10 %`, ETH/BTC/HYPE prices), 520px header group limit, market-group boundaries, all six forecast pitches and 792×272 canvas. These are software-only verification; rendering and revised visual balance need confirmation on hardware.
+
+### Hardware test for Rev-C4
+
+1. Get branch `phase8a1-static-prototype` and preserve the ignored local `config.h`.
+2. **Disable** `EDP_PHASE8_FONT_TEST` and **enable** `#define EDP_PHASE8A1_PREVIEW 1` (never both).
+3. Arduino IDE compile/upload `firmware/CrowPanelDashboard/CrowPanelDashboard.ino`; Serial Monitor 115200 should say `EDP Phase 8A-1: STATIC MOCK DATA PREVIEW` and `PASS: static dashboard preview shown once; Wi-Fi/APIs disabled.`.
+4. Confirm the displayed Dashboard uses consistent 34px clock/price, 17px labels, and clearly readable 14px current and six-column forecast numbers. Check bottom text fits each column, no clipping in ETH/BTC/HYPE groups, header alignment and x=396 seam, logos/diamond lines unaffected, and no ghosting/blur after maintenance refresh.
+5. Report compile/upload logs and a panel photograph. **Rev-C4 requires explicit user visual approval** before marking full-layout acceptance or entering later layout/reflow/live data milestones.
+
+No changes to `GraphicsBW`, `CrowEPD579`, main production rendering, secrets, HTTPS trust anchors, or the application-owned refresh sequence.

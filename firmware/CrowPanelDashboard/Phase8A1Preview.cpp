@@ -2,20 +2,21 @@
 
 #include <Arduino.h>
 #include "Icons.h"
-#include "Phase8A1Digits.h"
-#include "Phase8A1HeaderFont.h"
+#include "DashboardFont34.h"
+#include "DashboardFont17.h"
 #include "Phase8A1Logos.h"
-#include "Phase8A1SmallFont.h"
+#include "DashboardFont14.h"
 
 namespace {
 
-// Consistent bitmap type family across sections:
-// 34px numeric time/prices; 17px calendar and English captions;
-// 13px compact temperature/precipitation. All rendered at scale=1.
-// Text weight is controlled at asset level, not by pixel-doubling.
-// Phase 8A-1 Rev-B typography pass preserves all layout coordinates.
-// Physical pixel dimensions: 792x272, split by horizontal rules.
-// This file owns only an opt-in static composition experiment.
+// Phase 8A-1 Rev-C4: user-approved JetBrains Mono Medium 1-bit family.
+// 34px for time/prices, 17px for date/weekday/English labels,
+// 14px for compact weather temperature and precipitation.
+// Draw at native scale=1, with fixed-cell glyph metrics.
+// The former Rev-B font assets and optional 13px diagnostic remain
+// available only for historical/reference testing, not this preview.
+// Phase 8A-1 layout anchors deliberately unchanged in this font-only pass.
+// Physical pixel dimensions: 792x272; opt-in static-only composition.
 static constexpr int16_t WIDTH = 792;
 static constexpr int16_t HEADER_DIVIDER_Y = 81;
 static constexpr int16_t FORECAST_DIVIDER_Y = 181;
@@ -84,8 +85,8 @@ void drawOutlineSun(GraphicsBW& g, int16_t x, int16_t y) {
 bool drawHeader(GraphicsBW& g) {
   drawOutlineSun(g, 22, 25);
 
-  if (!g.drawText(Phase8A1HeaderFont::FONT, "SUNNY", 69, 27, 1, true) ||
-      !g.drawText(Phase8A1SmallFont::FONT,
+  if (!g.drawText(DashboardFont17::FONT, "SUNNY", 69, 27, 1, true) ||
+      !g.drawText(DashboardFont14::FONT,
                   "26.9 C", 69, 48, 1, true)) {
     return false;
   }
@@ -95,9 +96,9 @@ bool drawHeader(GraphicsBW& g) {
   const char* date = "10 OCT";
   const char* time = "12:59";
   const char* weekday = "SUNDAY";
-  const uint16_t dateWidth = g.textWidth(Phase8A1HeaderFont::FONT, date, 1);
-  const uint16_t timeWidth = g.textWidth(Phase8A1Digits::FONT, time, 1);
-  const uint16_t dayWidth = g.textWidth(Phase8A1HeaderFont::FONT, weekday, 1);
+  const uint16_t dateWidth = g.textWidth(DashboardFont17::FONT, date, 1);
+  const uint16_t timeWidth = g.textWidth(DashboardFont34::FONT, time, 1);
+  const uint16_t dayWidth = g.textWidth(DashboardFont17::FONT, weekday, 1);
   if (dateWidth == 0 || timeWidth == 0 || dayWidth == 0) {
     return false;
   }
@@ -121,10 +122,10 @@ bool drawHeader(GraphicsBW& g) {
       timeX + timeWidth + DIAMOND_SECTION_WIDTH / 2);
 
   // All three have a common vertical center at y=42.
-  if (!g.drawText(Phase8A1HeaderFont::FONT, date, startX, 34, 1, true) ||
-      !g.drawText(Phase8A1Digits::FONT, time,
+  if (!g.drawText(DashboardFont17::FONT, date, startX, 34, 1, true) ||
+      !g.drawText(DashboardFont34::FONT, time,
                   timeX, 25, 1, true) ||
-      !g.drawText(Phase8A1HeaderFont::FONT, weekday,
+      !g.drawText(DashboardFont17::FONT, weekday,
                   dayX, 34, 1, true) ||
       !g.drawBitmap(Icons::WIFI_STRONG, 738, 25, true)) {
     return false;
@@ -141,15 +142,15 @@ bool drawMarket(GraphicsBW& g,
                 int16_t priceX,
                 const char* price) {
   if (price == nullptr || g.textWidth(
-          Phase8A1Digits::FONT, price, 1) == 0 ||
-      priceX + g.textWidth(Phase8A1Digits::FONT, price, 1) > 782) {
+          DashboardFont34::FONT, price, 1) == 0 ||
+      priceX + g.textWidth(DashboardFont34::FONT, price, 1) > 782) {
     return false;
   }
 
   return g.drawBitmap(logo, logoX, MARKET_LOGO_Y, true) &&
-         g.drawText(Phase8A1Digits::FONT,
+         g.drawText(DashboardFont34::FONT,
                     price, priceX, MARKET_PRICE_Y, 1, true) &&
-         g.drawText(Phase8A1HeaderFont::FONT,
+         g.drawText(DashboardFont17::FONT,
                     "USDT PERP", priceX, MARKET_LABEL_Y, 1, true);
 }
 
@@ -167,16 +168,16 @@ bool drawSixDayForecast(GraphicsBW& g) {
     const int16_t x = static_cast<int16_t>(
         16 + index * FORECAST_COLUMN_PITCH);
     drawOutlineSun(g, x, 200);
-    if (!g.drawText(Phase8A1HeaderFont::FONT, FORECAST[index].day,
+    if (!g.drawText(DashboardFont17::FONT, FORECAST[index].day,
                     x + 40, 209, 1, true) ||
-        !g.drawText(Phase8A1SmallFont::FONT,
+        !g.drawText(DashboardFont14::FONT,
                     FORECAST[index].summary,
                     x, 243, 1, true)) {
       return false;
     }
 
     // Strictly reserve each segment's width to avoid six-column collisions.
-    if (g.textWidth(Phase8A1SmallFont::FONT,
+    if (g.textWidth(DashboardFont14::FONT,
                     FORECAST[index].summary, 1) >
         FORECAST_COLUMN_PITCH - 12) {
       return false;

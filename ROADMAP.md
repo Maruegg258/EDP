@@ -285,9 +285,9 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 - [x] **Rev-C3-JB1 font source adoption (code committed, hardware pending):** Replace isolated Rev-C3 hand-drawn raster glyphs with official JetBrains Mono Medium-derived 34/17/13px 1-bit glyphs. Preserve all four test pages and fixed-cell metrics; no Rev-C4 layout integration.
 - [x] **Rev-C3-JB1 hardware typography feedback:** User finds the JetBrains Mono 34px and 17px samples excellent; 13px appears too small (2026-10-10). This does not close all Phase 8 acceptance criteria.
 - [x] **Rev-C3-JB2 implementation (hardware pending):** Add independently rasterized 9×14px JetBrains Mono Medium (17 glyphs) alongside unchanged 13/17/34px assets; extend isolated Serial diagnostics to five pages (4=14px, 5=13-vs-14). Update generator and docs; production rendering remains unchanged.
-- [ ] **Rev-C3-JB2 validation:** Compile/upload new firmware, inspect 14px page 4 and direct 13/14 comparison page 5 on CrowPanel; accept or refine before Rev-C4. Optional local `python3 tools/generate_dashboard_fonts.py --check` (independent source/header readback already checked).
-
-- [ ] **Rev-C4:** Integrate approved fonts into static Dashboard; then resume deferred layout and production-data work.
+- [x] **Rev-C3-JB2 typography approval (hardware, 2026-10-10):** User reports satisfactory actual-panel results and selects 34/17/14px JetBrains Mono Medium; 13px is superseded for Dashboard use. This accepts font size/appearance, not the full Dashboard layout.
+- [x] **Rev-C4 source integration:** Switch only `Phase8A1Preview.cpp` to `DashboardFont34/17/14`, scale=1. Leave all font pixel data, divider/layout positions, icons, services and E-paper driver unchanged; source-level fixture bounds validated.
+- [ ] **Rev-C4 hardware validation:** Compile/upload static preview with local `EDP_PHASE8A1_PREVIEW=1`, `EDP_PHASE8_FONT_TEST` off; photograph/review 792×272 full Dashboard (headers, 3 markets, 6-day 14px strip, x=396 seam and refresh quality) before approving revised layout or live data work.
 
 See [Rev-C font design notes](docs/PHASE8_FONT_REVC.md) and [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
 

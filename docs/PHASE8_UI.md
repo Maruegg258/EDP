@@ -122,3 +122,11 @@ Design/implementation notes: [PHASE8_FONT_REVC.md](PHASE8_FONT_REVC.md). This ph
 The three new Rev-C fonts are intentionally **not yet** used by `Phase8A1Preview.cpp`. An isolated `DashboardFontTest.cpp/.h` module now provides four pages (34px, 17px, 13px, side-by-side comparison). Compile with local `#define EDP_PHASE8_FONT_TEST 1` and make sure `EDP_PHASE8A1_PREVIEW` is disabled. At 115200 baud, send `1`/`2`/`3`/`4` in Arduino Serial Monitor to switch pages without reflashing; no Wi-Fi/HTTP/services or background refresh are active. The existing maintenance refresh is preserved. Source-level glyph coverage and pixel-bounds validation passed; **Arduino compile and device approval are pending**.
 
 For complete instructions and sample strings see [PHASE8_FONT_REVC.md](PHASE8_FONT_REVC.md). Continue to Rev-C4 only after the user confirms acceptable weight/spacing on the physical panel.
+
+## Phase 8A-1 Rev-C4 — Accepted JetBrains Mono applied to isolated static Dashboard (2026-10-10)
+
+After real-panel evaluation, the user approved **34px (numeric)**, **17px (English labels)** and **14px (small weather numeric)** JetBrains Mono Medium. The former 13px size was judged too small. The opt-in `Phase8A1Preview.cpp` is now switched from Rev-B mixed font assets to `DashboardFont34.h`, `DashboardFont17.h` and `DashboardFont14.h`, all at scale 1. The old `DashboardFont13` remains in the font diagnostic only.
+
+This is a **font substitution only**: no divider movement, weather/logo redrawing, Wi-Fi changes, real data, or maintenance-refresh changes. The existing 792×272 fixture positions and sample values are retained. Font coverage and static text widths fit the fixture's header, market and forecast bounding zones, but the full rendered Dashboard has **not yet been compiled or visually accepted** on the panel.
+
+To view the new static Dashboard, use local `config.h` with `#define EDP_PHASE8A1_PREVIEW 1` and with `EDP_PHASE8_FONT_TEST` disabled. Build/upload, check Serial 115200 and take a panel photo to inspect the three sizes, labels, forecast 14px text width, x=396 seam, dividers, and refresh quality. The mock weather, prices and date are still fixed **not live**. See [PHASE8_FONT_REVC.md](PHASE8_FONT_REVC.md) for full criteria.
