@@ -4,7 +4,6 @@
 #include "Icons.h"
 #include "DashboardFont34.h"
 #include "DashboardFont17.h"
-#include "Phase8A1Logos.h"
 #include "DashboardFont14.h"
 
 namespace {
@@ -20,9 +19,11 @@ namespace {
 static constexpr int16_t WIDTH = 792;
 static constexpr int16_t HEADER_DIVIDER_Y = 77;
 static constexpr int16_t FORECAST_DIVIDER_Y = 181;
-static constexpr int16_t MARKET_LOGO_Y = 112;
-static constexpr int16_t MARKET_PRICE_Y = 106;
-static constexpr int16_t MARKET_LABEL_Y = 149;
+static constexpr int16_t MARKET_COLUMN_COUNT = 3;
+static constexpr int16_t MARKET_COLUMN_PITCH = 248;
+static constexpr int16_t MARKET_GRID_LEFT = 24;
+static constexpr int16_t MARKET_SYMBOL_Y = 101;
+static constexpr int16_t MARKET_PRICE_Y = 126;
 static constexpr int16_t FORECAST_COLUMN_PITCH = 128;
 static constexpr int16_t FORECAST_COLUMN_COUNT = 6;
 static constexpr int16_t FORECAST_GRID_LEFT = static_cast<int16_t>(
@@ -141,30 +142,44 @@ bool drawHeader(GraphicsBW& g) {
   return true;
 }
 
-bool drawMarket(GraphicsBW& g,
-                const Bitmap1bpp& logo,
-                int16_t logoX,
-                int16_t priceX,
-                const char* price) {
-  if (price == nullptr || g.textWidth(
-          DashboardFont34::FONT, price, 1) == 0 ||
-      priceX + g.textWidth(DashboardFont34::FONT, price, 1) > 782) {
-    return false;
-  }
+struct MarketFixture {
+  const char* symbol;
+  const char* price;
+};
 
-  return g.drawBitmap(logo, logoX, MARKET_LOGO_Y, true) &&
-         g.drawText(DashboardFont34::FONT,
-                    price, priceX, MARKET_PRICE_Y, 1, true) &&
-         g.drawText(DashboardFont17::FONT,
-                    "USDT PERP", priceX, MARKET_LABEL_Y, 1, true);
-}
+static const MarketFixture MARKETS[MARKET_COLUMN_COUNT] = {
+    {"ETH", "2493.56"},
+    {"BTC", "82750.1"},
+    {"HYPE", "84.154"}
+};
 
 bool drawMarkets(GraphicsBW& g) {
-  // No decorative separators: intentional whitespace between instruments.
-  // Each logo is a native 30px outline (previous prototype: 48px filled).
-  return drawMarket(g, Phase8A1Logos::ETH, 59, 114, "2493.56") &&
-         drawMarket(g, Phase8A1Logos::BTC, 307, 366, "82750.1") &&
-         drawMarket(g, Phase8A1Logos::HYPE, 557, 628, "84.154");
+  // Rev-D2: text-only labels above prices, each centered within its column.
+  for (uint8_t i = 0; i < MARKET_COLUMN_COUNT; ++i) {
+    const uint16_t labelWidth =
+        g.textWidth(DashboardFont17::FONT, MARKETS[i].symbol, 1);
+    const uint16_t priceWidth =
+        g.textWidth(DashboardFont34::FONT, MARKETS[i].price, 1);
+    if (labelWidth == 0 || priceWidth == 0 ||
+        labelWidth > MARKET_COLUMN_PITCH - 24 ||
+        priceWidth > MARKET_COLUMN_PITCH - 24) {
+      return false;
+    }
+
+    const int16_t columnX = static_cast<int16_t>(
+        MARKET_GRID_LEFT + i * MARKET_COLUMN_PITCH);
+    const int16_t labelX = static_cast<int16_t>(
+        columnX + (MARKET_COLUMN_PITCH - labelWidth) / 2);
+    const int16_t priceX = static_cast<int16_t>(
+        columnX + (MARKET_COLUMN_PITCH - priceWidth) / 2);
+    if (!g.drawText(DashboardFont17::FONT, MARKETS[i].symbol,
+                    labelX, MARKET_SYMBOL_Y, 1, true) ||
+        !g.drawText(DashboardFont34::FONT, MARKETS[i].price,
+                    priceX, MARKET_PRICE_Y, 1, true)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool drawSixDayForecast(GraphicsBW& g) {
