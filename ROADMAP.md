@@ -281,7 +281,8 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 
 - [x] **Rev-C1:** Specify stable fixed-cell fonts (34px 22×34, 17px 12×17, 13px 8×13), exact glyph coverage, identical advance per font, and design/maintenance contract.
 - [x] **Rev-C2:** Create readable `fonts_src/DashboardFont*.glyphs` and generated `DashboardFont*.h` files plus `tools/generate_dashboard_fonts.py`. Readback/static re-encoding of all 75 glyphs passed.
-- [ ] **Rev-C3:** Run generator --check in developer environment; build font-only preview, Arduino compile, and obtain on-panel typography approval.
+- [x] **Rev-C3 implementation:** Add four dedicated font-only pages with opt-in local config and Serial Monitor page selection; use only the existing verified maintenance refresh, preserving all production paths. Static sample glyph/bounds checks passed.
+- [ ] **Rev-C3 validation:** Run generator --check in the checked-out repository, compile in Arduino IDE, upload, and photograph/approve all four font pages on CrowPanel.
 - [ ] **Rev-C4:** Integrate approved fonts into static Dashboard; then resume deferred layout and production-data work.
 
 See [Rev-C font design notes](docs/PHASE8_FONT_REVC.md) and [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
