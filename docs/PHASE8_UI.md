@@ -103,3 +103,15 @@ After receiving the hardware results, refine typography and logo masks before pr
 **Readback and validation:** All 16 small glyphs have correct row-major byte lengths and non-overlapping advances. Header (37 glyphs) and large numerals (16 glyphs) were independently rechecked. Calculated fixed demo values fit in existing text bounds: `SUNNY` 64px, `USDT PERP` 112px, forecast `25-29 / 10 %` 86px. New caption and day label heights fit their static zones. Data services, E-paper driver, maintenance sequence, and optional preview mode remain unchanged.
 
 **Still required:** Compile/upload to hardware, inspect text shape and perceived stroke balance at normal viewing distance. The user has not yet accepted this new typography revision; do not mark it as hardware-verified.
+
+
+## Phase 8A-1 Rev-C Font Reset — C1/C2 (2026-10-10)
+
+Rev-B's attempted font polishing was stopped at the user's request because the result still lacked a consistent family appearance. The Rev-C design intentionally **starts from new, independently editable, native-size pixel sources** instead of patching the prior raster fonts.
+
+- [x] Rev-C1 — define fixed-cell typography contract: `DashboardFont34` 22×34px numeric, `DashboardFont17` 12×17px uppercase/date, `DashboardFont13` 8×13px compact weather numeric.
+- [x] Rev-C2 — author three new `fonts_src/*.glyphs` sources, generated `DashboardFont*.h` headers, and a deterministic Python 3 converter. Readback/bitmap metrics and independent re-encoding checks passed.
+- [ ] Run local Python `tools/generate_dashboard_fonts.py --check`, Arduino compile and Rev-C3 **font-only test page on the actual panel**.
+- [ ] Rev-C4 — replace fonts inside static Dashboard only after user visually accepts the independent font sample. No screen divider or data service changes before that.
+
+Design/implementation notes: [PHASE8_FONT_REVC.md](PHASE8_FONT_REVC.md). This phase has **not** been declared hardware-verified. `Phase8A1Preview.cpp` still uses the prior font assets and keeps its original demo frame unchanged.
