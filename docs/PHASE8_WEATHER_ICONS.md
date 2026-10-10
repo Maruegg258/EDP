@@ -1,6 +1,6 @@
 # Phase 8A-2 — Weather Icon System
 
-**Status (2026-10-11):** Eleven candidate monochrome assets and the isolated gallery are committed on `phase8a1-static-prototype`. Source/header bitwise consistency, 16-condition routing review and gallery bounds PASS. **Arduino compile/upload and physical appearance are pending**, so none of the eleven drawings are yet visually approved.
+**Status (2026-10-11):** Initial 11-icon Gallery **ran and displayed normally on hardware**, but the user preferred the subsequently supplied thin-outline reference style. **Rev-B pixel assets have been traced from that user reference and committed**; source/header consistency PASS. The new Rev-B artwork still needs Arduino compile/upload and physical visual approval. Earlier notes below describe the first implementation.
 
 ## Purpose and boundaries
 
@@ -76,3 +76,38 @@ python3 tools/generate_weather_icons.py --check
 - [ ] Adopt accepted icons into the static Dashboard; only later integrate live WeatherService updates with application-owned dirty/refresh handling.
 
 **Avoid interpreting source-level PASS as a completed hardware test.**
+
+## Rev-B — Reference-style artwork revision (2026-10-11)
+
+### Evidence and decision
+
+The user confirmed the Phase 8A-2 initial eleven-icon Gallery displayed normally on the actual CrowPanel, but the **artwork style** was not the intended one. They provided a narrow black-background screenshot containing **eleven thin white-outline icons** in the desired order: sun, crescent moon, partly cloudy day, partly cloudy night, cloud, fog, drizzle, rain, snow, thunder, and question mark. The user explicitly requested replacing all eleven candidates with that reference family and **not** adding wind data.
+
+### Implementation
+
+- **Keep the user-supplied design's native optical proportions.** Pixel artwork was traced from the provided screenshot onto a 32×32 monochrome glyph canvas. Source strokes use a fixed brightness threshold (above 135 of 255) to turn its anti-aliased reference lines into crisp 1-bit pixels; source glyphs are centered and are **not** enlarged to fill the square. The result is a compact roughly 21–23px drawn footprint surrounded by transparent margins.
+- White lines on the original black background become foreground black when composed by `GraphicsBW::drawBitmap` on the white E-paper. This is the same line geometry but inverted foreground color appropriate for the production black-and-white panel.
+- All eleven `weather_icons_src/WeatherIcons32.icons` glyph matrices have been replaced, and `WeatherIconAssets.h` has been regenerated to match. The `tools/generate_weather_icons.py` input/output format remains unchanged.
+- `WeatherIconGallery.cpp` and `WeatherIconSelector.cpp` require **no code edits**: they already reference the stable eleven names and 32×32 contract. The gallery remains a one-shot 4×3 page, rendering the original approved 17px label font.
+- No changed weather classifications or WMO decoding, no separate wind icon, no daily-data expansion, and no edits to `WeatherService`, production `WeatherWidgetMapper`, `Phase8A1Preview.cpp`, the dual-SSD1683 driver, navigation, GPIO, TLS, Wi-Fi, or maintenance refresh.
+
+### Verification and next test
+
+- [x] 11×32 source matrices, each 128 bytes after MSB-first packing.
+- [x] Independently regenerated `WeatherIconAssets.h` and compared every byte/pixel with the checked-in asset (PASS).
+- [x] All visible glyph bounds remain within each 32×32 cell; existing Gallery coverage and selector still reference all eleven icon names (PASS).
+- [ ] Arduino IDE ESP32-S3 compile/upload of the **Rev-B** assets.
+- [ ] Physical CrowPanel inspection and acceptance of the thin reference-like strokes. Examine SUN DAY/MOON NIGHT/PARTLY DAY/PARTLY NIGHT, distinguish DRIZZLE/RAIN/SNOW/THUNDER, ensure UNKNOWN is readable and there is no blur/ghosting.
+- [ ] After approval, adopt these glyphs in the static Dashboard (future 8A-2D); do **not** integrate unreviewed weather sprites into production.
+
+### How to view Rev-B
+
+Use the unchanged local `config.h` flags:
+
+```cpp
+// #define EDP_PHASE8_FONT_TEST 1
+// #define EDP_PHASE8A1_PREVIEW 1
+#define EDP_PHASE8_WEATHER_ICON_TEST 1
+```
+
+Pull latest `phase8a1-static-prototype`, Compile → Upload via Arduino IDE, then inspect the same 11-icon Gallery. No Python command is required for Arduino IDE users, and `main` remains untouched.
