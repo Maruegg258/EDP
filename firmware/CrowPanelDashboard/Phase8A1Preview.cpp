@@ -1,7 +1,6 @@
 #include "Phase8A1Preview.h"
 
 #include <Arduino.h>
-#include "Font5x7.h"
 #include "Icons.h"
 #include "Phase8A1Digits.h"
 #include "Phase8A1HeaderFont.h"
@@ -10,6 +9,11 @@
 
 namespace {
 
+// Consistent bitmap type family across sections:
+// 34px numeric time/prices; 17px calendar and English captions;
+// 13px compact temperature/precipitation. All rendered at scale=1.
+// Text weight is controlled at asset level, not by pixel-doubling.
+// Phase 8A-1 Rev-B typography pass preserves all layout coordinates.
 // Physical pixel dimensions: 792x272, split by horizontal rules.
 // This file owns only an opt-in static composition experiment.
 static constexpr int16_t WIDTH = 792;
@@ -80,7 +84,7 @@ void drawOutlineSun(GraphicsBW& g, int16_t x, int16_t y) {
 bool drawHeader(GraphicsBW& g) {
   drawOutlineSun(g, 22, 25);
 
-  if (!g.drawText(Font5x7::FONT, "SUNNY", 69, 27, 2, true) ||
+  if (!g.drawText(Phase8A1HeaderFont::FONT, "SUNNY", 69, 27, 1, true) ||
       !g.drawText(Phase8A1SmallFont::FONT,
                   "26.9 C", 69, 48, 1, true)) {
     return false;
@@ -137,7 +141,7 @@ bool drawMarket(GraphicsBW& g,
                 int16_t priceX,
                 const char* price) {
   if (price == nullptr || g.textWidth(
-          Phase8A1Digits::FONT, price, 2) == 0 ||
+          Phase8A1Digits::FONT, price, 1) == 0 ||
       priceX + g.textWidth(Phase8A1Digits::FONT, price, 1) > 782) {
     return false;
   }
@@ -145,8 +149,8 @@ bool drawMarket(GraphicsBW& g,
   return g.drawBitmap(logo, logoX, MARKET_LOGO_Y, true) &&
          g.drawText(Phase8A1Digits::FONT,
                     price, priceX, MARKET_PRICE_Y, 1, true) &&
-         g.drawText(Font5x7::FONT,
-                    "USDT PERP", priceX, MARKET_LABEL_Y, 2, true);
+         g.drawText(Phase8A1HeaderFont::FONT,
+                    "USDT PERP", priceX, MARKET_LABEL_Y, 1, true);
 }
 
 bool drawMarkets(GraphicsBW& g) {
@@ -163,8 +167,8 @@ bool drawSixDayForecast(GraphicsBW& g) {
     const int16_t x = static_cast<int16_t>(
         16 + index * FORECAST_COLUMN_PITCH);
     drawOutlineSun(g, x, 200);
-    if (!g.drawText(Font5x7::FONT, FORECAST[index].day,
-                    x + 40, 209, 2, true) ||
+    if (!g.drawText(Phase8A1HeaderFont::FONT, FORECAST[index].day,
+                    x + 40, 209, 1, true) ||
         !g.drawText(Phase8A1SmallFont::FONT,
                     FORECAST[index].summary,
                     x, 243, 1, true)) {
