@@ -92,7 +92,7 @@ bool drawHeader(GraphicsBW& g) {
   const char* time = "12:59";
   const char* weekday = "SUNDAY";
   const uint16_t dateWidth = g.textWidth(Phase8A1HeaderFont::FONT, date, 1);
-  const uint16_t timeWidth = g.textWidth(Phase8A1Digits::FONT, time, 2);
+  const uint16_t timeWidth = g.textWidth(Phase8A1Digits::FONT, time, 1);
   const uint16_t dayWidth = g.textWidth(Phase8A1HeaderFont::FONT, weekday, 1);
   if (dateWidth == 0 || timeWidth == 0 || dayWidth == 0) {
     return false;
@@ -119,7 +119,7 @@ bool drawHeader(GraphicsBW& g) {
   // All three have a common vertical center at y=42.
   if (!g.drawText(Phase8A1HeaderFont::FONT, date, startX, 34, 1, true) ||
       !g.drawText(Phase8A1Digits::FONT, time,
-                  timeX, 25, 2, true) ||
+                  timeX, 25, 1, true) ||
       !g.drawText(Phase8A1HeaderFont::FONT, weekday,
                   dayX, 34, 1, true) ||
       !g.drawBitmap(Icons::WIFI_STRONG, 738, 25, true)) {
@@ -138,20 +138,20 @@ bool drawMarket(GraphicsBW& g,
                 const char* price) {
   if (price == nullptr || g.textWidth(
           Phase8A1Digits::FONT, price, 2) == 0 ||
-      priceX + g.textWidth(Phase8A1Digits::FONT, price, 2) > 782) {
+      priceX + g.textWidth(Phase8A1Digits::FONT, price, 1) > 782) {
     return false;
   }
 
   return g.drawBitmap(logo, logoX, MARKET_LOGO_Y, true) &&
          g.drawText(Phase8A1Digits::FONT,
-                    price, priceX, MARKET_PRICE_Y, 2, true) &&
+                    price, priceX, MARKET_PRICE_Y, 1, true) &&
          g.drawText(Font5x7::FONT,
                     "USDT PERP", priceX, MARKET_LABEL_Y, 2, true);
 }
 
 bool drawMarkets(GraphicsBW& g) {
   // No decorative separators: intentional whitespace between instruments.
-  // Each logo is now a 32px outline mark (previous prototype: 48px filled).
+  // Each logo is a native 30px outline (previous prototype: 48px filled).
   return drawMarket(g, Phase8A1Logos::ETH, 59, 114, "2493.56") &&
          drawMarket(g, Phase8A1Logos::BTC, 307, 366, "82750.1") &&
          drawMarket(g, Phase8A1Logos::HYPE, 557, 628, "84.154");
