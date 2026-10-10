@@ -1,5 +1,5 @@
-# DashboardFont13: native 8x13 pixel glyphs for temperatures and forecast.
-# Each glyph authored at its own target size; fixed 8px advance and cap height.
+# DashboardFont13: project-owned independently editable native 8x13 bitmap cells.
+# Ink='#', white='.', advance=8. Rev-C original pixel data; no bitmap scaling.
 FONT DashboardFont13 8 13
 GLYPH U+0030
 ........
@@ -218,9 +218,9 @@ GLYPH U+0025
 ....##..
 ....#...
 ...##...
-...#.###
-..##.#.#
-..#..###
+...#.##.
+..##.##.
+..#..##.
 .#......
 ........
 END
@@ -272,4 +272,3 @@ GLYPH U+0020
 ........
 ........
 END
-
