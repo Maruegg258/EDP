@@ -1,24 +1,25 @@
 # Phase 8A-1 — Static Dashboard visual prototype
 
-**Status:** Implemented on `phase8a1-static-prototype` branch. Awaiting Arduino compile/upload and on-panel visual validation.
+**Status:** Initial 8A-1 static layout functionally verified by the user on-panel; revised 2026-10-10 visual composition committed to the same feature branch, pending its own compile/upload and hardware confirmation.
 
 ## Source of design
 
 User-supplied `EDP.pdf`, page 1, approximately 825.36 × 283.56 PDF points. This aspect ratio closely matches the project-owned **792 × 272** visible pixel coordinate system. The PDF is a visual reference, not a source of live prices/weather. No PDF or local credentials are committed.
 
-Agreed priorities: >90% of time on DASHBOARD, preserve an ETH/BTC/HYPE order, two diamond-ended horizontal separators, small sparkle separators, modern numeric font, more detailed crypto marks, six-day summary along the bottom. WEATHER and MARKETS pages are deliberately unchanged.
+Agreed priorities: >90% of time on DASHBOARD, ETH/BTC/HYPE order, two diamond-ended horizontal separators, modern numeric font, detailed outline crypto marks, and six-day summary along the bottom. The revised visual reference supersedes the original PDF regarding ornament sizes and placement. WEATHER and MARKETS pages are deliberately unchanged.
 
-## Prototype contents
+## Revised static composition (approved visual reference, 2026-10-10)
 
-`Phase8A1Preview.cpp` renders exactly **one static 792 × 272 frame** with:
+`Phase8A1Preview.cpp` still renders exactly **one static 792 × 272 frame**, with the following visual refinement of the user's most recent approved image:
 
-- Y=67 and Y=181 dividing rules, black diamond endpoints
-- Upper row: current weather at left, `10 OCT ✦ 12:59 ✦ SUNDAY` centered, existing production Wi-Fi strong icon at upper-right
-- ETH / BTC / HYPE priced `2493.56 / 82750.1 / 84.154`, each with a 48×48 1-bit logo derived from the uploaded design sample, plus `USDT PERP`
-- Six sample forecast slots MON through SAT with condition icons, integer min/max values (e.g., `25-29 C`) and daily precipitation percentages
-- `Phase8A1Digits.h`: experimental numeric glyphs with tabular digit advances and three draw scales: time and prices use scale 2; temperatures and daily precipitation use scale 1. English labels continue to use `Font5x7`
+- Two thin separating rules at **y=81** and **y=181**, each with small filled diamonds at the line endpoints
+- Header: left weather icon is now **32×32 px**, same outline-sun design as the lower strip; compact `SUNNY` and `26.9 C` text. Center group is `10 OCT ◆ 12:59 ◆ SUNDAY`, vertically aligned on y≈42 with 17px date/weekday glyphs and 34px clock digits (exact 50% character height); header separators use the same filled diamond motif as line endpoints. Original Wi-Fi production bitmap remains at upper-right
+- Crypto row: ETH / BTC / HYPE prices `2493.56 / 82750.1 / 84.154` and `USDT PERP`, with **no inter-asset sparkle separators**. Coin silhouettes are replaced by project-owned **30×30 monochrome outlined** symbols (62.5% of the original 48px bitmap dimension, near the requested 60%). BTC/ETH echo the supplied stroke-based logo reference; HYPE is an outline in the same style
+- Six equally pitched forecast columns: a **32×32 outline weather icon** and weekday label on a single top row, with a compact single-line `25-29 / 10 %` below each. Sample values and icon conditions intentionally match the approved static mock; they are NOT live weather
+- `Phase8A1Digits.h` retains the experimental large numeric raster for time and crypto prices; `Phase8A1HeaderFont.h` holds 17px header letters derived from project-owned Font5x7; `Phase8A1SmallFont.h` is a hand-drawn compact 11px numeric font for the six-column summaries and small current temperature
+- English labels elsewhere continue to use `Font5x7`
 
-The display is black/white. The original colorful brand-circle backgrounds were converted into solid dark monochrome silhouettes with white-negative marks; details, balance, line weights and dithering remain open to user testing and revision. Numeric bitmaps were rasterized from **Inter Display Medium** (SIL Open Font License 1.1), then committed as project-local packed 1-bit bitmap data only. The original font file is **not** included.
+The display is black/white with no grayscale promise. Numeric glyphs in `Phase8A1Digits.h` were rasterized from **Inter Display Medium** (SIL Open Font License 1.1); only packed project-local data are included, no original font files. Outline logo and weather-icon readability remain subject to revised hardware testing.
 
 ## Preview isolation and safety
 
@@ -44,9 +45,10 @@ The display is black/white. The original colorful brand-circle backgrounds were 
 ## Acceptance and next steps
 
 - [x] Branch isolated from `main`.
-- [x] Static renderer + font assets + high-detail black/white logo assets + safe opt-in boot path committed.
-- [ ] Local Arduino compile confirmed.
-- [ ] Physical 792×272 rendering checked by user, including labels, price widths, weather strip legibility and SSD1683 seam.
-- [ ] Hardware results recorded and marked accepted.
+- [x] Original 8A-1 static prototype compiled/uploaded and visually tested by the user. User reported the panel rendered normally and closely matched the first simulated reference (2026-10-10); no explicit electrical measurements made.
+- [x] Approved follow-up visual adjustments committed on this branch: reduced upper-left weather, 50%-height date/weekday, diamond header separators, near-60% outline logos, removed middle sparkles, six compact single-line forecasts.
+- [x] Source readback + bitmap byte-length + text-width and horizontal clipping checks completed for the revised static assets.
+- [ ] **Revised** Phase 8A-1 Arduino compile/upload and final 792×272 panel confirmation, especially header centering, logo stroke clarity, bottom text sizes, dual-controller seam and E-paper refresh artifacts.
+- [ ] User acceptance of revised artwork before any production data integration.
 
 After receiving the hardware results, refine typography and logo masks before production data integration. Six genuine daily forecasts require a later WeatherService contract update and must not be represented as already implemented by this mock.
