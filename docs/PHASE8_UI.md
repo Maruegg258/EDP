@@ -182,3 +182,21 @@ The user reports the actual Rev-D2 display result is **OK, with no problems**, c
 **Verified on real hardware (user report):** Rev-D2 static Dashboard appearance. **Not yet claimed verified:** real/live price and weather binding, dynamic string layout under changing values, long-running behavior, refresh endurance, or production mode. No new source changes are necessary for this acceptance; leave `Phase8A1Preview.cpp`, graphics, fonts, services, drivers and refresh logic intact.
 
 **Handoff:** The feature branch `phase8a1-static-prototype` retains this accepted static design. Before a future live-data step, review actual service/state interfaces from current GitHub and preserve strict separation between data polling, visual dirty state and physical display refresh.
+
+## Phase 8A-2 — Native weather icon gallery (2026-10-11)
+
+After Rev-D2 visual approval, the user chose to finish weather icon artwork before attaching live services to the new Dashboard. This test-only checkpoint creates **eleven project-owned 32×32 1-bit icons** and a one-shot Gallery without altering the accepted Rev-D2 preview renderer.
+
+An independent `WeatherIconSelector` maps the existing `WeatherCondition` enum (16 states) and `isDay` into eleven candidate assets. Existing `WeatherWidgetMapper`, `Icons.h`, `WeatherService`, and the E-paper driver remain unchanged. The editable source is `weather_icons_src/WeatherIcons32.icons`, and the generated native bitmap data is `WeatherIconAssets.h`; a Python 3 standard-library source/header check is optional for the developer.
+
+**Opt-in hardware inspection** (with local ignored `config.h`):
+
+```cpp
+// #define EDP_PHASE8_FONT_TEST 1
+// #define EDP_PHASE8A1_PREVIEW 1
+#define EDP_PHASE8_WEATHER_ICON_TEST 1
+```
+
+Compile/upload via Arduino IDE. The Gallery displays all eleven symbols at **real physical size**, four columns and three rows, with approved 17px uppercase captions. No Wi-Fi/API calls or background E-paper refresh are started. Source/header equality, static mapping coverage and Gallery text bounds pass; **Arduino compile, upload, and real panel approval are pending**. The UI layout and production renderer will only be changed after actual visual feedback.
+
+See [PHASE8_WEATHER_ICONS.md](PHASE8_WEATHER_ICONS.md) for the full icon/condition mapping and acceptance tests.

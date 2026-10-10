@@ -294,7 +294,17 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 - [x] **Rev-D1a hardware acceptance (2026-10-10):** User confirms the updated `25-29/ 10%` text appears OK on the physical E-paper panel.
 - [x] **Rev-D2 implementation (hardware pending):** Remove the middle-region ETH/BTC/HYPE logos and `USDT PERP` footers in the opt-in static Dashboard preview. Show 17px ETH/BTC/HYPE above their corresponding 34px prices, with independent centering in three equal 248px columns and no changes to fonts, dividers, header, bottom forecast or display drivers.
 - [x] **Rev-D2 on-panel visual acceptance (2026-10-11):** User reports the revised ETH/BTC/HYPE text-only market row displays correctly and is satisfactory on the CrowPanel. The 17px symbol-above-34px-price arrangement is accepted as the new static-preview baseline. This feedback confirms visual appearance, not extended refresh or live-data behavior.
-- [ ] **Next checkpoint — static-layout handoff:** Preserve the accepted Rev-D2 arrangement, evaluate any remaining visual feedback, then plan isolated binding of live service data to the accepted UI without changing the E-paper driver or refresh sequence.
+- [x] **Rev-D2 static-layout handoff:** Preserve the accepted Rev-D2 appearance as the fixed reference for icon and later live-data work. No production rendering changes.
+
+Phase 8A-2 — Weather Icon System (feature branch; device artwork acceptance pending):
+
+- [x] **8A-2A classification contract:** Define eleven 32×32 native monochrome icons for clear day/night, partly cloudy day/night, overcast, fog, drizzle, rain, snow, thunder and unknown; map existing 16 `WeatherCondition` categories, with day/night only where meaningful.
+- [x] **8A-2B source artwork and reproducibility:** Add editable `weather_icons_src/WeatherIcons32.icons` and 1-bit packed `WeatherIconAssets.h`, plus `tools/generate_weather_icons.py`; source/header bitwise readback check passed for all 11 × 128-byte assets.
+- [x] **8A-2B gallery and isolated selector:** Add `WeatherIconSelector` and a 4-column × 3-row Gallery with 11 native 32×32 samples and 17px labels. Use opt-in local `EDP_PHASE8_WEATHER_ICON_TEST=1`, mutually exclusive with font test and static preview. Bounds and 16-category mapping review passed; no production-service or refresh-path edits.
+- [ ] **8A-2C real-device inspection:** Compile/upload from this branch, confirm all 11 icons are recognizable and consistent at native 32×32, distinct rain/drizzle/snow/thunder marks, day/night clarity, seam behavior and no ghosting. Iterate only on rejected assets if needed.
+- [ ] **8A-2D artwork acceptance and UI handoff:** After hardware approval, adopt the reviewed icons in the static Dashboard current-weather and daily-forecast slots; retain `WeatherService` and production `WeatherWidgetMapper` boundaries until Phase 8B/8C live-data binding.
+
+See [Phase 8 weather icon notes](docs/PHASE8_WEATHER_ICONS.md) for mapping and Gallery test instructions. Phase 8B live-data integration remains pending.
 
 See [Rev-C font design notes](docs/PHASE8_FONT_REVC.md) and [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
 
