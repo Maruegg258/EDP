@@ -1,6 +1,6 @@
 # Phase 8A-1 — Static Dashboard visual prototype
 
-**Status:** Initial 8A-1 static layout functionally verified by the user on-panel; revised 2026-10-10 visual composition committed to the same feature branch, pending its own compile/upload and hardware confirmation.
+**Status (2026-10-10):** Rev-C4 static preview with 34/17/14px JetBrains Mono was tested on the device and accepted as a visual baseline. Later layout tuning remains opt-in and unverified until re-tested; prior checkpoints below preserve historical context.
 
 ## Source of design
 
@@ -130,3 +130,9 @@ After real-panel evaluation, the user approved **34px (numeric)**, **17px (Engli
 This is a **font substitution only**: no divider movement, weather/logo redrawing, Wi-Fi changes, real data, or maintenance-refresh changes. The existing 792×272 fixture positions and sample values are retained. Font coverage and static text widths fit the fixture's header, market and forecast bounding zones, but the full rendered Dashboard has **not yet been compiled or visually accepted** on the panel.
 
 To view the new static Dashboard, use local `config.h` with `#define EDP_PHASE8A1_PREVIEW 1` and with `EDP_PHASE8_FONT_TEST` disabled. Build/upload, check Serial 115200 and take a panel photo to inspect the three sizes, labels, forecast 14px text width, x=396 seam, dividers, and refresh quality. The mock weather, prices and date are still fixed **not live**. See [PHASE8_FONT_REVC.md](PHASE8_FONT_REVC.md) for full criteria.
+
+## Rev-C4 physical acceptance / layout handoff (2026-10-10)
+
+The user confirms the **actual CrowPanel 5.79-inch display** running the Rev-C4 34/17/14px JetBrains Mono static Dashboard is visually **acceptable**. This is an on-panel visual approval of the unchanged Rev-C4 font-integrated mock, not a claim that all possible refresh/staleness/long-duration conditions have been tested. No additional photo or detailed Serial log was supplied at this handoff. The last Rev-C4 source is commit `c821ce3b6ea34078c9b10390242ff3d0102f0537`, retained in history for rollback.
+
+**Next controlled step: Rev-D1 layout-only test.** Move only the top diamond-ended horizontal divider from y=81 to y=77; center icon/weekday group and 14px forecast numerical summary independently inside all six equal 128px cells. Preserve 34/17/14px font assets, all header content, three market groups, icons/logos, second divider (y=181), network/production path and `maintenanceRefresh()`. Rev-D2 market-group balancing is deferred until D1 is physically reviewed.

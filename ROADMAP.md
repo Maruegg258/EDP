@@ -255,7 +255,7 @@ Scope decisions (2026-10-08):
 
 ## Phase 8 — UI refinement
 
-**Status: In progress (Rev-B fonts/logos observed on hardware; typography uniformity refined, awaiting new device verification)**
+**Status: In progress (Rev-C4 integrated JetBrains Mono 34/17/14px static preview visually accepted on hardware 2026-10-10; layout refinements pending)**
 
 **Goal:** Improve readability and visual quality without sacrificing E-paper stability.
 
@@ -287,7 +287,9 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 - [x] **Rev-C3-JB2 implementation (hardware pending):** Add independently rasterized 9×14px JetBrains Mono Medium (17 glyphs) alongside unchanged 13/17/34px assets; extend isolated Serial diagnostics to five pages (4=14px, 5=13-vs-14). Update generator and docs; production rendering remains unchanged.
 - [x] **Rev-C3-JB2 typography approval (hardware, 2026-10-10):** User reports satisfactory actual-panel results and selects 34/17/14px JetBrains Mono Medium; 13px is superseded for Dashboard use. This accepts font size/appearance, not the full Dashboard layout.
 - [x] **Rev-C4 source integration:** Switch only `Phase8A1Preview.cpp` to `DashboardFont34/17/14`, scale=1. Leave all font pixel data, divider/layout positions, icons, services and E-paper driver unchanged; source-level fixture bounds validated.
-- [ ] **Rev-C4 hardware validation:** Compile/upload static preview with local `EDP_PHASE8A1_PREVIEW=1`, `EDP_PHASE8_FONT_TEST` off; photograph/review 792×272 full Dashboard (headers, 3 markets, 6-day 14px strip, x=396 seam and refresh quality) before approving revised layout or live data work.
+- [x] **Rev-C4 hardware visual acceptance (2026-10-10):** User uploaded/tested the integrated 34/17/14px JetBrains Mono static Dashboard and reported the result acceptable. This approves the Rev-C4 visual baseline, **not** future layout edits or live-data integration.
+- [ ] **Rev-D1 layout tuning:** Adjust the upper divider from y=81 to y=77 and center icon+weekday plus 14px summary within each 128px forecast cell. Keep all fonts, logos, other anchors and refresh behavior unchanged. Hardware re-check required after implementation.
+- [ ] **Rev-D2 proposed:** Independently rebalance ETH/BTC/HYPE horizontal groups only after D1 hardware feedback; avoid changing them simultaneously.
 
 See [Rev-C font design notes](docs/PHASE8_FONT_REVC.md) and [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
 

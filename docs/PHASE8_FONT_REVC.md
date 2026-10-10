@@ -1,6 +1,6 @@
 # Phase 8A-1 Rev-C — Dashboard Font Reset
 
-**Status (2026-10-10):** Rev-C3-JB2 font choice accepted by user after on-panel testing: **JetBrains Mono Medium 34/17/14px**. Rev-C4 static Dashboard integration is now implemented on the feature branch, with compile/upload and full layout visual approval pending. Older notes below are historical snapshots of earlier checkpoints.
+**Status (2026-10-10):** Rev-C4 integrated **JetBrains Mono Medium 34/17/14px** static Dashboard has been tested and visually accepted by the user on the physical CrowPanel. The three font pixel assets are locked for the next layout-only phase. Older notes below are historical snapshots.
 
 ## Rationale
 
@@ -216,3 +216,7 @@ The user explicitly confirmed hardware testing of the Rev-C3-JB2 preview was sat
 5. Report compile/upload logs and a panel photograph. **Rev-C4 requires explicit user visual approval** before marking full-layout acceptance or entering later layout/reflow/live data milestones.
 
 No changes to `GraphicsBW`, `CrowEPD579`, main production rendering, secrets, HTTPS trust anchors, or the application-owned refresh sequence.
+
+## Rev-C4 physical confirmation (2026-10-10)
+
+User feedback: the complete static Dashboard following font substitution was uploaded and inspected on the physical panel; appearance **OK / acceptable**. This is sufficient to close Rev-C4 visual approval and start layout-only refinement. Preserve `DashboardFont34`, `DashboardFont17`, and `DashboardFont14` pixel data without further edits unless a new hardware issue is reported; keep `DashboardFont13` only for diagnostics/history. Normal production paths remain separate from this opt-in visual prototype.
