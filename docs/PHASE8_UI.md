@@ -173,4 +173,12 @@ All three market groups occupy centered 248px-wide columns with x=24–272, 272�
 
 The static renderer no longer includes `Phase8A1Logos.h`, but the asset file remains on GitHub for rollback. Accepted 34/17/14px glyph bitmaps, header, Wi-Fi, weather, lower six-day strip, driver, services, networking and maintenance-refresh sequence remain unchanged.
 
-**Status:** Code and source geometry checks only; full Rev-D2 compile/upload and physical inspection are **pending**. With `EDP_PHASE8A1_PREVIEW=1` and `EDP_PHASE8_FONT_TEST` disabled in local ignored `config.h`, compile/upload and review label-over-price alignment, visual spacing, legibility across the x=396 controller seam, and absence of clipping/ghosting. Do not mark Rev-D2 hardware-accepted until the user's explicit approval.
+**Status at initial commit (2026-10-10):** Source and geometry checks passed; on-panel review was then pending. For the subsequently confirmed result, see the Rev-D2 acceptance record below.
+
+## Phase 8A-1 Rev-D2 — On-panel visual acceptance (2026-10-11)
+
+The user reports the actual Rev-D2 display result is **OK, with no problems**, confirming acceptance of the text-only middle region: 17px `ETH`, `BTC` and `HYPE` above independently centered 34px price numbers, with no crypto logos or `USDT PERP` labels. The already approved Rev-D1a compact forecast `25-29/ 10%` and 34/17/14px JetBrains Mono family remain the current visual baseline.
+
+**Verified on real hardware (user report):** Rev-D2 static Dashboard appearance. **Not yet claimed verified:** real/live price and weather binding, dynamic string layout under changing values, long-running behavior, refresh endurance, or production mode. No new source changes are necessary for this acceptance; leave `Phase8A1Preview.cpp`, graphics, fonts, services, drivers and refresh logic intact.
+
+**Handoff:** The feature branch `phase8a1-static-prototype` retains this accepted static design. Before a future live-data step, review actual service/state interfaces from current GitHub and preserve strict separation between data polling, visual dirty state and physical display refresh.

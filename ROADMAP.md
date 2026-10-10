@@ -255,7 +255,7 @@ Scope decisions (2026-10-08):
 
 ## Phase 8 — UI refinement
 
-**Status: In progress (Rev-C4 integrated JetBrains Mono 34/17/14px static preview visually accepted on hardware 2026-10-10; layout refinements pending)**
+**Status: In progress (Rev-D2 static layout visually accepted on hardware 2026-10-11; live-data binding and production integration not yet started)**
 
 **Goal:** Improve readability and visual quality without sacrificing E-paper stability.
 
@@ -293,7 +293,8 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 - [x] **Rev-D1a text-spacing adjustment (source committed):** All six mock summaries changed from `25-29 / 10 %` to `25-29/ 10%`, retaining the original 14px font and dynamic centering in 128px columns. No other layout or hardware behavior was changed.
 - [x] **Rev-D1a hardware acceptance (2026-10-10):** User confirms the updated `25-29/ 10%` text appears OK on the physical E-paper panel.
 - [x] **Rev-D2 implementation (hardware pending):** Remove the middle-region ETH/BTC/HYPE logos and `USDT PERP` footers in the opt-in static Dashboard preview. Show 17px ETH/BTC/HYPE above their corresponding 34px prices, with independent centering in three equal 248px columns and no changes to fonts, dividers, header, bottom forecast or display drivers.
-- [ ] **Rev-D2 hardware validation:** Compile and upload static preview, verify the text-only three-column market row, alignment and seam readability; await user approval before further layout work.
+- [x] **Rev-D2 on-panel visual acceptance (2026-10-11):** User reports the revised ETH/BTC/HYPE text-only market row displays correctly and is satisfactory on the CrowPanel. The 17px symbol-above-34px-price arrangement is accepted as the new static-preview baseline. This feedback confirms visual appearance, not extended refresh or live-data behavior.
+- [ ] **Next checkpoint — static-layout handoff:** Preserve the accepted Rev-D2 arrangement, evaluate any remaining visual feedback, then plan isolated binding of live service data to the accepted UI without changing the E-paper driver or refresh sequence.
 
 See [Rev-C font design notes](docs/PHASE8_FONT_REVC.md) and [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
 
