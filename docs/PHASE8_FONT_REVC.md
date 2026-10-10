@@ -76,12 +76,64 @@ The generator uses Python standard library only, enforces the exact required gly
 - [ ] Compile with Arduino ESP32-S3 toolchain.
 - [ ] Rev-C3 visual test sheet and device confirmation.
 
-## C3/C4 are intentionally not implemented yet
+## Rev-C3 — Font-only device test (implemented, hardware approval pending)
 
-**Rev-C3:** Add a separate opt-in font-only diagnostic renderer, not a production dashboard change. It should show full 34px digit/symbol samples, 17px alphabet/date/labels, and 13px numeric/temperature/100%-precipitation samples. Split across screens instead of shrinking any text to force all content into one frame. Check consistent weight and true e-paper readability on the dual SSD1683 panel.
+`DashboardFontTest.h/.cpp` provide a standalone 792×272 composition renderer. It uses **only** the three Rev-C font families. It does not know how to refresh the controller or contact the network.
 
-**Rev-C4:** After user approval of the test sheet, replace the experimental font references in `Phase8A1Preview.cpp`, recalculate text widths and only later address divider/layout changes and dynamic data binding.
+Activate it by using the firmware from **branch `phase8a1-static-prototype`** and adding this one line to the **ignored local** `config.h`:
+
+```cpp
+#define EDP_PHASE8_FONT_TEST 1
+```
+
+**IMPORTANT:** If your local `config.h` still contains `#define EDP_PHASE8A1_PREVIEW 1`, comment out or remove that older switch first. A build-time error explicitly disallows activating both.
+
+In Arduino IDE compile/upload the sketch normally, then open the USB Serial Monitor at **115200 baud**. At boot, test sheet 1 displays automatically. Send a single digit `1`, `2`, `3` or `4` to choose a test page. Line ending is optional (CR/LF are ignored). **Upload only once; serial commands change the pages.** No network, timed data updates or physical-button handling occurs while this mode is active. Only changing the page triggers one maintenance refresh; repeated same-page commands do not refresh.
+
+| Page | Samples (all native 1× BitmapFont pixels) | Look for |
+| --- | --- | --- |
+| 1: 34px | `0123456789`, `12:59`, `2493.56`, `82750.1`, `84.154`, `+-.: 012345` | Consistent numeric width, vertical alignment and 0/1/8 weight balance |
+| 2: 17px | `ABCDEFGHIJKLM`, `NOPQRSTUVWXYZ`, `0123456789`, `10 OCT SUNDAY`, `SUNNY USDT PERP`, `MON TUE WED THU FRI SAT` | No lost letters or badly weighted uppercase / numbers |
+| 3: 13px | `0123456789`, `26.9 C  25-29 / 10 %`, `-12.5 C  25-29 / 100 %`, `+3.2 C  -30-40 / 95 %` | Period, slash, minus, percent legible at real size; long daily values fit |
+| 4: comparison | 34px `12:59` and `82750.1`, 17px `12:59` / `MON TUE WED THU`, 13px `26.9 C` / `25-29 / 100 %` | Shared family impression and useful relative sizing |
+
+The test intentionally draws several sample strings across the E-paper controller seam near visible x=396, helping identify seam-specific artifacts. The panel retains the last test image even after `display.sleep()`.
+
+### Rev-C3 code verification
+
+- [x] Static renderer and opt-in boot+serial switching committed on feature branch
+- [x] No `Font5x7`, old `Phase8A1Digits` or Dashboard widget paths in the new renderer
+- [x] 31 literal samples validated against required per-font glyph coverage and 792×272 bounds
+- [x] Font source/header consistency retained; all samples fit the declared fixed cell widths
+- [x] Only `maintenanceRefresh(frameBuffer)` used for E-paper hardware updates
+- [x] Compile-time exclusive-choice guard between font test and old static Dashboard preview
+- [ ] Execute `python3 tools/generate_dashboard_fonts.py --check` on the actual repo checkout
+- [ ] Arduino IDE / ESP32-S3 compilation and upload
+- [ ] On-panel inspection by user, photos of all 4 sheets, and explicit acceptance/adjustments
+
+These are **static source-level checks only**. Arduino compile and hardware testing have **not** been carried out by the assistant.
+
+### Expected serial output
+
+```text
+EDP Phase 8A-1 Rev-C3 FONT TEST: native 1-bit 34/17/13px.
+Send 1, 2, 3, or 4 via Serial Monitor to choose a font sheet.
+PASS: Rev-C3 font sheet 1/4 rendered; Wi-Fi/APIs disabled.
+```
+
+After entering `2`:
+
+```text
+Rev-C3 rendering font sheet 2/4...
+PASS: font sheet 2/4 displayed.
+```
+
+To exit test mode, remove/comment the local `EDP_PHASE8_FONT_TEST` flag and reflash. The existing `EDP_PHASE8A1_PREVIEW` flag can then be selected again if desired.
+
+## Rev-C4 — Deliberately deferred
+
+**Rev-C4:** After user approval of the test sheets, replace experimental font references in `Phase8A1Preview.cpp`, recompute widths/positions and then resume the existing divider/layout milestones. Never infer approval from automated bitmap checks.
 
 ## Scope and safety
 
-All new font files are currently **unused by the active dashboard prototype**. Existing Rev-B `Phase8A1Digits.h`, `Phase8A1HeaderFont.h`, `Phase8A1SmallFont.h`, the renderer, `main` branch, E-paper driver, refresh sequence, and all services remain unchanged. No Wi-Fi secrets or external fonts were added. The new native pixel diagrams are authored for this project rather than redistributed from an external typeface.
+The three new font families are **used only in the opt-in diagnostic renderer**, not by the normal static Dashboard preview or by production services. Existing `Phase8A1Preview.cpp` and Rev-B fonts remain unchanged. The `main` branch, E-paper driver, maintenance refresh sequence and all network services are unchanged. No Wi-Fi secrets or external font files were added.
