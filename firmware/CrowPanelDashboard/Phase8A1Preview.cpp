@@ -39,12 +39,12 @@ struct PreviewForecast {
 // These are NOT six live daily forecasts; production WeatherService still
 // owns only today and tomorrow.
 static const PreviewForecast FORECAST[6] = {
-    {"MON", "25-29 / 10 %"},
-    {"TUE", "25-29 / 10 %"},
-    {"WED", "25-29 / 10 %"},
-    {"THU", "25-29 / 10 %"},
-    {"FRI", "25-29 / 10 %"},
-    {"SAT", "25-29 / 10 %"}
+    {"MON", "25-29/ 10%"},
+    {"TUE", "25-29/ 10%"},
+    {"WED", "25-29/ 10%"},
+    {"THU", "25-29/ 10%"},
+    {"FRI", "25-29/ 10%"},
+    {"SAT", "25-29/ 10%"}
 };
 
 void drawDiamond(GraphicsBW& g, int16_t cx, int16_t cy, int16_t size = 3) {

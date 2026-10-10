@@ -152,3 +152,13 @@ Changes solely in `Phase8A1Preview.cpp`:
 **Device test:** with local `EDP_PHASE8A1_PREVIEW=1` and `EDP_PHASE8_FONT_TEST` disabled, compile/upload the sketch and inspect the resulting full 792×272 static mock. Focus on upper-divider clearance, uniformly centered six-day groups, the already accepted **14px** forecast numerals, seam x=396, clipping/ghosting and consistency with the Rev-C4 reference. Request explicit user approval before Rev-D2.
 
 The printed prices/weather are mock values; live data and production Dashboard are still not connected to this layout.
+
+## Phase 8A-1 Rev-D1a — Forecast summary punctuation spacing (2026-10-10)
+
+**Device evidence:** The user reports the Rev-D1 static Dashboard displays normally on the actual CrowPanel. They request a targeted formatting refinement of the bottom six-day temperature/rain line. The other Rev-D1 layout changes are being retained; this does not constitute a new hardware approval of Rev-D1a.
+
+**Exact text fixture change in `Phase8A1Preview.cpp` (all six weekdays):** `25-29 / 10 %` → **`25-29/ 10%`**. Specifically remove the space between `29` and `/`, and the space between `10` and `%`; retain exactly one space **after** `/`. The six samples remain mock data, not live weather forecasts.
+
+With approved `DashboardFont14::FONT` (9px fixed advance), the string decreases from **12 glyphs / 108px** to **10 glyphs / 90px**. The existing `textWidth()`-based center algorithm recomputes the starting offset for each 128px forecast cell from **+10px** to **+19px**. This preserves equal margins, the x=396 seam alignment and all other coordinates automatically. The source-level width check passes (`90 <= 128 - 12`). No 34/17/14 font glyphs, dividers, logos, header/market groups, services, E-paper driver or refresh procedure have changed.
+
+**Hardware test remaining:** use the existing isolated static preview flag (`EDP_PHASE8A1_PREVIEW=1` and font test disabled); compile/upload and inspect the six compact `25-29/ 10%` labels. Confirm exact spacing and centering on the E-paper, then accept Rev-D1a before proceeding to Rev-D2 market spacing.
