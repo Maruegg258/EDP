@@ -28,6 +28,8 @@
 #include "TlsTrustAnchors.h"
 #include "WeatherService.h"
 #include "WeatherSnapshotCompare.h"
+#include "WeatherIconGallery.h"
+#include "WeatherIconSelector.h"
 #include "WeatherWidgetMapper.h"
 #include "WiFiManager.h"
 #include "config.h"
@@ -36,6 +38,13 @@
 #if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1) && \
     defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)
 #error "Choose one preview mode: EDP_PHASE8_FONT_TEST or EDP_PHASE8A1_PREVIEW."
+#endif
+
+// The weather icon gallery is a third, mutually exclusive test mode.
+#if defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1) && \
+    ((defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
+     (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)))
+#error "Disable font test and Dashboard preview before enabling Weather Icon Gallery."
 #endif
 
 CrowEPD579 display;
@@ -1999,6 +2008,29 @@ void setup() {
   gpio_hold_dis(
       static_cast<gpio_num_t>(CrowEPD579::PIN_PANEL_POWER));
 
+  // Phase 8A-2: isolated, single-frame 11-icon weather gallery.
+  // Pure bitmap and semantic mapping self-test; never starts Wi-Fi/APIs.
+#if defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)
+  Serial.println("EDP Phase 8A-2: WEATHER ICON GALLERY (11 x 32x32)");
+  if (!WeatherIconSelector::selfCheck()) {
+    Serial.println("FAIL: weather icon condition mapping self-check.");
+    return;
+  }
+  Serial.println("PASS: weather icon mapping self-check.");
+  if (!WeatherIconGallery::render(graphics)) {
+    Serial.println("FAIL: weather icon gallery composition.");
+    return;
+  }
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    Serial.println("FAIL: weather icon gallery E-paper refresh.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  Serial.println("PASS: Phase 8A-2 gallery rendered once; Wi-Fi/APIs disabled.");
+  return;
+#endif
+
   // Rev-C3 FONT-ONLY preview. Explicit opt-in, no network or production services.
   // Display each sheet using the already verified maintenanceRefresh sequence.
 #if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
@@ -2113,6 +2145,11 @@ void setup() {
 }
 
 void loop() {
+#if defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)
+  // A single static 1-bit diagnostic frame; no background work or refresh.
+  delay(1000);
+  return;
+#endif
 #if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
   // USB Serial commands are exclusively enabled in this local test mode.
   // Unknown bytes (including newline) are ignored; no automatic refresh.
