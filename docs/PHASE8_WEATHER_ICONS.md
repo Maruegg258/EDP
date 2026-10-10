@@ -1,6 +1,6 @@
 # Phase 8A-2 — Weather Icon System
 
-**Status (2026-10-11):** Initial 11-icon Gallery **ran and displayed normally on hardware**, but the user preferred the subsequently supplied thin-outline reference style. **Rev-B pixel assets have been traced from that user reference and committed**; source/header consistency PASS. The new Rev-B artwork still needs Arduino compile/upload and physical visual approval. Earlier notes below describe the first implementation.
+**Status (2026-10-11):** Rev-B's eleven native 32×32 thin-outline icons have been **visually accepted by the user after a CrowPanel hardware test**. Source/header consistency PASS. Next: integrate the approved assets into the isolated Rev-D2 static Dashboard (8A-2D), then test the resulting full layout. Existing notes below retain the original checkpoints.
 
 ## Purpose and boundaries
 
@@ -111,3 +111,9 @@ Use the unchanged local `config.h` flags:
 ```
 
 Pull latest `phase8a1-static-prototype`, Compile → Upload via Arduino IDE, then inspect the same 11-icon Gallery. No Python command is required for Arduino IDE users, and `main` remains untouched.
+
+## Rev-B — Physical panel acceptance (2026-10-11)
+
+The user reports **all eleven reference-style 32×32 Weather Icon Gallery images display correctly and their appearance is OK** on the actual Elecrow CrowPanel. Mark Phase 8A-2 Rev-B artwork as **visually approved**. Do not infer other test results that were not separately reported: this approval does not demonstrate dynamic WMO/day-night icon switching, production refresh durability, or multi-day forecasts.
+
+**Next checkpoint is 8A-2D (not yet implemented):** Place the accepted `WeatherIconAssets` into the existing static Rev-D2 Dashboard current-weather and six-day forecast 32×32 slots, retaining exact panel layout anchors and the existing one-shot maintenance refresh. Keep static fixtures clearly distinct from live weather states. Test the integrated full-frame preview on-device before adopting any icon mapping into production `WeatherWidgetMapper` or starting Phase 8B data binding. No weather service, driver or normal application flow is changed by this documentation-only approval commit.
