@@ -20,6 +20,7 @@
 #include "MarketPageState.h"
 #include "NavigationController.h"
 #include "PageRenderer.h"
+#include "Phase8A1Preview.h"
 #include "SecureHttpClient.h"
 #include "SystemPages.h"
 #include "TimeService.h"
@@ -1987,6 +1988,26 @@ void setup() {
   gpio_hold_dis(
       static_cast<gpio_num_t>(CrowEPD579::PIN_PANEL_POWER));
 
+  // Isolated Phase 8A-1 ONE-SHOT preview; never contacts Wi-Fi or data APIs.
+  // Enabled only when local ignored config.h explicitly defines:
+  // #define EDP_PHASE8A1_PREVIEW 1
+#if defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)
+  Serial.println("EDP Phase 8A-1: STATIC MOCK DATA PREVIEW");
+  if (!Phase8A1Preview::render(graphics)) {
+    Serial.println("FAIL: static prototype composition failed.");
+    return;
+  }
+  // Reuse the Phase 1F verified fast-clear -> white -> partial maintenance.
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    Serial.println("FAIL: static prototype maintenance refresh failed.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  Serial.println("PASS: static dashboard preview shown once; Wi-Fi/APIs disabled.");
+  return;
+#endif
+
   const esp_sleep_wakeup_cause_t wakeCause =
       esp_sleep_get_wakeup_cause();
   if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
@@ -2062,6 +2083,11 @@ void setup() {
 }
 
 void loop() {
+#if defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)
+  // Deliberately static. No buttons, polling, Wi-Fi, or background refresh.
+  delay(1000);
+  return;
+#endif
   handlePanelInputIfAny();
 
   if (!processPendingSystemAction()) {
