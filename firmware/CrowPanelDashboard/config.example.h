@@ -25,3 +25,9 @@
 // This runs without Wi-Fi, live data, navigation or timed refresh.
 // Do NOT enable simultaneously with EDP_PHASE8A1_PREVIEW.
 // #define EDP_PHASE8_FONT_TEST 1
+
+// Phase 8A-2 11-item weather icon gallery (feature branch only).
+// In LOCAL ignored config.h, uncomment to view one static 792x272 test page.
+// Must disable both EDP_PHASE8_FONT_TEST and EDP_PHASE8A1_PREVIEW.
+// No Wi-Fi, HTTP, polling, buttons or automatic refresh in this mode.
+// #define EDP_PHASE8_WEATHER_ICON_TEST 1
