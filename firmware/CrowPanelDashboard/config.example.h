@@ -17,3 +17,10 @@
 // The preview intentionally does not connect Wi-Fi or poll weather/markets.
 // Remove/comment it after testing to resume normal production firmware.
 // #define EDP_PHASE8A1_PREVIEW 1
+
+// Rev-C3 font-only diagnostic mode (feature branch only).
+// Add to LOCAL ignored config.h and upload once. On boot, font page 1 displays.
+// Use Arduino Serial Monitor at 115200 baud, send 1/2/3/4 to change pages.
+// This runs without Wi-Fi, live data, navigation or timed refresh.
+// Do NOT enable simultaneously with EDP_PHASE8A1_PREVIEW.
+// #define EDP_PHASE8_FONT_TEST 1
