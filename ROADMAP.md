@@ -268,6 +268,13 @@ Phase 8A-1 checkpoints:
 - [ ] Recompile/reupload **revised** artwork and verify final layout on hardware, including x=396 seam, pixel clipping, icon clarity and refresh artifacts.
 - [ ] Capture user feedback, refine assets and record hardware results before integrating live dashboard data.
 
+Phase 8A-1 Rev-B (2026-10-10): user hardware feedback confirms the second static prototype exposes broken calendar glyphs, unbalanced spacing, low-quality logos and coarse large numerals.
+
+- [x] **Rev-B Step 1 — Font & Logo Assets (source committed, software data checks passed):** repair 17px date/day glyph atlas, use native 34px non-overlapping numeric glyphs, refine 11px forecast numerals, and manually redraw native 30px 1-bit ETH/BTC/HYPE outlines. `main` and production data/refresh code are untouched.
+- [ ] Rev-B Step 1 Arduino compilation and updated on-panel visual check.
+- [ ] **Rev-B Step 2 — Layout:** upper divider y=81 → y=77; rebalance three market groups and center all six weather columns with uniform spacing.
+- [ ] **Rev-B Step 3 — Hardware acceptance:** verify readable glyphs/logos, absence of overlap/clipping, seam quality and partial refresh stability before live-data integration.
+
 See [Phase 8 UI prototype notes](docs/PHASE8_UI.md). Six future daily forecast values are static mock data in 8A-1; actual 6-day WeatherService expansion is later work.
 
 Planned work:
