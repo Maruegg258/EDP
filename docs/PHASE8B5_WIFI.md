@@ -79,3 +79,9 @@ The user states **「實際測試正常」** after using the opt-in Phase 8B-5A 
 **What this does not prove:** no separate Serial transcript, photos, deliberate router-off/reconnect, observed grade transition through all `-60/-70/-80 dBm` boundaries, same-grade refresh suppression trace, midnight date rollover, 30-minute repoll, fault injection or extended ghosting test was provided. Keep these as Phase 8B-6 regression items rather than inventing a PASS for each.
 
 **Next implementation, Phase 8B-5B (pending):** Move the visually accepted renderer and owned live state into the normal application Dashboard and its `PageRenderer`/dirty refresh flow, then hardware-check page navigation, DETAIL `DISPLAY CLEAN`, standby/deep sleep and service-update merging. Preserve the exact SSD1683 maintenance refresh and all verified endpoints/TLS handling. **Do not display the six example daily forecasts as real data** in a production route. Work out honest unavailable/daily-data labeling before enabling the normal Dashboard. No firmware source is changed in this 8B-5A acceptance checkpoint.
+
+## Phase 8B-5B modern Dashboard application integration (2026-10-11)
+
+Phase 8B-5A Wi-Fi-on-panel test was accepted. Code for the follow-on 8B-5B normal application path has now been committed under the opt-in `EDP_PHASE8B5B_APP_TEST` switch. This keeps the accepted top-right Wi-Fi grade icons and all live NTP/market/weather fields while re-enabling original navigation, WEATHER/MARKETS pages and Phase 7 DETAIL action processing.
+
+**The six-day preview fixtures are deliberately NOT shown in the live page**; until Phase 8C supplies valid daily data, the panel says `6-DAY FORECAST UNAVAILABLE`. The source/branch checks were performed but the user has **not yet** reported a physical 8B-5B test. Detailed checklist: [PHASE8B5B_PRODUCTION.md](PHASE8B5B_PRODUCTION.md).

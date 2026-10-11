@@ -276,3 +276,11 @@ The previously visually accepted top-right 32×24 `Icons::WIFI_STRONG` at (738,2
 The user confirms that the dynamic Wi-Fi RSSI icon test **runs normally on the actual panel**, alongside already accepted live NTP, Crypto and current weather. Mark the **8B-5A isolated visual/integration checkpoint PASS**, without claiming unreported exhaustive RSSI grade transitions, forced Wi-Fi outage/recovery or extended partial-refresh endurance tests.
 
 **Next:** 8B-5B will migrate this visual baseline into the **normal application** with display-state/dirty tracking, WEATHER/MARKETS page navigation and Phase 7 DETAIL actions. It must avoid showing mock six-day weather as live predictions. The older normal Dashboard, `main`, SSD1683 driver and tested refresh sequence remain unchanged at this checkpoint.
+
+## Phase 8B-5B — Normal app Dashboard migration code checkpoint (2026-10-11)
+
+An opt-in `EDP_PHASE8B5B_APP_TEST` now runs the accepted Phase 8A composition with owned live NTP/calendar, BTC/ETH/HYPE rounded price strings, Open-Meteo current weather day/night icon and real Wi-Fi grade **inside the normal Phase 7 application**. `Dashboard` and `PageRenderer` share the same graphics-only modern entry point for baseline, partial, page switch and DETAIL DISPLAY CLEAN, while existing old route, Weather/Markets page renderers, MENU action handler and deep sleep remain available unchanged.
+
+The daily strip no longer shows fictional weekday/weather/precipitation fixture values; instead the live route clearly reads `6-DAY FORECAST UNAVAILABLE` pending Phase 8C. All accepted historical preview modes still draw their original fixture data.
+
+**Status:** GitHub code committed/source reviewed; **Arduino and real CrowPanel 8B-5B regression pending**. See [PHASE8B5B_PRODUCTION.md](PHASE8B5B_PRODUCTION.md) for all physical checks and opt-in flag.
