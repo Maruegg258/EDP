@@ -590,6 +590,114 @@ void copyText(char* destination,
   destination[capacity - 1] = '\0';
 }
 
+
+bool isLeapYear(int year) {
+  return (year % 4 == 0 && year % 100 != 0) ||
+         (year % 400 == 0);
+}
+
+int calendarMonthDays(int year, int month) {
+  static constexpr uint8_t DAYS[] = {
+      31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+  };
+  if (month < 1 || month > 12) return 0;
+  return month == 2 && isLeapYear(year) ? 29 : DAYS[month - 1];
+}
+
+int fourDigits(const char* date) {
+  return (date[0] - '0') * 1000 + (date[1] - '0') * 100 +
+         (date[2] - '0') * 10 + (date[3] - '0');
+}
+
+bool validCalendarDate(const char* date) {
+  if (!validDate(date)) return false;
+  const int year = fourDigits(date);
+  const int month = parseTwoDigits(date, 5);
+  const int day = parseTwoDigits(date, 8);
+  return year >= 2000 && year <= 9999 &&
+         day >= 1 && day <= calendarMonthDays(year, month);
+}
+
+bool nextCalendarDay(const char* previous, const char* current) {
+  if (!validCalendarDate(previous) || !validCalendarDate(current)) {
+    return false;
+  }
+  int year = fourDigits(previous);
+  int month = parseTwoDigits(previous, 5);
+  int day = parseTwoDigits(previous, 8) + 1;
+  if (day > calendarMonthDays(year, month)) {
+    day = 1;
+    ++month;
+    if (month == 13) { month = 1; ++year; }
+  }
+  return year == fourDigits(current) &&
+         month == parseTwoDigits(current, 5) &&
+         day == parseTwoDigits(current, 8);
+}
+
+// The existing scalar/array readers are reused by BOTH endpoint contracts.
+// Provider arrays must have exactly 2 or 7 values; no partial/misaligned
+// forecast is allowed to replace the last-valid WeatherSnapshot.
+template <size_t COUNT>
+bool parseValidatedDailySeries(const String& body,
+                               int objectStart, int objectEnd,
+                               WeatherSnapshot& parsed) {
+  static_assert(COUNT == 2 ||
+                    COUNT == WeatherService::SIX_DAY_RESPONSE_COUNT,
+                "daily parser must receive 2 or 7 dates");
+  char dates[COUNT][WeatherDailyValue::DATE_CAPACITY] = {};
+  double maxC[COUNT] = {};
+  double minC[COUNT] = {};
+  long codes[COUNT] = {};
+  long probability[COUNT] = {};
+
+  if (!parseStringArray(body, objectStart, objectEnd, "time", dates) ||
+      !parseIntegerArray(body, objectStart, objectEnd, "weather_code", codes) ||
+      !parseDoubleArray(body, objectStart, objectEnd,
+                        "temperature_2m_max", maxC) ||
+      !parseDoubleArray(body, objectStart, objectEnd,
+                        "temperature_2m_min", minC) ||
+      !parseIntegerArray(body, objectStart, objectEnd,
+                         "precipitation_probability_max", probability)) {
+    return false;
+  }
+
+  if (strncmp(parsed.current.time, dates[0], 10) != 0) return false;
+
+  for (size_t i = 0; i < COUNT; ++i) {
+    if (!validCalendarDate(dates[i]) ||
+        !validTemperature(maxC[i]) ||
+        !validTemperature(minC[i]) ||
+        maxC[i] < minC[i] ||
+        !validWeatherCode(codes[i]) ||
+        !validProbability(probability[i])) {
+      return false;
+    }
+    if (i > 0 && (COUNT == WeatherService::SIX_DAY_RESPONSE_COUNT
+                     ? !nextCalendarDay(dates[i-1], dates[i])
+                     : strcmp(dates[i-1], dates[i]) == 0)) {
+      return false;
+    }
+  }
+
+  for (size_t i = 0; i < COUNT; ++i) {
+    WeatherDailyValue* dest = (i == 0)
+        ? &parsed.today
+        : &parsed.futureDays[i - 1];
+    copyText(dest->date, sizeof(dest->date), dates[i]);
+    dest->weatherCode = static_cast<uint8_t>(codes[i]);
+    dest->condition = weatherConditionFromWmoCode(dest->weatherCode);
+    dest->temperatureMaxC = static_cast<float>(maxC[i]);
+    dest->temperatureMinC = static_cast<float>(minC[i]);
+    dest->precipitationProbabilityMax = static_cast<uint8_t>(probability[i]);
+    if (i == 1) parsed.tomorrow = *dest;
+  }
+
+  parsed.hasSixDayForecast =
+      (COUNT == WeatherService::SIX_DAY_RESPONSE_COUNT);
+  return true;
+}
+
 }  // namespace
 
 WeatherService::WeatherService(SecureHttpClient& httpClient)
@@ -600,6 +708,15 @@ WeatherService::WeatherService(SecureHttpClient& httpClient)
 }
 
 bool WeatherService::fetchLatest(double latitude, double longitude) {
+  return fetchLatestInternal(latitude, longitude, false);
+}
+
+bool WeatherService::fetchLatestSixDay(double latitude, double longitude) {
+  return fetchLatestInternal(latitude, longitude, true);
+}
+
+bool WeatherService::fetchLatestInternal(double latitude, double longitude,
+                                         bool sevenDay) {
   if (!std::isfinite(latitude) || !std::isfinite(longitude) ||
       latitude < -90.0 || latitude > 90.0 ||
       longitude < -180.0 || longitude > 180.0) {
@@ -617,7 +734,7 @@ bool WeatherService::fetchLatest(double latitude, double longitude) {
   url += "&hourly=temperature_2m,weather_code,precipitation_probability,is_day";
   url += "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max";
   url += "&forecast_hours=6";
-  url += "&forecast_days=2";
+  url += sevenDay ? "&forecast_days=7" : "&forecast_days=2";
   url += "&timezone=Asia%2FTaipei";
 
   SecureHttpResponse response;
@@ -641,7 +758,7 @@ bool WeatherService::fetchLatest(double latitude, double longitude) {
 
   WeatherSnapshot parsed{};
 
-  if (!parseForecastPayload(response.body, parsed)) {
+  if (!parseForecastPayload(response.body, parsed, sevenDay)) {
     return false;
   }
 
@@ -664,7 +781,8 @@ const char* WeatherService::lastError() const {
 }
 
 bool WeatherService::parseForecastPayload(const String& body,
-                                          WeatherSnapshot& parsed) {
+                                          WeatherSnapshot& parsed,
+                                          bool sevenDay) {
   int currentStart = 0;
   int currentEnd = 0;
   int hourlyStart = 0;
@@ -733,7 +851,8 @@ bool WeatherService::parseForecastPayload(const String& body,
           body,
           dailyStart,
           dailyEnd,
-          candidate)) {
+          candidate,
+          sevenDay)) {
     return false;
   }
 
@@ -896,94 +1015,17 @@ bool WeatherService::parseDailyObject(
     const String& body,
     int objectStart,
     int objectEnd,
-    WeatherSnapshot& parsed) {
-  char dates[DAILY_RESPONSE_COUNT][WeatherDailyValue::DATE_CAPACITY] = {};
-  double maximumTemperatures[DAILY_RESPONSE_COUNT] = {};
-  double minimumTemperatures[DAILY_RESPONSE_COUNT] = {};
-  long weatherCodes[DAILY_RESPONSE_COUNT] = {};
-  long precipitationProbabilities[DAILY_RESPONSE_COUNT] = {};
-
-  if (!parseStringArray(
-          body,
-          objectStart,
-          objectEnd,
-          "time",
-          dates) ||
-      !parseIntegerArray(
-          body,
-          objectStart,
-          objectEnd,
-          "weather_code",
-          weatherCodes) ||
-      !parseDoubleArray(
-          body,
-          objectStart,
-          objectEnd,
-          "temperature_2m_max",
-          maximumTemperatures) ||
-      !parseDoubleArray(
-          body,
-          objectStart,
-          objectEnd,
-          "temperature_2m_min",
-          minimumTemperatures) ||
-      !parseIntegerArray(
-          body,
-          objectStart,
-          objectEnd,
-          "precipitation_probability_max",
-          precipitationProbabilities)) {
-    setError("invalid or mis-sized daily weather arrays");
+    WeatherSnapshot& parsed,
+    bool sevenDay) {
+  const bool valid = sevenDay
+      ? parseValidatedDailySeries<SIX_DAY_RESPONSE_COUNT>(
+            body, objectStart, objectEnd, parsed)
+      : parseValidatedDailySeries<DAILY_RESPONSE_COUNT>(
+            body, objectStart, objectEnd, parsed);
+  if (!valid) {
+    setError("daily arrays invalid, mis-sized, or nonconsecutive dates");
     return false;
   }
-
-  for (size_t index = 0; index < DAILY_RESPONSE_COUNT; ++index) {
-    if (!validDate(dates[index]) ||
-        !validTemperature(maximumTemperatures[index]) ||
-        !validTemperature(minimumTemperatures[index]) ||
-        maximumTemperatures[index] < minimumTemperatures[index] ||
-        !validWeatherCode(weatherCodes[index]) ||
-        !validProbability(precipitationProbabilities[index])) {
-      setError("daily weather value failed validation");
-      return false;
-    }
-  }
-
-  if (strncmp(parsed.current.time, dates[0], 10) != 0) {
-    setError("current weather date does not align with daily[0]");
-    return false;
-  }
-
-  if (strcmp(dates[0], dates[1]) == 0) {
-    setError("today and tomorrow weather dates are identical");
-    return false;
-  }
-
-  WeatherDailyValue* destinations[DAILY_RESPONSE_COUNT] = {
-    &parsed.today,
-    &parsed.tomorrow
-  };
-
-  for (size_t index = 0; index < DAILY_RESPONSE_COUNT; ++index) {
-    WeatherDailyValue& destination = *destinations[index];
-
-    copyText(
-        destination.date,
-        sizeof(destination.date),
-        dates[index]);
-    destination.weatherCode =
-        static_cast<uint8_t>(weatherCodes[index]);
-    destination.condition =
-        weatherConditionFromWmoCode(destination.weatherCode);
-    destination.temperatureMaxC =
-        static_cast<float>(maximumTemperatures[index]);
-    destination.temperatureMinC =
-        static_cast<float>(minimumTemperatures[index]);
-    destination.precipitationProbabilityMax =
-        static_cast<uint8_t>(
-            precipitationProbabilities[index]);
-  }
-
   return true;
 }
 
