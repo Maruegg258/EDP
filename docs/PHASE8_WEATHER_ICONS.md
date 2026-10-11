@@ -142,3 +142,11 @@ The unchanged `25-29/ 10%` sample on every day is **dummy text**; the differing 
 **Verification at commit:** Source-level content/geometry review and GitHub readback only. No Arduino IDE compile/upload or whole-page on-panel validation of this integration is asserted yet. The previous **Gallery-only** Rev-B hardware acceptance remains valid but does not automatically prove this combined Dashboard page.
 
 **Next hardware test:** Use the existing `EDP_PHASE8A1_PREVIEW` flag (not the Gallery flag), upload, and visually check the new icon family in the header and six-day strip with the previously approved typography and market layout. Confirm line sharpness, spacing, controller seam and lack of clipping/ghosting. After explicit user approval, schedule Phase 8B live-data binding.
+
+## Phase 8A-2D — Integrated static Dashboard real-device acceptance (2026-10-11)
+
+The user confirms the actual full-panel `EDP_PHASE8A1_PREVIEW=1` display **is normal** after substituting the eleven-icon Rev-B family into the header's current-weather icon and all six daily forecast slots. This completes **Phase 8A-2D static visual acceptance**, following the previously accepted standalone Rev-B Gallery artwork.
+
+**Scope of verified evidence:** One-shot full-frame visual display/functionality, based on explicit user feedback. Keep the precise accepted positions, shapes, JetBrains Mono 34/17/14px font assets, three-price middle section and compact six-column forecast baseline intact. **Not verified by this checkpoint:** live `WeatherService`-to-widget binding, dynamic day/night transitions, six live daily forecast rows, recurring data updates or extended ghosting/endurance tests. Those are later Phase 8B/8C and Phase 9 work.
+
+**Release boundary:** The approved art is still used only inside the `phase8a1-static-prototype` branch's explicitly enabled isolated preview; `main`, normal `WeatherWidgetMapper`, data services and E-paper driver remain unchanged. Subsequent integration should use the present eleven-icon selector and the application's existing dirty/coalesced refresh architecture, not duplicate service/refresh logic.

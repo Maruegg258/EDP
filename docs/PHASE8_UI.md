@@ -208,3 +208,11 @@ The previously hardware-approved Rev-D2 layout now uses the eleven-icon Rev-B we
 **Status:** Commit/source verification complete; new combined-page compile and physical validation **pending**. Set local `#define EDP_PHASE8A1_PREVIEW 1`, disable `EDP_PHASE8_WEATHER_ICON_TEST` and `EDP_PHASE8_FONT_TEST`, compile/upload, inspect full screen and provide hardware feedback. The condition labels and all weather/market values remain static mock data. Existing `WeatherService` and production `WeatherWidgetMapper` are not yet bound to this renderer.
 
 See [PHASE8_WEATHER_ICONS.md](PHASE8_WEATHER_ICONS.md) for artwork provenance, classification, checks and the exact icon/day fixtures.
+
+## Phase 8A visual sign-off — Rev-D2 + Rev-B weather family (2026-10-11)
+
+**User-reported hardware acceptance:** The Phase 8A-2D integrated `EDP_PHASE8A1_PREVIEW=1` static Dashboard displays normally on the physical CrowPanel. Combined with the preceding font, market layout and standalone weather-icon visual checks, this closes Phase 8A **static UI design and visual acceptance** on the feature branch.
+
+**Approved visual baseline:** native 34px clock/prices; 17px date/weekday/market labels; 14px weather values; text-only, centered ETH/BTC/HYPE market groups; 32×32 Rev-B reference-style weather symbols in upper current-weather + six forecast slots; six compact summaries formatted `25-29/ 10%`; divider y=77/181. Original sample values are still fixtures, not real data. Do not rebuild the fonts or change the dual-controller maintenance sequence when beginning Phase 8B.
+
+**Remaining boundaries:** The one-shot static preview still has no network or production poll; it is not merged into `main`. This acceptance does not cover a real-time Dashboard, actual six-day Open-Meteo values, long-running refresh, or multi-page integration. Recommended next Phase 8B-1: inspect current live service and presentation/state interfaces before connecting dynamic values incrementally through application-owned dirty/coalesced update logic.

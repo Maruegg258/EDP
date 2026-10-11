@@ -255,7 +255,7 @@ Scope decisions (2026-10-08):
 
 ## Phase 8 — UI refinement
 
-**Status: In progress (Rev-D2 static layout visually accepted on hardware 2026-10-11; live-data binding and production integration not yet started)**
+**Status: In progress — Phase 8A isolated static visual design and Weather Icon integration accepted on real CrowPanel hardware (2026-10-11); Phase 8B live-data binding and production integration remain pending.**
 
 **Goal:** Improve readability and visual quality without sacrificing E-paper stability.
 
@@ -296,7 +296,7 @@ Phase 8A-1 Rev-C — Font Reset (new independent native bitmap family):
 - [x] **Rev-D2 on-panel visual acceptance (2026-10-11):** User reports the revised ETH/BTC/HYPE text-only market row displays correctly and is satisfactory on the CrowPanel. The 17px symbol-above-34px-price arrangement is accepted as the new static-preview baseline. This feedback confirms visual appearance, not extended refresh or live-data behavior.
 - [x] **Rev-D2 static-layout handoff:** Preserve the accepted Rev-D2 appearance as the fixed reference for icon and later live-data work. No production rendering changes.
 
-Phase 8A-2 — Weather Icon System (feature branch; Rev-B 11-icon Gallery accepted on hardware, 8A-2D static Dashboard integration committed with new hardware test pending):
+Phase 8A-2 — Weather Icon System (feature branch; complete for isolated static visual design and device acceptance on 2026-10-11):
 
 - [x] **8A-2A classification contract:** Define eleven 32×32 native monochrome icons for clear day/night, partly cloudy day/night, overcast, fog, drizzle, rain, snow, thunder and unknown; map existing 16 `WeatherCondition` categories, with day/night only where meaningful.
 - [x] **8A-2B source artwork and reproducibility:** Add editable `weather_icons_src/WeatherIcons32.icons` and 1-bit packed `WeatherIconAssets.h`, plus `tools/generate_weather_icons.py`; source/header bitwise readback check passed for all 11 × 128-byte assets.
@@ -305,7 +305,11 @@ Phase 8A-2 — Weather Icon System (feature branch; Rev-B 11-icon Gallery accept
 - [x] **8A-2 Rev-B source artwork:** Recreate all eleven 32×32 editable monochrome glyphs using the user-supplied icon reference. Preserve the small ~21–23px optical footprint centered on 32×32, fine outline style, exact category names and existing test-only Gallery/condition selector. Source-to-generated-header independent byte-level readback PASS. No forecast/wind additions; no service/driver/production Dashboard changes.
 - [x] **8A-2 Rev-B on-panel visual approval (2026-10-11):** User confirms the reference-style weather icon Gallery displays correctly and all eleven icon appearances are acceptable on the real CrowPanel. This verifies visual output, not future dynamic icon switching, long-duration refresh, or production integration.
 - [x] **8A-2D implementation (code committed, device acceptance pending):** Replace the handcrafted outline sun in `Phase8A1Preview.cpp` with `WeatherIconSelector::select()` and approved 32×32 Rev-B assets. Header uses CLEAR day; MON…SAT respectively show CLEAR, PARTLY_CLOUDY, OVERCAST, DRIZZLE, RAIN, THUNDERSTORM daytime representative icons. All are static fixtures; existing 34/17/14px typography, 32×32 icon slot coordinates, dividers, markets, Wi-Fi, six-day formatting, E-paper driver and production state/refresh remain untouched. Source bounds checks passed.
-- [ ] **8A-2D hardware validation:** Compile/upload the isolated `EDP_PHASE8A1_PREVIEW=1` Dashboard and inspect all seven icon placements, text spacing, left/right forecast balance, x=396 seam, crisp partial-refresh output. If approved, proceed to Phase 8B service integration; do not mark this commit as hardware accepted yet.
+- [x] **8A-2D integrated Dashboard real-panel acceptance (2026-10-11):** User reports the complete static Dashboard with approved header + six forecast weather icons displays normally on the CrowPanel. Accept the integrated Phase 8A appearance as the next development baseline; this is a one-shot integrated visual/functionality check, not a long-duration refresh or live-data test.
+
+**Phase 8A visual-design closeout (2026-10-11):** The final opt-in 792×272 preview now has accepted JetBrains Mono Medium 34/17/14px text, the Rev-D2 three-market text-only layout, centered six-slot forecast row, and the user-approved 11-weather-icon family. Rev-B Gallery and Rev-D2/8A-2D combined-page display have been tested on hardware. Keep the feature-branch renderer and its assets stable as the Phase 8B visual reference; do not treat Phase 8A acceptance as evidence that the live Dashboard has been integrated or verified.
+ 
+**Next proposed Phase 8B-1:** Review current GitHub production Dashboard/Clock/Weather/Market/Wi-Fi state interfaces and design the minimal application-owned data-to-UI presentation boundary. Only after that, begin one-widget-at-a-time integration while preserving dirty/coalesced update behavior, verified maintenance refresh sequence and Phase 7 navigation.
 
 See [Phase 8 weather icon notes](docs/PHASE8_WEATHER_ICONS.md) for mapping and Gallery test instructions. Phase 8B live-data integration remains pending.
 
