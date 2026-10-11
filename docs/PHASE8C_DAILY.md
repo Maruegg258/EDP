@@ -90,3 +90,7 @@ A failed response logs `FAIL: 8C-1 7-day fetch/validation: ...` and retries no f
 **Next — Phase 8C-2:** Convert `WeatherSnapshot::futureDays[6]` into bounded **weekday / condition bitmap / max-min Celsius / precipitation** presentation fields and render in the existing six 128px columns, using 17px/14px fonts and approved 32×32 assets. Retain the known-good legacy static preview as a fixture, and retain truthful `UNAVAILABLE` placeholders when validated six-day content does not exist. Phase 8C-3 subsequently connects the new daily fields to the 30-minute application weather poll and successful-refresh-only visible dirty lifecycle.
 
 **Git action:** Documentation-only physical acceptance; `WeatherService`, app firmware, TLS roots, `CrowEPD579`, and formal `main` are unchanged by this acceptance.
+
+## Phase 8C-2 graphics follow-on prepared (2026-10-11)
+
+The next isolated checkpoint is now coded: bounded weekday + approved 32×32 condition icon + max/min Celsius and maximum precipitation in six existing 128px columns. It uses genuine `futureDays[6]` from a verified seven-date fetch; normal app/dirty tracking remain untouched until 8C-3. Hardware rendering still pending. See [PHASE8C2_GRAPHICS.md](PHASE8C2_GRAPHICS.md).

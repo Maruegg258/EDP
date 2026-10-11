@@ -306,3 +306,11 @@ Status: GitHub source/readback PASS; Arduino compile and real API response test 
 ## Phase 8C-1 — Real device sign-off (2026-10-11)
 
 User confirms the serial-only seven-date Open-Meteo test runs normally on the physical ESP32-S3/CrowPanel. **Phase 8C-1 data-contract gate PASS** on `phase8a1-static-prototype`. This is not a six-column display hardware acceptance: live graphic rendering remains the **8C-2** checkpoint, and `Phase8DashboardVisualState` / 30-minute application poll integration remains **8C-3**. Keep full-system endurance at the end of Phase 8 as requested. No firmware changes for this sign-off.
+
+## Phase 8C-2 — Six real future-day columns (source checkpoint 2026-10-11)
+
+The accepted six-column 128px Rev-D2 geometry is now wired to `Phase8SixDayPresentation` using **actual seven-date Open-Meteo snapshots**. Each column has a 32×32 condition icon + 17px weekday at y≈200–209 and a centered 14px `MAX/MINC PRECIP%` at y=243, e.g. `29/25C 80%`. Gregorian weekdays come directly from the provider's local daily date. Daily artwork is intentionally **daytime representative**, since daily weather codes have no hourly `isDay` field.
+
+The opt-in **`EDP_PHASE8C2_DISPLAY_TEST` draws this once after HTTPS data validation**; upper NTP/crypto shows truthful WAITING/-- placeholders because that mode does not run their services. Old Phase 8A static mock render entry points are unaffected; the 8B-5B normal app still truthfully says unavailable until 8C-3 integrates the new data and visible dirty-state lifecycle.
+
+**Status:** GitHub source readback completed; Arduino compile/hardware visual acceptance pending. See [PHASE8C2_GRAPHICS.md](PHASE8C2_GRAPHICS.md).
