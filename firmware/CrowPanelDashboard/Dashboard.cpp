@@ -1,6 +1,7 @@
 #include "Dashboard.h"
 
 #include "Icons.h"
+#include "Phase8A1Preview.h"
 
 namespace {
 
@@ -42,4 +43,8 @@ bool Dashboard::render(const DashboardState& state) {
          _eth.render(state.eth) &&
          _hype.render(state.hype) &&
          _status.render(state.status);
+}
+
+bool Dashboard::renderLive(const Phase8DashboardFrame& frame) {
+  return Phase8A1Preview::renderLive(_graphics, frame);
 }

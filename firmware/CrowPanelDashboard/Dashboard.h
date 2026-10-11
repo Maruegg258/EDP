@@ -3,6 +3,7 @@
 #include "ClockWidget.h"
 #include "CryptoWidget.h"
 #include "DashboardState.h"
+#include "Phase8DashboardFrame.h"
 #include "GraphicsBW.h"
 #include "StatusWidget.h"
 #include "WeatherWidget.h"
@@ -13,6 +14,8 @@ public:
   explicit Dashboard(GraphicsBW& graphics);
 
   bool render(const DashboardState& state);
+  // 8B-5B: approved modern UI; no polling, page actions or E-paper I/O.
+  bool renderLive(const Phase8DashboardFrame& frame);
 
 private:
   GraphicsBW& _graphics;

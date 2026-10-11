@@ -17,7 +17,9 @@ bool PageRenderer::render(
     const MarketPageState& marketState) {
   switch (page) {
     case PageId::DASHBOARD:
-      return _dashboard.render(dashboardState);
+      return _liveDashboard != nullptr
+          ? _dashboard.renderLive(*_liveDashboard)
+          : _dashboard.render(dashboardState);
 
     case PageId::WEATHER:
       return _weatherPage.render(weatherSnapshot);
