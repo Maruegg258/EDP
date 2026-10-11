@@ -270,3 +270,9 @@ The new UI renderer shares the Phase 8A layout and retains the validated static/
 The previously visually accepted top-right 32×24 `Icons::WIFI_STRONG` at (738,25) is now a **parameter** only in the opt-in `EDP_PHASE8B5A_WIFI_TEST`. The new graphics entry point reuses existing Phase 4 RSSI grades through the normal `WiFiManager` and displays the disconnected X, very weak, weak, medium or strong icon as needed; visual-equality comparison suppresses redundant icon redraws. Existing static, NTP-only, Crypto and Phase 8B-4 preview entry points still render unchanged fixture symbols.
 
 **Status:** GitHub source implementation/readback completed; physical acceptance pending. The six-day strip remains a static mock, and Phase 7 production Dashboard navigation, DIRTY management, deep sleep and DETAIL actions are not yet migrated (8B-5B). See [PHASE8B5_WIFI.md](PHASE8B5_WIFI.md).
+
+## Phase 8B-5A — Real CrowPanel acceptance (2026-10-11)
+
+The user confirms that the dynamic Wi-Fi RSSI icon test **runs normally on the actual panel**, alongside already accepted live NTP, Crypto and current weather. Mark the **8B-5A isolated visual/integration checkpoint PASS**, without claiming unreported exhaustive RSSI grade transitions, forced Wi-Fi outage/recovery or extended partial-refresh endurance tests.
+
+**Next:** 8B-5B will migrate this visual baseline into the **normal application** with display-state/dirty tracking, WEATHER/MARKETS page navigation and Phase 7 DETAIL actions. It must avoid showing mock six-day weather as live predictions. The older normal Dashboard, `main`, SSD1683 driver and tested refresh sequence remain unchanged at this checkpoint.

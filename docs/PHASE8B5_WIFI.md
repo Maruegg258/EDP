@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-11  
 **Development branch:** `phase8a1-static-prototype`  
-**Status:** Firmware changes committed and GitHub source/readback checks PASS. **Full Arduino IDE compile/upload and physical CrowPanel approval pending.** Phase 8B-5B production integration has **not started**.
+**Status:** Firmware and GitHub source/readback checks completed, and the user confirms **normal physical CrowPanel operation** of the 8B-5A isolated test on 2026-10-11. **Hardware acceptance PASS for the tested normal-operation scope.** Phase 8B-5B production integration has **not started**; optional fault-injection/endurance tests remain pending.
 
 ## Why 8B-5 has two hardware gates
 
@@ -68,6 +68,14 @@ PASS: 8B-5A coalesced partial refresh (clock=changed, prices=changed, weather=ch
 - [ ] Observe actual upper-right disconnected/connected bitmap and correct RSSI grade, with no clipping or ghosting.
 - [ ] Verify NTP calendar, three crypto prices and current weather still operate; ensure no extra repaint for same RSSI grade.
 - [ ] Optionally disconnect/reconnect Wi-Fi and check X icon and signal icon return; if not done, defer this to Phase 8B-6.
-- [ ] Explicit real CrowPanel user acceptance before 8B-5B production migration.
+- [x] Explicit real CrowPanel user acceptance for 8B-5A normal operation (2026-10-11); optional Wi-Fi off/on and RSSI boundary tests remain separate acceptance evidence.
 
 **8B-5B remains pending.** It must migrate calendar and presentation dirty ownership into the application, verify startup, normal coalescer and page transitions, and exercise Phase 7 DETAIL DISPLAY CLEAN, standby and deep sleep. It must also stop illustrating six-day mock values as real production forecasts. The current regular `main` firmware and Phase 7 production code paths remain unchanged, as do secure HTTPS trust anchors, source services and SSD1683 maintenance logic.
+
+## Phase 8B-5A — On-device acceptance and 8B-5B handoff (2026-10-11)
+
+The user states **「實際測試正常」** after using the opt-in Phase 8B-5A test. Treat this as successful real-device acceptance of the **normal displayed behavior** of the combined live NTP/calendar, Binance ETH/BTC/HYPE USDⓈ-M perpetual prices, Open-Meteo current weather and real Wi-Fi RSSI icon in the accepted Rev-D2 layout.
+
+**What this does not prove:** no separate Serial transcript, photos, deliberate router-off/reconnect, observed grade transition through all `-60/-70/-80 dBm` boundaries, same-grade refresh suppression trace, midnight date rollover, 30-minute repoll, fault injection or extended ghosting test was provided. Keep these as Phase 8B-6 regression items rather than inventing a PASS for each.
+
+**Next implementation, Phase 8B-5B (pending):** Move the visually accepted renderer and owned live state into the normal application Dashboard and its `PageRenderer`/dirty refresh flow, then hardware-check page navigation, DETAIL `DISPLAY CLEAN`, standby/deep sleep and service-update merging. Preserve the exact SSD1683 maintenance refresh and all verified endpoints/TLS handling. **Do not display the six example daily forecasts as real data** in a production route. Work out honest unavailable/daily-data labeling before enabling the normal Dashboard. No firmware source is changed in this 8B-5A acceptance checkpoint.
