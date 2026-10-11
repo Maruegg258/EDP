@@ -4,7 +4,7 @@
 **Reference repository:** `Maruegg258/EDP`  
 **Hardware-accepted baseline:** branch `phase8a1-static-prototype` at commit `546c9de0697ebb656a2cbcda34bb5c08cb1165b1` (Phase 8B-5B user-reported normal on-panel operation).  
 **Production `main` at start:** `0471c1e63c218ecad85375e671cee674476db7f9` (unchanged).  
-**Status:** Code-path inspection PASS for documented architectural invariants. **ESP32 build, specific fault simulations, continuous physical update quality, observed true midnight rollover and detailed menu-path device checks remain pending.**
+**Status:** Code-path inspection PASS. **8B-6A three requested hardware tasks PASS (user report, 2026-10-11): page navigation, DISPLAY CLEAN followed by three minute partial updates, and STANDBY/deep-sleep wake.** Separate forced Wi-Fi outage, 30-minute weather polling, multi-hour endurance and real midnight/day-night transitions remain pending or optional.
 
 ## Scope / non-goals
 
@@ -85,7 +85,7 @@ The user is USB-C powered, so **battery current measurement is outside this gate
 | --- | --- | --- |
 | Previous 8B-5B normal live Dashboard | **PASS (user reported)** | Hardware result reported 2026-10-11 |
 | 8B-6 source architecture/refresh audit | **PASS (source review only)** | GitHub branch inspected; no firmware modified |
-| 8B-6A short navigation + clean + standby | **PENDING** | Request individual A1–A6 results |
+| 8B-6A short navigation + clean + standby | **PASS — user report 2026-10-11** | Three requested practical tasks normal: A2 page navigation; A4 DISPLAY CLEAN + 3 minute updates; A5/A6 standby/deep-sleep wake; basic DETAIL menu interaction. A1 individual diagnostic log and A3 held-open menu not separately established |
 | 8B-6B Wi-Fi + 30-minute weather poll | **PENDING** | Request B1–B4; optional tests may be deferred |
 | 8B-6C long-run + real midnight/day-night | **PENDING** | Request C1–C4; mark unobserved events DEFERRED, never PASS |
 
@@ -94,3 +94,15 @@ The user is USB-C powered, so **battery current measurement is outside this gate
 ## Next stage boundary
 
 Phase 8C will introduce **real six-day daily weather**. Neither 8B-6 test scripts nor production UI should display the old illustrative `MON–SAT` temperatures/precipitation as actual forecasts. No new network listeners, OTA, BLE, MQTT, telemetry or privileged exchange API keys.
+
+## 8B-6A physical test outcome — 2026-10-11
+
+The user explicitly reported **「實際測試三項都正常」** after being asked to test the following **three** procedures on the existing, unchanged Phase 8B-5B firmware:
+
+1. **Navigation:** Use UP/DOWN to cycle DASHBOARD, WEATHER and MARKETS and return home — **PASS (user-reported normal)**; corresponds to A2.
+2. **DETAIL → DISPLAY CLEAN:** Execute cleanup and observe the **next three minute-level partial updates** — **PASS (user-reported normal)**; corresponds to A4, including the requested post-maintenance refresh-quality check.
+3. **DETAIL → STANDBY / deep sleep / wake:** Show small moon, enter deep sleep, wake via MENU/EXIT and return to the Dashboard — **PASS (user-reported normal)**; corresponds to A5–A6.
+
+The 8B-6A **three-task hardware regression gate is accepted**. Because this was a combined outcome statement rather than individual serial/photo transcripts, do not claim the user separately instrumented every sub-assertion. The earlier 8B-5B acceptance established normal live startup, but **A1 detailed startup logs** were not resubmitted here; **A3 deliberately leaving DETAIL open for 1–2 minutes** was not explicitly reported. These may be followed up if later behavior calls for it.
+
+**No firmware changes, driver changes, recompilation or reflashing are required by this sign-off.** Continue with the existing accepted opt-in `EDP_PHASE8B5B_APP_TEST=1` firmware. **Next: 8B-6B**, optional, controlled test-device Wi-Fi interruption and recovery (B1–B2), visible-diff/RSSI level checks (B3), and one normal 30-minute weather poll (B4). Observe but do not manipulate NTP certificate validation or backend price/weather sources. A separate 8B-6C endurance/cross-midnight gate remains open.

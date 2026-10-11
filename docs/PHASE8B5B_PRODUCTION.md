@@ -111,3 +111,7 @@ Subsequently the same normal production Binance, WeatherService and NTP logs sho
 The feature branch's **hardware-accepted 8B-5B firmware is frozen** while source-level review and a three-gate on-panel regression checklist begin. No re-upload is needed if the device is already running the accepted `EDP_PHASE8B5B_APP_TEST=1` firmware. Start with **8B-6A**: navigate DASHBOARD ↔ WEATHER ↔ MARKETS, test DETAIL/EXIT, perform original `DISPLAY CLEAN` and watch the next three minute partials, and verify STANDBY moon + deep-sleep wake. Follow with 8B-6B Wi-Fi recovery, then 8B-6C E-paper endurance/cross-midnight when practical.
 
 The source audit did **not** establish real midnight, failure-injection or long-duration hardware performance. See [PHASE8B6_REGRESSION.md](PHASE8B6_REGRESSION.md). Firmware source and `main` remain unchanged at this checkpoint.
+
+## Phase 8B-6A accepted on device (2026-10-11)
+
+The user confirmed all three requested on-panel short regression tests are normal: UP/DOWN page navigation, DETAIL DISPLAY CLEAN followed by three minute partials, and STANDBY/Deep Sleep wake. Mark 8B-6A normal hardware gate PASS. Long-run ghosting, deliberate Wi-Fi outage/reconnect, a full 30-minute weather repoll and real midnight/date/weekday rollover remain unverified. The accepted 8B-5B firmware and dual-controller refresh sequence are unchanged. See [PHASE8B6_REGRESSION.md](PHASE8B6_REGRESSION.md).
