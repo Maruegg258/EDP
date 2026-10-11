@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-11  
 **Feature branch:** `phase8a1-static-prototype`  
-**Current status:** Source implementation and GitHub readback/checks complete. **Arduino ESP32-S3 compilation and real hardware/API verification are pending.** This step intentionally performs **NO E-paper refresh or Dashboard forecast rendering.**
+**Current status:** Source implementation and GitHub readback/checks complete. **User reports the Phase 8C-1 serial-only real-hardware test operated normally (2026-10-11); 8C-1 data-acquisition checkpoint ACCEPTED.** Detailed raw TLS/Serial transcript was not supplied. This step performs **NO E-paper refresh or Dashboard forecast rendering.**
 
 ## Boundary agreed after Phase 8B-6B
 
@@ -77,4 +77,16 @@ A failed response logs `FAIL: 8C-1 7-day fetch/validation: ...` and retries no f
 - [ ] Panel does not refresh or show old mock daily forecast in this **serial-only** mode. It may retain its previous E-paper image; that is expected.
 - [ ] Older Weather page, existing normal Dashboard mode and TLS validation remain unmodified by source review; a complete user hardware regression on those paths is deferred to 8C-3.
 
-**Next, only after 8C-1 device PASS:** Phase 8C-2 creates bounded six-column 17px weekday / 32px weather icon / 14px max-min °C and precipitation probability presentation using actual future-day values; then Phase 8C-3 integrates it into the app-owned refresh/dirty cycle. Full-system multi-hour/overnight endurance is **last Phase 8**, not this step.
+**Next, after the reported 8C-1 device PASS:** Phase 8C-2 creates bounded six-column 17px weekday / 32px weather icon / 14px max-min °C and precipitation probability presentation using actual future-day values; then Phase 8C-3 integrates it into the app-owned refresh/dirty cycle. Full-system multi-hour/overnight endurance is **last Phase 8**, not this step.
+
+## Phase 8C-1 actual device acceptance — 2026-10-11
+
+**User confirmation:** After being asked to upload the exclusive `EDP_PHASE8C1_DAILY_TEST=1` Serial-only experiment and verify Open-Meteo's real `forecast_days=7` response, the user replied **「實際測試正常」**.
+
+**Accepted scope:** Phase 8C-1 real ESP32-S3 data-acquisition / strict seven-date forecast contract test **PASS for reported normal device operation**. The code acquires local today plus six prospective dates through the existing certificate-verifying HTTPS client and uses an atomic validated snapshot. The six-column E-paper graphics/UI integration **has not yet been implemented**; no E-paper redraw is expected in this serial-only test.
+
+**Evidence boundary:** No verbatim Serial transcript, individual six-date values, screenshot, TLS handshake trace or raw weather response was included with the confirmation; do not assert those artifacts were separately reviewed. The user-reported test outcome is sufficient to accept this implementation gate while retaining further data-format edge-case regression for later if needed.
+
+**Next — Phase 8C-2:** Convert `WeatherSnapshot::futureDays[6]` into bounded **weekday / condition bitmap / max-min Celsius / precipitation** presentation fields and render in the existing six 128px columns, using 17px/14px fonts and approved 32×32 assets. Retain the known-good legacy static preview as a fixture, and retain truthful `UNAVAILABLE` placeholders when validated six-day content does not exist. Phase 8C-3 subsequently connects the new daily fields to the 30-minute application weather poll and successful-refresh-only visible dirty lifecycle.
+
+**Git action:** Documentation-only physical acceptance; `WeatherService`, app firmware, TLS roots, `CrowEPD579`, and formal `main` are unchanged by this acceptance.

@@ -302,3 +302,7 @@ Source-level code checks are documented as complete, but actual 8B-6A/B/C physic
 The user deferred multi-hour E-paper endurance until **after the complete Dashboard** is built. Phase 8C-1 now adds a strictly validated `WeatherService::fetchLatestSixDay()` contract and `WeatherSnapshot::futureDays[6]` without altering the existing accepted two-day Weather API call. The first device gate is **Serial only**, through `EDP_PHASE8C1_DAILY_TEST=1`; no visual forecast columns are changed yet. The normal 8B-5B live UI still legitimately says `6-DAY FORECAST UNAVAILABLE`.
 
 Status: GitHub source/readback PASS; Arduino compile and real API response test **pending**. See [PHASE8C_DAILY.md](PHASE8C_DAILY.md).
+
+## Phase 8C-1 — Real device sign-off (2026-10-11)
+
+User confirms the serial-only seven-date Open-Meteo test runs normally on the physical ESP32-S3/CrowPanel. **Phase 8C-1 data-contract gate PASS** on `phase8a1-static-prototype`. This is not a six-column display hardware acceptance: live graphic rendering remains the **8C-2** checkpoint, and `Phase8DashboardVisualState` / 30-minute application poll integration remains **8C-3**. Keep full-system endurance at the end of Phase 8 as requested. No firmware changes for this sign-off.
