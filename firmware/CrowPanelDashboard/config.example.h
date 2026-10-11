@@ -78,3 +78,12 @@
 // Requires local WIFI credentials and WEATHER_LATITUDE/LONGITUDE.
 // Turn ALL previous EDP_PHASE8* test/preview flags off before enabling.
 // #define EDP_PHASE8B5B_APP_TEST 1
+
+// Phase 8C-1: serial-only LIVE Open-Meteo 7-date test (today + next six).
+// Disable ALL EDP_PHASE8* older flags; keep your Wi-Fi and weather latitude /
+// longitude ONLY in local ignored config.h. Serial Monitor 115200 baud.
+// Prints date, WMO weather condition, max/min Celsius, precipitation max for
+// six future days after HTTPS certificate validation. Does NOT draw or refresh
+// the E-paper, poll Binance, or enable normal app/page navigation.
+// No fake forecast. Next 8C-2 will map these values into the 6 visual columns.
+// #define EDP_PHASE8C1_DAILY_TEST 1

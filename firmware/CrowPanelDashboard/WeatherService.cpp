@@ -700,6 +700,19 @@ bool parseValidatedDailySeries(const String& body,
 
 }  // namespace
 
+bool WeatherService::sixDayDateSelfCheck() {
+  return nextCalendarDay("2026-10-11", "2026-10-12") &&
+         nextCalendarDay("2026-10-31", "2026-11-01") &&
+         nextCalendarDay("2026-12-31", "2027-01-01") &&
+         nextCalendarDay("2028-02-28", "2028-02-29") &&
+         nextCalendarDay("2028-02-29", "2028-03-01") &&
+         nextCalendarDay("2027-02-28", "2027-03-01") &&
+         !validCalendarDate("2027-02-29") &&
+         !validCalendarDate("2026-04-31") &&
+         !nextCalendarDay("2026-10-11", "2026-10-13") &&
+         !nextCalendarDay("2026-10-11", "2026-10-11");
+}
+
 WeatherService::WeatherService(SecureHttpClient& httpClient)
     : _httpClient(httpClient),
       _lastValid{},

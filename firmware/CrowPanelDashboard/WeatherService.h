@@ -64,6 +64,8 @@ public:
   bool fetchLatest(double latitude, double longitude);
   // Opt-in 8C-1 7-day acquisition: today + six consecutive future days.
   bool fetchLatestSixDay(double latitude, double longitude);
+  // Pure boundary checks: month/year and leap-day adjacency.
+  static bool sixDayDateSelfCheck();
 
   bool hasValidSnapshot() const;
   const WeatherSnapshot* lastValidSnapshot() const;

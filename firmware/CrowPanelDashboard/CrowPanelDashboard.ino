@@ -113,6 +113,31 @@
 #error "8B-5B live Dashboard needs WEATHER_LATITUDE/LONGITUDE in ignored config.h."
 #endif
 
+// 8C-1 is an isolated SERIAL-only seven-day contract test.
+// No E-paper refresh, other API poller, navigation or app behavior in mode.
+#if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1)) && \
+    ((defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1)) || \
+     (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1)) || \
+     (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || \
+     (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || \
+     (defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)) || \
+     (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
+     (defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
+     (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
+#error "8C-1 daily contract test must be the ONLY active preview/app mode."
+#endif
+#if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1)) && \
+    (!defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE))
+#error "8C-1 requires WEATHER_LATITUDE and WEATHER_LONGITUDE in local config.h."
+#endif
+
+#if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1))
+static bool phase8C1Ready = false;
+static bool phase8C1Fetched = false;
+static bool phase8C1Attempted = false;
+static uint32_t phase8C1LastAttemptMs = 0;
+#endif
+
 CrowEPD579 display;
 
 #if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
@@ -2460,6 +2485,24 @@ void setup() {
   return;
 #endif
 
+  // Serial-only real-data test, no display refresh or panel animation.
+#if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1))
+  Serial.println("EDP Phase 8C-1: REAL OPEN-METEO SIX-FUTURE-DAY DATA");
+  Serial.println("No E-paper refresh in this test; previous panel image stays.");
+  if (!WeatherService::sixDayDateSelfCheck() ||
+      !runWeatherConditionMappingSelfCheck()) {
+    Serial.println("FAIL: 8C-1 date/calendar or condition mapping self-check.");
+    return;
+  }
+  Serial.println("PASS: 8C-1 date/leap/year and WMO self-check.");
+  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("FAIL: 8C-1 Wi-Fi begin.");
+    return;
+  }
+  phase8C1Ready = true;
+  return;
+#endif
+
   const esp_sleep_wakeup_cause_t wakeCause =
       esp_sleep_get_wakeup_cause();
   if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
@@ -2549,6 +2592,65 @@ void setup() {
 }
 
 void loop() {
+#if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1))
+  if (!phase8C1Ready || phase8C1Fetched) {
+    delay(1000);
+    return;
+  }
+  wifiManager.tick();
+  if (!wifiManager.isConnected()) {
+    delay(250);
+    return;
+  }
+  const uint32_t attemptNow = millis();
+  if (phase8C1Attempted &&
+      static_cast<uint32_t>(attemptNow - phase8C1LastAttemptMs) < 30000UL) {
+    delay(250);
+    return;
+  }
+  phase8C1Attempted = true;
+  phase8C1LastAttemptMs = attemptNow;
+  Serial.println("8C-1: HTTPS Open-Meteo forecast_days=7, timezone=Asia/Taipei.");
+  if (!weatherService.fetchLatestSixDay(
+          static_cast<double>(WEATHER_LATITUDE),
+          static_cast<double>(WEATHER_LONGITUDE))) {
+    Serial.print("FAIL: 8C-1 7-day fetch/validation: ");
+    Serial.println(weatherService.lastError());
+    Serial.println("Retry after 30 seconds; no fabricated daily values.");
+    delay(250);
+    return;
+  }
+  const WeatherSnapshot* value = weatherService.lastValidSnapshot();
+  if (value == nullptr || !value->hasSixDayForecast) {
+    Serial.println("FAIL: 8C-1 service returned no validated 6-day list.");
+    delay(1000);
+    return;
+  }
+  Serial.print("8C-1 provider local today: ");
+  Serial.println(value->today.date);
+  for (size_t i = 0; i < WeatherSnapshot::FUTURE_DAY_COUNT; ++i) {
+    const WeatherDailyValue& day = value->futureDays[i];
+    Serial.print("+");
+    Serial.print(static_cast<unsigned>(i + 1));
+    Serial.print("d ");
+    Serial.print(day.date);
+    Serial.print(" | ");
+    Serial.print(weatherConditionName(day.condition));
+    Serial.print(" (WMO ");
+    Serial.print(day.weatherCode);
+    Serial.print(") | max ");
+    Serial.print(day.temperatureMaxC, 1);
+    Serial.print(" C min ");
+    Serial.print(day.temperatureMinC, 1);
+    Serial.print(" C | precipitation max ");
+    Serial.print(day.precipitationProbabilityMax);
+    Serial.println("%");
+  }
+  Serial.println("PASS: 8C-1 SIX REAL FUTURE DAYS VALIDATED (serial only).");
+  phase8C1Fetched = true; // one-shot test; no repeated request
+  delay(1000);
+  return;
+#endif
 #if (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
   if (!phase8B3Ready) {
     delay(1000);
