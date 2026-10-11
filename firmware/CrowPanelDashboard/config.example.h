@@ -98,3 +98,15 @@
 // Phase 8C-3 dirty tracking; earlier preview modes are unchanged.
 // Serial Monitor: 115200 baud.
 // #define EDP_PHASE8C2_DISPLAY_TEST 1
+
+// Phase 8C-3: FULL modern Dashboard (Phase 8B-5B app) with six REAL
+// future-day Open-Meteo forecasts and existing 30-minute service cadence.
+// Set EDP_PHASE8B5B_APP_TEST=1 AND EDP_PHASE8C3_APP_TEST=1 in ignored
+// local config.h, with all isolated preview/test flags commented out.
+// Both flags are required: this is normal Phase 7 page/DETAIL/deep-sleep app.
+// WeatherService::fetchLatestSixDay reuses TLS-validating SecureHttpClient.
+// No independent polling or refresh timer. Rendered forecast is compared in
+// Phase8DashboardVisualState and committed only after a successful panel draw.
+// If daily values are unavailable or won't fit, display UNAVAILABLE or retain
+// prior valid forecast. Full endurance is deferred to final Phase 8 sign-off.
+// #define EDP_PHASE8C3_APP_TEST 1

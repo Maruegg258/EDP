@@ -163,6 +163,16 @@ static bool phase8C2Attempted = false;
 static uint32_t phase8C2LastAttemptMs = 0;
 #endif
 
+#if (defined(EDP_PHASE8C3_APP_TEST) && (EDP_PHASE8C3_APP_TEST == 1))
+#if !(defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+#error "8C-3 requires EDP_PHASE8B5B_APP_TEST=1: reuse normal Phase 7 app."
+#endif
+#if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1)) || \
+    (defined(EDP_PHASE8C2_DISPLAY_TEST) && (EDP_PHASE8C2_DISPLAY_TEST == 1))
+#error "Disable isolated 8C-1/8C-2 modes before enabling 8C-3."
+#endif
+#endif
+
 CrowEPD579 display;
 
 #if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
@@ -1467,7 +1477,15 @@ static bool runWeatherSelfChecksIfNeeded() {
 static WeatherStageResult fetchAndStageLiveWeather(
     double latitude,
     double longitude) {
-  if (!weatherService.fetchLatest(latitude, longitude)) {
+  // Phase 8C-3 reuses this *same* production 30-minute poll;
+  // seven daily dates include the already used current/hours/tomorrow.
+  const bool fetched =
+#if (defined(EDP_PHASE8C3_APP_TEST) && (EDP_PHASE8C3_APP_TEST == 1))
+      weatherService.fetchLatestSixDay(latitude, longitude);
+#else
+      weatherService.fetchLatest(latitude, longitude);
+#endif
+  if (!fetched) {
     Serial.print("Weather fetch failed: ");
     Serial.println(weatherService.lastError());
 
@@ -1498,6 +1516,20 @@ static WeatherStageResult fetchAndStageLiveWeather(
     );
     return WeatherStageResult::FAILED;
   }
+
+#if (defined(EDP_PHASE8C3_APP_TEST) && (EDP_PHASE8C3_APP_TEST == 1))
+  Phase8SixDayForecast sixDay{};
+  if (!Phase8SixDayPresentation::fromSnapshot(*snapshot, sixDay)) {
+    // The WeatherService JSON can be valid but too wide for the 14px grid:
+    // preserve the LAST DISPLAYED six-day text rather than clipping.
+    Serial.println(
+        "8C-3: six-day typography unavailable/invalid; "
+        "keep previously visible forecast.");
+  } else {
+    Serial.println(
+        "8C-3: six future daily records validated for Dashboard staging.");
+  }
+#endif
 
   WeatherWidgetPresentation presentation{};
 
@@ -1688,6 +1720,17 @@ static bool stagePhase8LiveDashboardFromServices() {
             weatherSnapshot->current, candidate)) {
       next.weather = candidate;
     } // Preserve the previous visible weather if conversion fails.
+#if (defined(EDP_PHASE8C3_APP_TEST) && (EDP_PHASE8C3_APP_TEST == 1))
+    if (weatherSnapshot->hasSixDayForecast) {
+      Phase8SixDayForecast daily{};
+      if (Phase8SixDayPresentation::fromSnapshot(*weatherSnapshot, daily)) {
+        if (!Phase8SixDayPresentation::equal(next.forecast, daily)) {
+          Serial.println("8C-3: six-day forecast visual change staged.");
+        }
+        next.forecast = daily;
+      } // A failed new provider/formatter value never erases last-valid.
+    }
+#endif
   }
 
   const uint32_t now = millis();
@@ -2617,11 +2660,21 @@ void setup() {
       !Phase8MarketPresentation::selfCheck() ||
       !Phase8WeatherPresentation::selfCheck() ||
       !WeatherIconSelector::selfCheck() ||
-      !Phase8DashboardFrameCompare::selfCheck()) {
+      !Phase8DashboardFrameCompare::selfCheck()
+#if (defined(EDP_PHASE8C3_APP_TEST) && (EDP_PHASE8C3_APP_TEST == 1))
+      || !Phase8SixDayPresentation::selfCheck() ||
+         !WeatherService::sixDayDateSelfCheck()
+#endif
+      ) {
     Serial.println("FAIL: Phase 8B-5B live presentation self-checks.");
     return;
   }
   Serial.println("PASS: Phase 8B-5B owned state and presentation self-checks.");
+#if (defined(EDP_PHASE8C3_APP_TEST) && (EDP_PHASE8C3_APP_TEST == 1))
+  Serial.println("EDP Phase 8C-3: COMPLETE LIVE DASHBOARD + SIX REAL DAYS.");
+  Serial.println("8C-3: seven daily dates on existing 30-minute poll.");
+  Serial.println("PASS: 8C-3 six-day/date/visible-state self-checks.");
+#endif
 #endif
 
   Serial.println("Establishing live dashboard baseline...");
