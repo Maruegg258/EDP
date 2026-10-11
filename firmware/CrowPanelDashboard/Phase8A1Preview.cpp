@@ -190,6 +190,44 @@ bool drawUnavailableForecast(GraphicsBW& g) {
                     219, 1, true);
 }
 
+bool drawRealSixDayForecast(GraphicsBW& g,
+                            const Phase8SixDayForecast& forecast) {
+  if (!forecast.available) return drawUnavailableForecast(g);
+  for (size_t index=0; index<Phase8SixDayForecast::COUNT; ++index) {
+    const Phase8SixDayColumn& day=forecast.days[index];
+    if (day.icon==nullptr || day.icon->data==nullptr ||
+        day.icon->width!=32 || day.icon->height!=32 ||
+        strlen(day.weekday)!=3 || strlen(day.summary)==0) return false;
+
+    const int16_t left=static_cast<int16_t>(
+        FORECAST_GRID_LEFT+index*FORECAST_COLUMN_PITCH);
+    const uint16_t weekdayWidth=g.textWidth(DashboardFont17::FONT,
+                                             day.weekday,1);
+    const uint16_t summaryWidth=g.textWidth(DashboardFont14::FONT,
+                                             day.summary,1);
+    const int16_t groupWidth=static_cast<int16_t>(
+        FORECAST_ICON_SIZE+FORECAST_ICON_LABEL_GAP+weekdayWidth);
+    if (weekdayWidth!=3*12 ||
+        summaryWidth==0 ||
+        groupWidth>FORECAST_COLUMN_PITCH ||
+        summaryWidth>FORECAST_COLUMN_PITCH-12) return false;
+
+    const int16_t iconX=static_cast<int16_t>(
+        left+(FORECAST_COLUMN_PITCH-groupWidth)/2);
+    const int16_t dayX=static_cast<int16_t>(
+        iconX+FORECAST_ICON_SIZE+FORECAST_ICON_LABEL_GAP);
+    const int16_t summaryX=static_cast<int16_t>(
+        left+(FORECAST_COLUMN_PITCH-summaryWidth)/2);
+
+    if (!g.drawBitmap(*day.icon,iconX,200,true) ||
+        !g.drawText(DashboardFont17::FONT,day.weekday,dayX,209,1,true) ||
+        !g.drawText(DashboardFont14::FONT,day.summary,summaryX,243,1,true)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool drawSixDayForecast(GraphicsBW& g) {
   // Six equal columns centered across the 792px screen.
   // Center the 32px icon + weekday as one unit and the 14px summary
@@ -243,7 +281,8 @@ namespace Phase8A1Preview {
 static bool renderComposition(
     GraphicsBW& g, const Phase8CalendarHeader& calendar,
     const Phase8MarketPrices& prices, const Phase8CurrentWeather& weather,
-    const Bitmap1bpp& wifi, bool allowStaticForecastFixture) {
+    const Bitmap1bpp& wifi, bool allowStaticForecastFixture,
+    const Phase8SixDayForecast* realForecast) {
   if (g.width() != WIDTH || g.height() != 272) {
     return false;
   }
@@ -265,7 +304,9 @@ static bool renderComposition(
       !drawMarkets(g, prices) ||
       !(allowStaticForecastFixture
             ? drawSixDayForecast(g)
-            : drawUnavailableForecast(g))) {
+            : (realForecast != nullptr
+                ? drawRealSixDayForecast(g,*realForecast)
+                : drawUnavailableForecast(g)))) {
     return false;
   }
   drawSectionDivider(g, HEADER_DIVIDER_Y);
@@ -277,13 +318,21 @@ bool renderWithCalendarMarketsWeatherWifi(
     GraphicsBW& g, const Phase8CalendarHeader& calendar,
     const Phase8MarketPrices& prices, const Phase8CurrentWeather& weather,
     const Bitmap1bpp& wifi) {
-  return renderComposition(g, calendar, prices, weather, wifi, true);
+  return renderComposition(g, calendar, prices, weather, wifi, true, nullptr);
 }
 
 bool renderLive(GraphicsBW& g, const Phase8DashboardFrame& frame) {
   if (frame.wifi == nullptr) return false;
   return renderComposition(g, frame.calendar, frame.markets, frame.weather,
-                           *frame.wifi, false);
+                           *frame.wifi, false, nullptr);
+}
+
+bool renderWithSixDayForecast(
+    GraphicsBW& g, const Phase8DashboardFrame& frame,
+    const Phase8SixDayForecast& forecast) {
+  if (frame.wifi == nullptr) return false;
+  return renderComposition(g,frame.calendar,frame.markets,frame.weather,
+                           *frame.wifi,false,&forecast);
 }
 
 bool renderWithCalendarMarketsWeather(
