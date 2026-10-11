@@ -296,3 +296,9 @@ The reported successful device test should not be conflated with separately inst
 The accepted Phase 8B-5B modern Dashboard artwork and normal app integration are unchanged for this checkpoint. The first regression focus is **DISPLAY CLEAN followed by three minute-level partial refreshes**, plus Dashboard/Weather/Markets navigation and Phase 7 DETAIL → STANDBY/wake. The lower region must continue to read `6-DAY FORECAST UNAVAILABLE`, not old mock daily predictions.
 
 Source-level code checks are documented as complete, but actual 8B-6A/B/C physical outcomes remain pending. See [PHASE8B6_REGRESSION.md](PHASE8B6_REGRESSION.md).
+
+## Phase 8C-1 — True six-future-day data (2026-10-11)
+
+The user deferred multi-hour E-paper endurance until **after the complete Dashboard** is built. Phase 8C-1 now adds a strictly validated `WeatherService::fetchLatestSixDay()` contract and `WeatherSnapshot::futureDays[6]` without altering the existing accepted two-day Weather API call. The first device gate is **Serial only**, through `EDP_PHASE8C1_DAILY_TEST=1`; no visual forecast columns are changed yet. The normal 8B-5B live UI still legitimately says `6-DAY FORECAST UNAVAILABLE`.
+
+Status: GitHub source/readback PASS; Arduino compile and real API response test **pending**. See [PHASE8C_DAILY.md](PHASE8C_DAILY.md).

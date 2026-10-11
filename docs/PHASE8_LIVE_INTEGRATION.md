@@ -150,3 +150,9 @@ The user explicitly confirms that **all three** short regression procedures oper
 ## Phase 8B-6B real-device network/recovery sign-off (2026-10-11)
 
 The user replied **「實際測試三項都正常」** to the 8B-6B set: temporary Wi-Fi disconnect/last-valid+clock handling, subsequent Wi-Fi reconnect/data updates, and service polling/visual dirty observation. Mark the 8B-6B normal-use physical gate PASS on the accepted feature-branch firmware. This broad outcome is not a detailed packet or E-paper refresh event log and does not individually validate every RSSI threshold or service timestamp. The next gate is 8B-6C 1–2-hour E-paper/dual-controller-seam endurance with post-maintenance partials, optionally real local midnight and sunrise/sunset if actually observed. Keep untested transitions explicitly pending/deferred; do not alter SSD1683 or verified TLS merely to provoke them.
+
+## Phase 8C-1 — Open-Meteo seven-date contract (2026-10-11)
+
+After 8B-6A/B hardware sign-offs, the user moved the 8B-6C long-term/overnight endurance test to **the final Phase 8 validation**, after six-day forecasts and the final UI are live. This is a scheduling decision, not an endurance PASS.
+
+The existing `WeatherService` gained a **separate opt-in** `fetchLatestSixDay()` request with `forecast_days=7`, bounded six future-day fields and calendar/date/temperature/probability/WMO validation. Original production `fetchLatest()` still requests two daily dates and the existing WEATHER page/30-minute poll uses it unchanged. An isolated serial-only test flag requests and displays the six real future days after HTTPS CA validation. No second weather parser, fake daily data, E-paper refresh, new network service or key is introduced. 8C-2 graphics and 8C-3 final app/UI binding remain gated on actual 8C-1 hardware acceptance. See [PHASE8C_DAILY.md](PHASE8C_DAILY.md).
