@@ -66,7 +66,7 @@ void drawSectionDivider(GraphicsBW& g, int16_t y) {
   drawDiamond(g, 776, y);
 }
 
-bool drawHeader(GraphicsBW& g) {
+bool drawHeader(GraphicsBW& g, const Phase8CalendarHeader& calendar) {
   // Static current-weather example: sunny daytime. Same 32x32 slot as Rev-D2.
   if (!g.drawBitmap(
           WeatherIconSelector::select(WeatherCondition::CLEAR, true),
@@ -82,9 +82,9 @@ bool drawHeader(GraphicsBW& g) {
 
   // Compose date / diamond / time / diamond / weekday as a centered group.
   // Date/weekday are 17px tall, precisely 50% of the 34px clock height.
-  const char* date = "10 OCT";
-  const char* time = "12:59";
-  const char* weekday = "SUNDAY";
+  const char* date = calendar.date;
+  const char* time = calendar.time;
+  const char* weekday = calendar.weekday;
   const uint16_t dateWidth = g.textWidth(DashboardFont17::FONT, date, 1);
   const uint16_t timeWidth = g.textWidth(DashboardFont34::FONT, time, 1);
   const uint16_t dayWidth = g.textWidth(DashboardFont17::FONT, weekday, 1);
@@ -215,18 +215,40 @@ bool drawSixDayForecast(GraphicsBW& g) {
 
 namespace Phase8A1Preview {
 
-bool render(GraphicsBW& g) {
+bool renderWithCalendar(GraphicsBW& g,
+                        const Phase8CalendarHeader& calendar) {
   if (g.width() != WIDTH || g.height() != 272) {
     return false;
   }
 
+  // Validate required glyphs/size before drawing; no silent clipped text.
+  if (strlen(calendar.time) != 5 ||
+      strlen(calendar.date) != 6 ||
+      strlen(calendar.weekday) < 6 ||
+      strlen(calendar.weekday) > 9 ||
+      g.textWidth(DashboardFont34::FONT, calendar.time, 1) != 5 * 22 ||
+      g.textWidth(DashboardFont17::FONT, calendar.date, 1) != 6 * 12 ||
+      g.textWidth(DashboardFont17::FONT, calendar.weekday, 1) !=
+          strlen(calendar.weekday) * 12) {
+    return false;
+  }
+
   g.clear(true);
-  if (!drawHeader(g) || !drawMarkets(g) || !drawSixDayForecast(g)) {
+  if (!drawHeader(g, calendar) ||
+      !drawMarkets(g) || !drawSixDayForecast(g)) {
     return false;
   }
   drawSectionDivider(g, HEADER_DIVIDER_Y);
   drawSectionDivider(g, FORECAST_DIVIDER_Y);
   return true;
+}
+
+bool render(GraphicsBW& g) {
+  // Phase 8A user-accepted immutable one-shot regression fixture.
+  static const Phase8CalendarHeader fixture = {
+      "12:59", "10 OCT", "SUNDAY"
+  };
+  return renderWithCalendar(g, fixture);
 }
 
 }  // namespace Phase8A1Preview
