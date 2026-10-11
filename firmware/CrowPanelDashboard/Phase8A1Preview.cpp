@@ -2,19 +2,21 @@
 
 #include <Arduino.h>
 #include "Icons.h"
+#include "WeatherIconSelector.h"
 #include "DashboardFont34.h"
 #include "DashboardFont17.h"
 #include "DashboardFont14.h"
 
 namespace {
 
-// Phase 8A-1 Rev-C4: user-approved JetBrains Mono Medium 1-bit family.
+// Phase 8A-2D: approved weather icon family in the isolated Rev-D2 Dashboard.
+// Preserve JetBrains Mono typography, market row and fixed layout anchors.
 // 34px for time/prices, 17px for date/weekday/English labels,
 // 14px for compact weather temperature and precipitation.
 // Draw at native scale=1, with fixed-cell glyph metrics.
 // The former Rev-B font assets and optional 13px diagnostic remain
 // available only for historical/reference testing, not this preview.
-// Phase 8A-1 layout anchors deliberately unchanged in this font-only pass.
+// Fixed mock values only; no live weather or dynamic update path in preview.
 // Physical pixel dimensions: 792x272; opt-in static-only composition.
 static constexpr int16_t WIDTH = 792;
 static constexpr int16_t HEADER_DIVIDER_Y = 77;
@@ -34,18 +36,19 @@ static constexpr int16_t FORECAST_ICON_LABEL_GAP = 8;
 struct PreviewForecast {
   const char* day;
   const char* summary;
+  WeatherCondition condition;  // Static, illustrative daily icon category.
 };
 
 // Intentionally mock values matching the approved Phase 8A-1 preview.
 // These are NOT six live daily forecasts; production WeatherService still
 // owns only today and tomorrow.
 static const PreviewForecast FORECAST[6] = {
-    {"MON", "25-29/ 10%"},
-    {"TUE", "25-29/ 10%"},
-    {"WED", "25-29/ 10%"},
-    {"THU", "25-29/ 10%"},
-    {"FRI", "25-29/ 10%"},
-    {"SAT", "25-29/ 10%"}
+    {"MON", "25-29/ 10%", WeatherCondition::CLEAR},
+    {"TUE", "25-29/ 10%", WeatherCondition::PARTLY_CLOUDY},
+    {"WED", "25-29/ 10%", WeatherCondition::OVERCAST},
+    {"THU", "25-29/ 10%", WeatherCondition::DRIZZLE},
+    {"FRI", "25-29/ 10%", WeatherCondition::RAIN},
+    {"SAT", "25-29/ 10%", WeatherCondition::THUNDERSTORM}
 };
 
 void drawDiamond(GraphicsBW& g, int16_t cx, int16_t cy, int16_t size = 3) {
@@ -63,33 +66,13 @@ void drawSectionDivider(GraphicsBW& g, int16_t y) {
   drawDiamond(g, 776, y);
 }
 
-// 32x32 matching outline-sun icon shared by upper current weather and
-// the six forecast slots, derived from the user's thin-stroke icon reference.
-void drawOutlineSun(GraphicsBW& g, int16_t x, int16_t y) {
-  static constexpr int16_t CENTER = 16;
-  for (int16_t dy = -10; dy <= 10; ++dy) {
-    for (int16_t dx = -10; dx <= 10; ++dx) {
-      const int16_t distanceSquared =
-          static_cast<int16_t>(dx * dx + dy * dy);
-      if (distanceSquared >= 72 && distanceSquared <= 94) {
-        g.setPixel(x + CENTER + dx,
-                   y + CENTER + dy, true);
-      }
-    }
-  }
-
-  static const int8_t RAYS[8][4] = {
-    {0,-12,0,-15}, {0,12,0,15}, {-12,0,-15,0}, {12,0,15,0},
-    {-9,-9,-11,-11}, {9,-9,11,-11}, {-9,9,-11,11}, {9,9,11,11}
-  };
-  for (const auto& ray : RAYS) {
-    g.drawLine(x + CENTER + ray[0], y + CENTER + ray[1],
-               x + CENTER + ray[2], y + CENTER + ray[3], true);
-  }
-}
-
 bool drawHeader(GraphicsBW& g) {
-  drawOutlineSun(g, 22, 25);
+  // Static current-weather example: sunny daytime. Same 32x32 slot as Rev-D2.
+  if (!g.drawBitmap(
+          WeatherIconSelector::select(WeatherCondition::CLEAR, true),
+          22, 25, true)) {
+    return false;
+  }
 
   if (!g.drawText(DashboardFont17::FONT, "SUNNY", 69, 27, 1, true) ||
       !g.drawText(DashboardFont14::FONT,
@@ -210,8 +193,14 @@ bool drawSixDayForecast(GraphicsBW& g) {
     const int16_t summaryX = static_cast<int16_t>(
         columnLeft + (FORECAST_COLUMN_PITCH - summaryWidth) / 2);
 
-    drawOutlineSun(g, iconX, 200);
-    if (!g.drawText(DashboardFont17::FONT, FORECAST[index].day,
+    // Daily representatives use daytime artwork. These are mock conditions,
+    // not hourly isDay values or live six-day WeatherService predictions.
+    const Bitmap1bpp& icon =
+        WeatherIconSelector::select(FORECAST[index].condition, true);
+    if (icon.width != FORECAST_ICON_SIZE ||
+        icon.height != FORECAST_ICON_SIZE ||
+        !g.drawBitmap(icon, iconX, 200, true) ||
+        !g.drawText(DashboardFont17::FONT, FORECAST[index].day,
                     weekdayX, 209, 1, true) ||
         !g.drawText(DashboardFont14::FONT,
                     FORECAST[index].summary,
