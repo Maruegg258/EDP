@@ -22,6 +22,7 @@
 #include "NavigationController.h"
 #include "PageRenderer.h"
 #include "Phase8A1Preview.h"
+#include "Phase8CalendarPresentation.h"
 #include "SecureHttpClient.h"
 #include "SystemPages.h"
 #include "TimeService.h"
@@ -45,6 +46,14 @@
     ((defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
      (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)))
 #error "Disable font test and Dashboard preview before enabling Weather Icon Gallery."
+#endif
+
+// Phase 8B-2 isolated NTP/calendar experiment. All preview modes are exclusive.
+#if defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1) && \
+    ((defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
+     (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
+     (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
+#error "Phase 8B-2 NTP test must be the only enabled preview mode."
 #endif
 
 CrowEPD579 display;
@@ -91,6 +100,13 @@ bool hasRenderedMarketPageState = false;
 
 WiFiManager wifiManager;
 TimeService timeService;
+
+#if defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)
+static Phase8CalendarHeader phase8B2Displayed = {
+    "--:--", "-- ---", "WAITING"
+};
+static bool phase8B2Ready = false;
+#endif
 SecureHttpClient secureHttpClient(
     TlsTrustAnchors::DIGICERT_GLOBAL_ROOT_G2
 );
@@ -2070,6 +2086,36 @@ void setup() {
   return;
 #endif
 
+  // Phase 8B-2 NTP-only test of the accepted Phase 8A renderer.
+  // The header is live after sync; every other Dashboard field is a mock.
+#if defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)
+  Serial.println("EDP Phase 8B-2: NTP TIME / DATE / WEEKDAY TEST");
+  Serial.println("Only calendar header is live. Crypto/weather/forecast/Wi-Fi icons are static MOCK values.");
+  if (!Phase8CalendarPresentation::selfCheck()) {
+    Serial.println("FAIL: 8B-2 calendar formatter / midnight self-check.");
+    return;
+  }
+  Serial.println("PASS: calendar formatter, midnight and weekday self-check.");
+
+  if (!Phase8A1Preview::renderWithCalendar(graphics, phase8B2Displayed) ||
+      !display.maintenanceRefresh(frameBuffer)) {
+    display.sleep();
+    Serial.println("FAIL: 8B-2 WAITING baseline composition/refresh.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  Serial.println("PASS: 8B-2 WAITING baseline displayed via maintenanceRefresh().");
+
+  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("FAIL: Wi-Fi manager could not start; verify local config.h.");
+    return;
+  }
+  phase8B2Ready = true;
+  Serial.println("Waiting for NTP; only TimeService and Wi-Fi reconnect are active.");
+  return;
+#endif
+
   const esp_sleep_wakeup_cause_t wakeCause =
       esp_sleep_get_wakeup_cause();
   if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
@@ -2145,6 +2191,72 @@ void setup() {
 }
 
 void loop() {
+#if defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)
+  if (!phase8B2Ready) {
+    delay(1000);
+    return;
+  }
+
+  // Network is used solely for existing TimeService NTP synchronization.
+  // Do not fetch crypto/weather, run Phase 7 navigation, or refresh periodically.
+  wifiManager.tick();
+  if (!startTimeServiceWhenConnected()) {
+    Serial.println("FAIL: 8B-2 NTP service start.");
+    delay(1000);
+    return;
+  }
+  timeService.tick();
+
+  if (timeService.isSynchronized()) {
+    struct tm localTime{};
+    Phase8CalendarHeader next{};
+    if (!timeService.getLocalTime(localTime) ||
+        !Phase8CalendarPresentation::fromLocalTm(localTime, next)) {
+      Serial.println("FAIL: 8B-2 local calendar formatting.");
+      delay(1000);
+      return;
+    }
+
+    // Compare all three fields, not just minute: midnight/NTP corrections
+    // must refresh date and weekday even if HH:MM happens to match.
+    if (!Phase8CalendarPresentation::equal(phase8B2Displayed, next)) {
+      if (!Phase8A1Preview::renderWithCalendar(graphics, next)) {
+        Serial.println("FAIL: 8B-2 calendar frame composition.");
+        delay(1000);
+        return;
+      }
+
+      // Preserve the validated application-owned partial refresh sequence.
+      // Nothing is committed as displayed until physical refresh succeeds.
+      if (!display.begin()) {
+        Serial.println("FAIL: 8B-2 E-paper wake.");
+        delay(1000);
+        return;
+      }
+      if (!display.restoreFrameStateForPartial(previousFrameBuffer) ||
+          !display.displayPartialFrame(frameBuffer)) {
+        display.sleep();
+        Serial.println("FAIL: 8B-2 E-paper partial refresh.");
+        delay(1000);
+        return;
+      }
+
+      memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+      display.sleep();
+      phase8B2Displayed = next;
+
+      Serial.print("PASS: 8B-2 calendar refreshed: ");
+      Serial.print(next.date);
+      Serial.print(" ");
+      Serial.print(next.weekday);
+      Serial.print(" ");
+      Serial.println(next.time);
+    }
+  }
+
+  delay(100);
+  return;
+#endif
 #if defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)
   // A single static 1-bit diagnostic frame; no background work or refresh.
   delay(1000);

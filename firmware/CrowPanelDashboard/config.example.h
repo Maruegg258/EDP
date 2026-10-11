@@ -31,3 +31,12 @@
 // Must disable both EDP_PHASE8_FONT_TEST and EDP_PHASE8A1_PREVIEW.
 // No Wi-Fi, HTTP, polling, buttons or automatic refresh in this mode.
 // #define EDP_PHASE8_WEATHER_ICON_TEST 1
+
+// Phase 8B-2 isolated REAL NTP clock/calendar test (feature branch only).
+// This is NOT production live Dashboard: crypto, current weather, forecast
+// and Wi-Fi icon remain STATIC MOCKS even though Wi-Fi is used for NTP.
+// Exactly ONE of the four preview/test flags may be enabled.
+// Shows WAITING while no valid NTP time, then HH:MM / DD MMM / WEEKDAY.
+// Only changed calendar text triggers the existing partial-refresh sequence.
+// Requires real WIFI_SSID and WIFI_PASSWORD in the ignored local config.h.
+// #define EDP_PHASE8B2_CLOCK_TEST 1

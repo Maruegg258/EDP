@@ -1,6 +1,7 @@
 #include "Phase8A1Preview.h"
 
 #include <Arduino.h>
+#include <cstring>
 #include "Icons.h"
 #include "WeatherIconSelector.h"
 #include "DashboardFont34.h"
