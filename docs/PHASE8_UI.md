@@ -326,3 +326,9 @@ The user confirms the six-column one-shot real Open-Meteo forecast layout **rend
 The accepted six real future-day 128px columns now participate in the normal app-owned Dashboard state alongside current weather, calendar, three Binance perpetual prices and RSSI. `Dashboard::renderLive()` uses `Phase8A1Preview::renderWithSixDayForecast()`; the 8B-5B-only mode still renders **`6-DAY FORECAST UNAVAILABLE`** until additional 8C-3 flag is enabled. Daily icon, weekday and displayed max/min°C and precipitation are compared to avoid unnecessary physical refresh; update/commit remain in Phase 7 application path.
 
 **Status:** GitHub source code verified, *Arduino compile and on-device 8C-3 integration validation pending*. Final long-duration/ghosting test remains at the **end of Phase 8**, after all Dashboard features. See [PHASE8C3_INTEGRATION.md](PHASE8C3_INTEGRATION.md).
+
+## Phase 8C-3 — Complete Dashboard hardware acceptance (2026-10-11)
+
+The user confirms all three requested physical test groups normal: the complete live NTP/Binance/current-weather/Wi-Fi/**six real future-day** Dashboard, regular coalesced data refresh and Phase 7 Dashboard/Weather/Markets + DETAIL / DISPLAY CLEAN / standby flows. This closes **8C-3 normal-operation integration PASS**. The result did not include separate screenshots or Serial transcripts for every event; full 1–2-hour/overnight ghosting and real date transitions remain **Phase 8 final endurance**, intentionally deferred by the user until the full Dashboard existed.
+
+No code/graphics/driver/TLS changes were made for this hardware acceptance.

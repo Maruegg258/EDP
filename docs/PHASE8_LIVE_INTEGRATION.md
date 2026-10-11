@@ -176,3 +176,9 @@ The six-day forecast presentation accepted in 8C-2 now belongs to the normal app
 Boot baseline, partial/maintenance, page return and Phase 7 DETAIL `DISPLAY CLEAN` all now render the same approved six-column compositor with staged forecast and success-only state commit; entering legacy 8B-5B mode alone retains the unavailable caption. The user-requested multi-hour and overnight tests stay as the *last* Phase 8 gate.
 
 **Status:** source inspection and GitHub code commit complete; full Arduino compile and hardware integration still pending. See [PHASE8C3_INTEGRATION.md](PHASE8C3_INTEGRATION.md).
+
+## Phase 8C-3 device acceptance → Phase 8 final stability gate (2026-10-11)
+
+The user confirmed **「實際測試三項都正常」** for the complete live Dashboard, app-owned data update/coalesced partial cycle, and Phase 7 page/DETAIL/display clean/sleep behavior with six future-day forecasts enabled. **Phase 8C-3 normal-use integration hardware gate PASS.** This does not independently establish a long-running E-paper ghosting result, real calendar midnight rollover, physical extreme data cases, exact individual poll interval logs or deliberately induced HTTPS failures.
+
+All originally planned Dashboard information categories now have accepted normal on-panel paths on `phase8a1-static-prototype`. The next task is the user-requested **Phase 8 final full-feature endurance** after all fields were integrated. Keep the tested firmware/SSD1683 maintenance sequence unchanged and do not merge `main` as part of this docs-only sign-off.

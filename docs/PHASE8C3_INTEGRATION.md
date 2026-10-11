@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-10-11  
 **GitHub branch:** `phase8a1-static-prototype`  
-**Status:** Code changes committed and source/GitHub readback checks PASS. **Arduino full build, actual on-panel integration and 30-minute cadence hardware verification PENDING.** `main` is not modified.
+**Status:** Code changes committed and source/GitHub checks PASS; **user reports all three 8C-3 integration test groups normal on the physical CrowPanel (2026-10-11), normal-operation hardware gate ACCEPTED**. No granular Serial/30-minute timing trace supplied. Final long-duration stability still PENDING. `main` is not modified.
 
 ## Scope
 
@@ -114,4 +114,18 @@ The firmware continues to use its original application log `Weather visible stat
 - Date/weekday/forecast boundaries and endurance through real local midnight remain for final Phase 8 testing; daily values ordinarily advance with the subsequent verified provider response. Do not change NTP/timezone or introduce arbitrary E-paper full refresh to simulate this.
 - The original 8B-5B mode is independently accessible by turning off the 8C-3 flag. Production `main` is unchanged. Final feature-branch promotion is a separate decision.
 
-**Phase 8C-3 implementation code checkpoint complete; physical acceptance pending.**
+**Phase 8C-3 normal-operation hardware gate PASS (user report, 2026-10-11); complete-dashboard Phase 8 final endurance gate PENDING.**
+
+## Phase 8C-3 physical acceptance — 2026-10-11
+
+**User feedback:** After receiving three explicit on-panel test groups, user replied **「實際測試三項都正常」**.
+
+- **Group 1 — complete live Dashboard: PASS (user report).** The requested comparison includes NTP HH:MM/date/weekday, BTC/ETH/HYPE perpetual values, current weather/day-night icon, Wi-Fi level and six **real** Open-Meteo future-day columns replacing the previous `UNAVAILABLE` text.
+- **Group 2 — existing polling and coalesced refresh: PASS (user report).** Normal clock/market minute updates and the existing ~30-minute weather polling/forecast staging were among the requested checks. User reported this group normal; no separate timestamped Serial event trace was supplied.
+- **Group 3 — Page/DETAIL regression: PASS (user report).** Requested Dashboard ↔ Weather ↔ Markets page navigation, DETAIL / DISPLAY CLEAN and moon STANDBY / Deep Sleep / wake retain normal operation after the new six-day data was added. This is an overall user-reported result, not a separate screenshot/video or per-key event log.
+
+**Scope:** This accepts **Phase 8C-3 short integration for normal observed device behavior**. Do **not** infer independently instrumented timing equality, deliberate Wi-Fi/TLS failures, a real local midnight/date/daytime forecast turnover, unusual numeric overflow cases, controller seam endurance, or multi-hour ghosting tests. They are outside the submitted evidence and remain available for the final stability gate or future reliability hardening.
+
+**Next — Phase 8 final complete-feature stability acceptance:** With all planned Dashboard data now present, use the **same accepted opt-in 8B-5B + 8C-3 application firmware**, without a speculative refresh-sequence modification, for the user-deferred 1–2-hour continuous E-paper/partial-refresh test; optionally overnight to observe natural midnight and six-day rolling dates. After an existing DETAIL `DISPLAY CLEAN`, check consecutive partial text clarity, dual SSD1683 center seam, weather daily updates, runtime responsiveness and absence of ghosting. Record only events that were actually observed. Do not mark final Phase 8 acceptance until hardware outcomes are reported.
+
+**Repository checkpoint:** This acceptance is documentation-only; no modified `CrowPanelDashboard.ino`, display driver, weather/TLS provider, credentials or `main` merge.
