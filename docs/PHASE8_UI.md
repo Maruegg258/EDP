@@ -230,3 +230,9 @@ See [PHASE8_LIVE_INTEGRATION.md](PHASE8_LIVE_INTEGRATION.md) for the complete au
 The accepted `Phase8A1Preview` graphic composition now accepts an owned calendar header with true `HH:MM`, `DD MMM` and full weekday values, while its original static regression entry point still draws `12:59`, `10 OCT`, `SUNDAY`. An opt-in `EDP_PHASE8B2_CLOCK_TEST` test exercises `TimeService`/Wi-Fi NTP only and renders via the existing maintenance baseline and previous/current RAM partial-refresh application sequence when all displayed header strings change. Crypto/weather/forecast/Wi-Fi pictogram remain hard-coded placeholders.
 
 **Status:** Test code committed and source readback PASS; Arduino build and real-device confirmation pending. Production Dashboard, dirty coalescer, page navigation, deep sleep, WeatherService, MarketDataService and driver unchanged. See [PHASE8B2_CALENDAR.md](PHASE8B2_CALENDAR.md) for testing and remaining risks.
+
+## Phase 8B-2 — CrowPanel real-device acceptance (2026-10-11)
+
+The user uploaded the Phase 8B-2 calendar preview and reported that the **actual panel test is normal**. Accept the isolated NTP-driven `HH:MM` / `DD MMM` / full English weekday composition as the new working live-header baseline. The UI remains a test mode, with weather, Wi-Fi graphic, crypto and six-day values still static mocks. No physical midnight rollover or sustained outage/endurance test is claimed by this feedback.
+
+**Next checkpoint:** Phase 8B-3 feeds real BTC/ETH/HYPE prices into the same accepted composition. Phase 8B-2 is accepted but not merged into production `main`.

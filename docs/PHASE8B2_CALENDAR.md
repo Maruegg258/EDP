@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-11  
 **Branch:** `phase8a1-static-prototype`  
-**Status:** Code committed; GitHub readback and static checks PASS; **Arduino IDE compile/upload and user hardware verification PENDING**.
+**Status:** Code committed, source readback checked and **CrowPanel hardware test ACCEPTED by user (2026-10-11)**. User reports the isolated live clock/calendar test is normal. Details of unobserved stress cases remain pending.
 
 ## What is implemented
 
@@ -69,3 +69,11 @@ PASS: 8B-2 calendar refreshed: 11 OCT SUNDAY 14:02
 This is **Phase 8B-2's first device gate**, not the full migration of `Dashboard::render()` to Phase 8A layout. The normal Phase 7 `DashboardState`, dirty/coalescer, page routing, market/weather services, DETAIL menu, DISPLAY CLEAN and deep sleep are deliberately untouched. A future Phase 8B production integration must migrate **all** physical render entry points to the shared design and give date/weekday an application-owned dirty contract, preserving the established refresh sequence.
 
 The six mock forecast cells remain fictional until Phase 8C acquires real daily data. Do not mistake them for live predictions.
+
+## 8B-2 — User real-device acceptance (2026-10-11)
+
+The user explicitly reported **「實際測試正常」** after uploading the isolated Phase 8B-2 NTP calendar preview to the physical CrowPanel. Mark the **8B-2 device gate PASS**: the new calendar presentation and rendering/refresh experiment are accepted as a stable basis for Phase 8B-3.
+
+**Evidence boundary:** This general positive real-device report supports normal display and operation of the tested experiment; it does **not** separately establish a monitored physical 23:59→00:00 transition, deliberate Wi-Fi failure/recovery, long-duration refresh/ghosting endurance, or production multi-page dirty/coalescer integration. The existing pure calendar self-check covers date/weekday/year-boundary formatting but not those physical scenarios.
+
+**Next:** Keep the accepted 34/17/14px assets, 11 weather bitmaps, layout, existing TimeService/NTP test branch and verified E-paper sequence untouched. For 8B-3, add narrowly scoped market-price presentation from the existing `MarketDataService`, with deterministic 34px width handling and last-valid preservation, then compile/upload and test before moving on to weather. No source behavior changes were made by this acceptance commit.

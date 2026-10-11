@@ -80,3 +80,9 @@ Checked at the above branch HEAD: `CrowPanelDashboard.ino`, `Dashboard.cpp/.h`, 
 The first coding checkpoint now exists on the isolated Phase 8 feature branch: `Phase8CalendarPresentation` owns and validates `HH:MM` / `DD MMM` / weekday, `Phase8A1Preview` accepts a header parameter but preserves the immutable static fallback, and `EDP_PHASE8B2_CLOCK_TEST` runs the existing Wi-Fi/NTP stack without querying weather/markets. The test mode alone owns its last-physically-displayed calendar state and issues partial refreshes on real visible changes.
 
 **Do not treat this test-only state as the production dirty/coalescer migration.** That remains the next integration gate. Detailed setup and diagnostics: [PHASE8B2_CALENDAR.md](PHASE8B2_CALENDAR.md). New ESP32 compilation and hardware acceptance remain pending.
+
+## Phase 8B-2 hardware acceptance and Phase 8B-3 handoff (2026-10-11)
+
+User confirms the physical Phase 8B-2 live NTP time/date/weekday test **operates normally**. Phase 8B-2 source code is accepted; the on-device 8B-2 gate is closed. Normal production `DashboardState` and `DashboardUpdateCoalescer` are **not** yet migrated to the Phase 8A design. Avoid changing display/refresh ownership when integrating market prices.
+
+Proceed in Phase 8B-3 with existing Binance last-valid three-symbol service, value-preserving bounded price presentation within 224px nominal market text space, unchanged ETH/BTC/HYPE column geometry, and application-owned one-shot/coalesced visual refresh. Keep simulated forecast/weather values clearly distinct from live data.
