@@ -137,14 +137,17 @@ static const MarketFixture MARKETS[MARKET_COLUMN_COUNT] = {
     {"HYPE", "84.154"}
 };
 
-bool drawMarkets(GraphicsBW& g) {
+bool drawMarkets(GraphicsBW& g, const Phase8MarketPrices& prices) {
   // Rev-D2: text-only labels above prices, each centered within its column.
   for (uint8_t i = 0; i < MARKET_COLUMN_COUNT; ++i) {
     const uint16_t labelWidth =
         g.textWidth(DashboardFont17::FONT, MARKETS[i].symbol, 1);
+    const char* price = i == 0 ? prices.eth : (i == 1 ? prices.btc : prices.hype);
     const uint16_t priceWidth =
-        g.textWidth(DashboardFont34::FONT, MARKETS[i].price, 1);
+        g.textWidth(DashboardFont34::FONT, price, 1);
     if (labelWidth == 0 || priceWidth == 0 ||
+        strlen(price) == 0 ||
+        strlen(price) > Phase8MarketPrices::DISPLAY_CAPACITY - 1 ||
         labelWidth > MARKET_COLUMN_PITCH - 24 ||
         priceWidth > MARKET_COLUMN_PITCH - 24) {
       return false;
@@ -158,7 +161,7 @@ bool drawMarkets(GraphicsBW& g) {
         columnX + (MARKET_COLUMN_PITCH - priceWidth) / 2);
     if (!g.drawText(DashboardFont17::FONT, MARKETS[i].symbol,
                     labelX, MARKET_SYMBOL_Y, 1, true) ||
-        !g.drawText(DashboardFont34::FONT, MARKETS[i].price,
+        !g.drawText(DashboardFont34::FONT, price,
                     priceX, MARKET_PRICE_Y, 1, true)) {
       return false;
     }
@@ -216,8 +219,9 @@ bool drawSixDayForecast(GraphicsBW& g) {
 
 namespace Phase8A1Preview {
 
-bool renderWithCalendar(GraphicsBW& g,
-                        const Phase8CalendarHeader& calendar) {
+bool renderWithCalendarAndMarkets(GraphicsBW& g,
+                                  const Phase8CalendarHeader& calendar,
+                                  const Phase8MarketPrices& prices) {
   if (g.width() != WIDTH || g.height() != 272) {
     return false;
   }
@@ -236,12 +240,22 @@ bool renderWithCalendar(GraphicsBW& g,
 
   g.clear(true);
   if (!drawHeader(g, calendar) ||
-      !drawMarkets(g) || !drawSixDayForecast(g)) {
+      !drawMarkets(g, prices) || !drawSixDayForecast(g)) {
     return false;
   }
   drawSectionDivider(g, HEADER_DIVIDER_Y);
   drawSectionDivider(g, FORECAST_DIVIDER_Y);
   return true;
+}
+
+bool renderWithCalendar(GraphicsBW& g,
+                        const Phase8CalendarHeader& calendar) {
+  // Phase 8B-2 retains the accepted mock markets while time is live.
+  Phase8MarketPrices sample{};
+  strcpy(sample.eth, MARKETS[0].price);
+  strcpy(sample.btc, MARKETS[1].price);
+  strcpy(sample.hype, MARKETS[2].price);
+  return renderWithCalendarAndMarkets(g, calendar, sample);
 }
 
 bool render(GraphicsBW& g) {
