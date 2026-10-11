@@ -1793,7 +1793,10 @@ static bool flushVisiblePageChangeIfNeeded() {
 
   if (targetPage == PageId::DASHBOARD &&
       navigationState.mode == NavigationMode::PAGE &&
-      applicationDashboardHasPending()) {
+      (applicationDashboardHasPending() ||
+       updateCoalescer.hasPendingUpdate())) {
+    // A page transition physically draws the latest Dashboard. Commit
+    // legacy raw status updates as well as visible modern data after success.
     if (!commitApplicationDashboard()) {
       display.sleep();
       Serial.println(
