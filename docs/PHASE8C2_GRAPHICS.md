@@ -88,3 +88,7 @@ Dates/temperatures in the **example** are only format illustrations. The actual 
 **Next — Phase 8C-3:** After entering the normal application, update its existing 30-minute WeatherService poll to obtain the validated seven-date response, stage the owned six-day presentation alongside calendar/current weather/markets/Wi-Fi, compare only visually rendered forecast state, keep last-valid forecasts on transient failure, and commit pending state **only after** successful partial/maintenance refresh or page-return render. Test Dashboard ↔ Weather/Markets, DETAIL DISPLAY CLEAN, Deep Sleep and repeated weather updates, while retaining the accepted SSD1683 maintenance sequence and certificate validation. No code modifications were made by this 8C-2 hardware acceptance checkpoint.
 
 **Final endurance:** The user explicitly postponed multi-hour ghosting/overnight transitions until all Phase 8 Dashboard functionality is finished. Keep that gate pending.
+
+## Phase 8C-3 application integration now available (2026-10-11)
+
+The independently user-accepted 8C-2 six-column renderer is now used by `Dashboard::renderLive()` through the existing `PageRenderer` and application refresh flows when **both** 8B-5B normal app and 8C-3 forecast flags are enabled. The forecast is stored within `Phase8DashboardFrame` and only commits after physical refresh. No 8C-2 icon/text placement or provider parser changes occurred during this step. Device gate remains pending. See [PHASE8C3_INTEGRATION.md](PHASE8C3_INTEGRATION.md).

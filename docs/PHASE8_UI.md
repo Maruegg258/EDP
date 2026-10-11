@@ -320,3 +320,9 @@ The opt-in **`EDP_PHASE8C2_DISPLAY_TEST` draws this once after HTTPS data valida
 The user confirms the six-column one-shot real Open-Meteo forecast layout **renders normally on CrowPanel**. The accepted visual format is a 32×32 icon plus native 17px weekday with centered 14px `MAX/MINC PRECIP%` summary. Historical 8A mock preview remains a separate fixture; regular Phase 8B-5B Dashboard **still shows `6-DAY FORECAST UNAVAILABLE`** until 8C-3 wires the six real days into the application update/dirty lifecycle.
 
 **Evidence:** General on-device PASS, not a separately reviewed screenshot, serial trace or long-duration stability result. **Next:** Phase 8C-3 production data binding and short integration tests; full-system endurance remains the end-of-Phase-8 gate.
+
+## Phase 8C-3 — Complete live Dashboard integrated in source (2026-10-11)
+
+The accepted six real future-day 128px columns now participate in the normal app-owned Dashboard state alongside current weather, calendar, three Binance perpetual prices and RSSI. `Dashboard::renderLive()` uses `Phase8A1Preview::renderWithSixDayForecast()`; the 8B-5B-only mode still renders **`6-DAY FORECAST UNAVAILABLE`** until additional 8C-3 flag is enabled. Daily icon, weekday and displayed max/min°C and precipitation are compared to avoid unnecessary physical refresh; update/commit remain in Phase 7 application path.
+
+**Status:** GitHub source code verified, *Arduino compile and on-device 8C-3 integration validation pending*. Final long-duration/ghosting test remains at the **end of Phase 8**, after all Dashboard features. See [PHASE8C3_INTEGRATION.md](PHASE8C3_INTEGRATION.md).

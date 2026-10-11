@@ -168,3 +168,11 @@ Built `Phase8SixDayPresentation` from owned six real `WeatherSnapshot::futureDay
 ## Phase 8C-2 hardware sign-off → 8C-3 (2026-10-11)
 
 Following the isolated 8C-2 on-panel test, the user reports **「實際測試正常」**. Mark the approved real future-day six-column presentation **PASS for normal observed hardware operation**. This does not imply Phase 8C-3 has been implemented or that every possible long negative-temperature glyph combination was physically exercised. The existing 8B-5B live app remains unchanged and still prints `6-DAY FORECAST UNAVAILABLE`; the new 8C-3 gate must integrate futureDays[6] into the same application-owned 30-minute WeatherService polling, visible dirty state and successful-refresh-only commit semantics, preserving the prior HTTPS/SSD1683 behavior. Full endurance remains deferred to the final Phase 8 acceptance.
+
+## Phase 8C-3 — Full live Dashboard integration code (2026-10-11)
+
+The six-day forecast presentation accepted in 8C-2 now belongs to the normal application `Phase8DashboardFrame`. `Phase8DashboardFrameCompare::equal()` includes future-day weekday/14px displayed summary/icon/availability so a daily change without a current-weather widget update can still request the single application-owned partial. The existing `runProductionWeatherPollIfDue()` stays the sole 30-minute weather schedule, with `fetchLatestSixDay()` only when **EDP_PHASE8B5B_APP_TEST + EDP_PHASE8C3_APP_TEST** are enabled. Current/hourly/today/tomorrow data still feed the old Weather page, and the original TLS CA and SSD1683 driver are untouched.
+
+Boot baseline, partial/maintenance, page return and Phase 7 DETAIL `DISPLAY CLEAN` all now render the same approved six-column compositor with staged forecast and success-only state commit; entering legacy 8B-5B mode alone retains the unavailable caption. The user-requested multi-hour and overnight tests stay as the *last* Phase 8 gate.
+
+**Status:** source inspection and GitHub code commit complete; full Arduino compile and hardware integration still pending. See [PHASE8C3_INTEGRATION.md](PHASE8C3_INTEGRATION.md).

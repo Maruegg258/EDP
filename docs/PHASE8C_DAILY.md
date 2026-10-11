@@ -98,3 +98,7 @@ The next isolated checkpoint is now coded: bounded weekday + approved 32×32 con
 ## Phase 8C-2 device approval (2026-10-11)
 
 The user reports the exclusive real-six-future-day 8C-2 E-paper display experiment operated normally on the physical CrowPanel. Record the **8C-2 graphics gate PASS** and proceed to 8C-3 production app data/dirty integration. The 8C-1 serial-only data contract and 8C-2 single-frame renderer are accepted separately; neither proves that 30-minute polling, last-valid failure handling or coalesced production forecast refresh has yet been integrated. See [PHASE8C2_GRAPHICS.md](PHASE8C2_GRAPHICS.md).
+
+## Phase 8C-3 production app code checkpoint (2026-10-11)
+
+The approved six future days have now been integrated into the Phase 8B-5B normal app **behind an additional local `EDP_PHASE8C3_APP_TEST=1` flag**. The existing 30-minute WeatherService request switches to verified seven-date data, and six bounded daily presentation columns join the owned Dashboard visible-diff/commit-on-success state. The historical 8B mode remains available without this flag. Real-device app integration and full-feature recovery/refresh checks are **pending**. See [PHASE8C3_INTEGRATION.md](PHASE8C3_INTEGRATION.md).
