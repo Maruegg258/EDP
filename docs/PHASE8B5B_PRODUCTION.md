@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-11  
 **Branch:** `phase8a1-static-prototype`  
-**Current status:** Code committed, GitHub readback/source-level checks PASS. **ESP32-S3 Arduino compile/upload and hardware acceptance PENDING.** `main` stays unchanged.
+**Current status:** Code committed and GitHub readback/source checks PASS. **User reports successful normal real-CrowPanel Phase 8B-5B test (2026-10-11); stage hardware acceptance PASS for the observed scope.** Dedicated regression/fault-injection remains Phase 8B-6. `main` stays unchanged.
 
 ## Why 8B-5B is separate from the passed 8B-5A
 
@@ -94,4 +94,14 @@ Subsequently the same normal production Binance, WeatherService and NTP logs sho
 - Existing secure HTTP trust anchors, API endpoints, source services, market/weather polling cadences, dual-controller driver, physical partial refresh, fast clear/physical white/previous RAM synchronization and Phase 7 sleep hardware behavior have not been modified.
 - No API key or Wi-Fi secret belongs in GitHub. This commit includes only `config.example.h`, not user `config.h`.
 
-**Phase 8B-5B coding checkpoint complete; real hardware acceptance pending.**
+**Phase 8B-5B normal real-device acceptance PASS (user report, 2026-10-11); Phase 8B-6 targeted regression pending.**
+
+## Real CrowPanel hardware acceptance — 2026-10-11
+
+**User result:** After being given the opt-in `EDP_PHASE8B5B_APP_TEST` compile/upload and real-panel validation procedure, the user replied **「實際測試正常」**.
+
+**Accepted gate:** Mark Phase 8B-5B **PASS for normal observed on-device operation** of the modern Dashboard in the Phase 7 application framework. The preceding Phase 8B-2 / 8B-3 / 8B-4 / 8B-5A NTP, three perpetual markets, current weather and RSSI previews had already received separate successful hardware feedback. This gate accepts integrating the approved live UI into the normal navigation/refresh lifecycle, while keeping the WEATHER/MARKETS pages, DETAIL actions and validated maintenance refresh paths as the basis for the next step. The bottom area in the live app is explicitly **`6-DAY FORECAST UNAVAILABLE`**, not a fictional six-day forecast.
+
+**Evidence limits:** The user supplied a general successful hardware test result, not separate screenshots or serial logs for every checkbox above. Do not reinterpret this as independent evidence for all button sequences (especially an observed actual deep-sleep wake and DISPLAY CLEAN sequence), a tested physical midnight rollover, deliberately induced Wi-Fi or TLS failures, recovery after failed partial refresh, a full 30-minute weather repoll cycle, strict no-refresh-during-unchanged-data measurement or many-hour ghosting endurance. Those may be checked explicitly in **Phase 8B-6**, as needed. Keep unobserved per-scenario checkboxes pending.
+
+**Next:** Phase 8B-6 integration regression. Use the 8B-5B opt-in normal application as the reference firmware; focus on page/DETAIL flows, partial-refresh-after-maintenance stability, NTP/calendar boundaries, last-valid data, RSSI transitions, combined visible-diff updates, and long-term ghosting. No firmware or hardware driver changes were made in this hardware-acceptance documentation commit, and `main` remains unchanged.

@@ -284,3 +284,9 @@ An opt-in `EDP_PHASE8B5B_APP_TEST` now runs the accepted Phase 8A composition wi
 The daily strip no longer shows fictional weekday/weather/precipitation fixture values; instead the live route clearly reads `6-DAY FORECAST UNAVAILABLE` pending Phase 8C. All accepted historical preview modes still draw their original fixture data.
 
 **Status:** GitHub code committed/source reviewed; **Arduino and real CrowPanel 8B-5B regression pending**. See [PHASE8B5B_PRODUCTION.md](PHASE8B5B_PRODUCTION.md) for all physical checks and opt-in flag.
+
+## Phase 8B-5B — Real-panel acceptance (2026-10-11)
+
+The user reports the opt-in **modern Dashboard integrated into the normal application tests normally on the CrowPanel**. Close the 8B-5B normal-operation device gate; retain this version as the working Phase 8B-6 baseline. The UI still deliberately displays **`6-DAY FORECAST UNAVAILABLE`** instead of the Phase 8A mock Monday–Saturday daily values. That real six-day data contract remains Phase 8C.
+
+The reported successful device test should not be conflated with separately instrumented deep-sleep wake, DISPLAY CLEAN aftercare, physical midnight rollover, Wi-Fi fault recovery, or extended refresh endurance; those are appropriate follow-up scenarios for 8B-6. This is a feature-branch sign-off, not a merge into `main`.

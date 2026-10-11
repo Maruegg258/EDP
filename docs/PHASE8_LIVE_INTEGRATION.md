@@ -130,3 +130,9 @@ A bounded, owner-copyable `Phase8DashboardFrame` now carries calendar (including
 The normal Phase 7 application loop (NTP, MarketDataService, WeatherService, WiFiManager, page buttons) is still the **sole** fetch/refresh owner. For the 8B-5B test flag it renders `Phase8A1Preview::renderLive()` through `Dashboard::renderLive()` and optional `PageRenderer::useLiveDashboardFrame()`, then reconciles staged/displayed state across startup, partial, page return and DISPLAY CLEAN. Normal standalone 8A and 8B-2..5A test modes, legacy app route without the flag, WEATHER/MARKETS pages, DETAIL system actions, verified maintenance sequence and TLS roots remain intact.
 
 **No fake forecasts:** Live lower strip now shows `6-DAY FORECAST UNAVAILABLE`. Former static MON–SAT / repeated `25-29/ 10%` values appear **only** in explicitly selected historical previews, never this live app. Device compile/hardware regression is still pending. See [PHASE8B5B_PRODUCTION.md](PHASE8B5B_PRODUCTION.md).
+
+## Phase 8B-5B hardware sign-off → Phase 8B-6 (2026-10-11)
+
+After loading and testing the opt-in modern Dashboard inside the original Phase 7 application, the user reports **「實際測試正常」**. Phase 8B-5B is therefore **accepted for normal observed physical CrowPanel operation**, on the feature branch. Existing NTP/market/current weather/Wi-Fi UI inputs, PageRenderer routing, the same shared modern artwork and the honest six-day-unavailable caption form the accepted baseline.
+
+Do not infer that every requested DETAIL/standby route, forced failure, physical midnight rollover, strict no-change suppression or extended E-paper endurance was separately observed. The next formal gate is **Phase 8B-6**, with targeted integration and refresh regression before considering a production-main promotion. No firmware files, HTTPS trust validation, network services or SSD1683 behavior were modified in this documentation-only sign-off.
