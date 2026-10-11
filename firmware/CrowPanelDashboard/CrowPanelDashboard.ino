@@ -25,6 +25,7 @@
 #include "Phase8CalendarPresentation.h"
 #include "Phase8MarketPresentation.h"
 #include "Phase8DashboardFrame.h"
+#include "Phase8SixDayPresentation.h"
 #include "Phase8WeatherPresentation.h"
 #include "SecureHttpClient.h"
 #include "SystemPages.h"
@@ -131,11 +132,35 @@
 #error "8C-1 requires WEATHER_LATITUDE and WEATHER_LONGITUDE in local config.h."
 #endif
 
+#if (defined(EDP_PHASE8C2_DISPLAY_TEST) && (EDP_PHASE8C2_DISPLAY_TEST == 1)) && \
+    ((defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1)) || \
+     (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1)) || \
+     (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1)) || \
+     (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || \
+     (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || \
+     (defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)) || \
+     (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
+     (defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
+     (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
+#error "8C-2 six-day display test requires ALL other preview/app modes off."
+#endif
+#if (defined(EDP_PHASE8C2_DISPLAY_TEST) && (EDP_PHASE8C2_DISPLAY_TEST == 1)) && \
+    (!defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE))
+#error "8C-2 requires WEATHER_LATITUDE and WEATHER_LONGITUDE in local config.h."
+#endif
+
 #if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1))
 static bool phase8C1Ready = false;
 static bool phase8C1Fetched = false;
 static bool phase8C1Attempted = false;
 static uint32_t phase8C1LastAttemptMs = 0;
+#endif
+
+#if (defined(EDP_PHASE8C2_DISPLAY_TEST) && (EDP_PHASE8C2_DISPLAY_TEST == 1))
+static bool phase8C2Ready = false;
+static bool phase8C2Displayed = false;
+static bool phase8C2Attempted = false;
+static uint32_t phase8C2LastAttemptMs = 0;
 #endif
 
 CrowEPD579 display;
@@ -2485,6 +2510,27 @@ void setup() {
   return;
 #endif
 
+  // Phase 8C-2 one-shot REAL six-day E-paper rendering.
+  // No Binance, NTP or Phase 7 buttons in this isolated typography test.
+#if (defined(EDP_PHASE8C2_DISPLAY_TEST) && (EDP_PHASE8C2_DISPLAY_TEST == 1))
+  Serial.println("EDP Phase 8C-2: SIX REAL DAILY WEATHER COLUMNS");
+  Serial.println("Upper calendar/market fields are WAITING/-- placeholders.");
+  Serial.println("Lower 6 columns use actual Open-Meteo seven-day data.");
+  if (!WeatherService::sixDayDateSelfCheck() ||
+      !WeatherIconSelector::selfCheck() ||
+      !Phase8SixDayPresentation::selfCheck()) {
+    Serial.println("FAIL: 8C-2 weekday/summary/icon self-check.");
+    return;
+  }
+  Serial.println("PASS: 8C-2 weekday, temperature, precipitation and icon self-check.");
+  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("FAIL: 8C-2 Wi-Fi begin.");
+    return;
+  }
+  phase8C2Ready = true;
+  return;
+#endif
+
   // Serial-only real-data test, no display refresh or panel animation.
 #if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1))
   Serial.println("EDP Phase 8C-1: REAL OPEN-METEO SIX-FUTURE-DAY DATA");
@@ -2592,6 +2638,85 @@ void setup() {
 }
 
 void loop() {
+#if (defined(EDP_PHASE8C2_DISPLAY_TEST) && (EDP_PHASE8C2_DISPLAY_TEST == 1))
+  if (!phase8C2Ready || phase8C2Displayed) {
+    delay(1000);
+    return;
+  }
+  wifiManager.tick();
+  if (!wifiManager.isConnected()) {
+    delay(250);
+    return;
+  }
+  const uint32_t attemptNow = millis();
+  if (phase8C2Attempted &&
+      static_cast<uint32_t>(attemptNow - phase8C2LastAttemptMs) < 30000UL) {
+    delay(250);
+    return;
+  }
+  phase8C2Attempted = true;
+  phase8C2LastAttemptMs = attemptNow;
+  Serial.println("8C-2: requesting 7 verified daily records from Open-Meteo...");
+  if (!weatherService.fetchLatestSixDay(
+          static_cast<double>(WEATHER_LATITUDE),
+          static_cast<double>(WEATHER_LONGITUDE))) {
+    Serial.print("FAIL: 8C-2 forecast fetch/validation: ");
+    Serial.println(weatherService.lastError());
+    delay(250);
+    return;
+  }
+
+  const WeatherSnapshot* snapshot = weatherService.lastValidSnapshot();
+  if (snapshot == nullptr || !snapshot->hasSixDayForecast) {
+    Serial.println("FAIL: 8C-2 no validated futureDays[6].");
+    delay(250);
+    return;
+  }
+  Phase8SixDayForecast forecast{};
+  Phase8SixDayPresentation::setUnavailable(forecast);
+  if (!Phase8SixDayPresentation::fromSnapshot(*snapshot, forecast)) {
+    Serial.println("FAIL: 8C-2 daily values cannot fit the native 14px columns.");
+    delay(250);
+    return;
+  }
+  Phase8DashboardFrame frame{};
+  Phase8DashboardFrameCompare::setUnavailable(frame);
+  if (!Phase8WeatherPresentation::fromCurrent(snapshot->current,
+                                               frame.weather)) {
+    Serial.println("FAIL: 8C-2 current weather preview mapping.");
+    delay(250);
+    return;
+  }
+  frame.wifi = wifiIconForRssi(wifiManager.rssi());
+  if (!Phase8A1Preview::renderWithSixDayForecast(
+          graphics, frame, forecast)) {
+    Serial.println("FAIL: 8C-2 six-column typography/frame composition.");
+    delay(250);
+    return;
+  }
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    display.sleep();
+    Serial.println("FAIL: 8C-2 verified maintenanceRefresh().");
+    delay(1000);
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  phase8C2Displayed = true;
+  Serial.println("PASS: 8C-2 SIX REAL FORECAST COLUMNS DRAWN ONCE.");
+  for (size_t i = 0; i < Phase8SixDayForecast::COUNT; ++i) {
+    Serial.print("  +");
+    Serial.print(static_cast<unsigned>(i + 1));
+    Serial.print("d ");
+    Serial.print(snapshot->futureDays[i].date);
+    Serial.print(" -> ");
+    Serial.print(forecast.days[i].weekday);
+    Serial.print(" ");
+    Serial.println(forecast.days[i].summary);
+  }
+  delay(1000);
+  return;
+#endif
 #if (defined(EDP_PHASE8C1_DAILY_TEST) && (EDP_PHASE8C1_DAILY_TEST == 1))
   if (!phase8C1Ready || phase8C1Fetched) {
     delay(1000);

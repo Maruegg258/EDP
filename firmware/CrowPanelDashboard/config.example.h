@@ -87,3 +87,14 @@
 // the E-paper, poll Binance, or enable normal app/page navigation.
 // No fake forecast. Next 8C-2 will map these values into the 6 visual columns.
 // #define EDP_PHASE8C1_DAILY_TEST 1
+
+// Phase 8C-2: isolated ONE-SHOT rendering of SIX REAL future-day columns.
+// Disable all EDP_PHASE8* other modes; preserve local WIFI credentials and
+// WEATHER_LATITUDE/LONGITUDE in ignored config.h. This fetches today's
+// current weather + 6 real future days using the existing verified TLS.
+// The upper time/price remains WAITING/-- (NTP/Binance disabled), so only
+// lower weather typography/icons are under test. MaintenanceRefresh once.
+// Does NOT enter normal Phase 7 navigation, poll repeatedly, or integrate
+// Phase 8C-3 dirty tracking; earlier preview modes are unchanged.
+// Serial Monitor: 115200 baud.
+// #define EDP_PHASE8C2_DISPLAY_TEST 1
