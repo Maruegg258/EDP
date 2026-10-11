@@ -290,3 +290,9 @@ The daily strip no longer shows fictional weekday/weather/precipitation fixture 
 The user reports the opt-in **modern Dashboard integrated into the normal application tests normally on the CrowPanel**. Close the 8B-5B normal-operation device gate; retain this version as the working Phase 8B-6 baseline. The UI still deliberately displays **`6-DAY FORECAST UNAVAILABLE`** instead of the Phase 8A mock Monday–Saturday daily values. That real six-day data contract remains Phase 8C.
 
 The reported successful device test should not be conflated with separately instrumented deep-sleep wake, DISPLAY CLEAN aftercare, physical midnight rollover, Wi-Fi fault recovery, or extended refresh endurance; those are appropriate follow-up scenarios for 8B-6. This is a feature-branch sign-off, not a merge into `main`.
+
+## Phase 8B-6 — Regression tests begin (2026-10-11)
+
+The accepted Phase 8B-5B modern Dashboard artwork and normal app integration are unchanged for this checkpoint. The first regression focus is **DISPLAY CLEAN followed by three minute-level partial refreshes**, plus Dashboard/Weather/Markets navigation and Phase 7 DETAIL → STANDBY/wake. The lower region must continue to read `6-DAY FORECAST UNAVAILABLE`, not old mock daily predictions.
+
+Source-level code checks are documented as complete, but actual 8B-6A/B/C physical outcomes remain pending. See [PHASE8B6_REGRESSION.md](PHASE8B6_REGRESSION.md).
