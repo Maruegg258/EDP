@@ -250,3 +250,11 @@ The user reports the **real Phase 8B-3 on-panel test is normal**. Accept the iso
 The current weather/header value and six-day forecast remain **mock**; the drawn Wi-Fi strength icon also remains mock. This approval does not represent the eventual production `DashboardState`/`DashboardUpdateCoalescer` migration or prove deliberate outage/rollover/extended ghosting scenarios.
 
 **Next:** Phase 8B-4 live current condition, temperature and day/night weather icon only. See [PHASE8B3_MARKETS.md](PHASE8B3_MARKETS.md) for acceptance scope.
+
+## Phase 8B-4 — Live current weather, condition icon and temperature (2026-10-11)
+
+The isolated Phase 8B-4 test mode adds `WeatherService::lastValidSnapshot()->current` to the existing accepted live NTP plus perpetual-price prototype. Weather label uses bounded 17px text, temperature uses native 14px, and the already approved 32×32 icon is selected using `condition` plus actual `isDay`. A missing value visibly reads `NO DATA / -- C`, not the former fictional `SUNNY / 26.9 C`; last valid values are preserved on HTTPS failure.
+
+The new UI renderer shares the Phase 8A layout and retains the validated static/8B-2/8B-3 modes; there is no change to normal production. Weather remains on the existing 30-minute poll while markets poll at 60 seconds, with no separate physical refresh owner.
+
+**Status:** Code/source checks committed. Arduino compilation and physical panel verification **pending**. Six-day forecast and Wi-Fi RSSI icon remain visual fixtures. See [PHASE8B4_WEATHER.md](PHASE8B4_WEATHER.md).

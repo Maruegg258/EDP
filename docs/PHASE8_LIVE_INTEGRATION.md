@@ -98,3 +98,9 @@ The approved six-day values and current weather are still static fixtures; the t
 User reports the opt-in Phase 8B-3 NTP and three-market firmware ran normally on the actual CrowPanel. This satisfies the **isolated on-panel device acceptance gate**. Do not infer extended fault-injection, performance/endurance, midnight rollover or every stress scenario from the general success response.
 
 For Phase 8B-4, carry forward the accepted live calendar/price presentation; map `WeatherSnapshot::current` (including `isDay`) using the approved eleven-icon selector and visible-text formatting, without modifying the service's verified TLS, 30-minute cadence or ownership boundaries. Keep one application-owned render/refresh path in the test mode; defer genuine six-day daily values to 8C and normal `DashboardState`/page integration to 8B-5.
+
+## Phase 8B-4 isolated current-weather implementation (2026-10-11)
+
+The user-approved weather artwork is connected to `WeatherSnapshot::current` in an **isolated test mode** using `Phase8WeatherPresentation` (bounded label, Celsius temperature, immutable weather bitmap selected by `condition`+`isDay`). Its visible equality includes the icon pointer so night/day changes are not lost. The new `Phase8A1Preview::renderWithCalendarMarketsWeather()` reuses all accepted layout coordinates and the Phase 8B-3 public HTTPS NTP/market staging loop; the new 30-minute weather poll uses the existing TLS-validating `WeatherService`.
+
+Only when candidate pixels differ does the application run the already verified restore-previous/partial-refresh path; displayed state is recorded after success. Tests in `docs/PHASE8B4_WEATHER.md`. Production `Dashboard::render()`, `WeatherWidgetMapper`, `PageRenderer`, `DashboardUpdateCoalescer`, services and driver remain unchanged. Physical device acceptance remains pending.
