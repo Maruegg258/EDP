@@ -120,3 +120,9 @@ The 8B-6A **three-task hardware regression gate is accepted**. Because this was 
 **No code changes:** Continue using the accepted Phase 8B-5B firmware `EDP_PHASE8B5B_APP_TEST=1` on the feature branch. Do not recompile or reflash simply to record this acceptance. Next is **8B-6C**: leave Dashboard running for 1–2 hours with minute-level E-paper updates and inspect crispness/dual-controller seam (C1), inspect 3–5 partials after a maintenance cleanup (C2), and, only if convenient and actually observed, test midnight date/weekday transition (C3) and real weather day/night icon transition (C4). Unobserved C3/C4 may be explicitly deferred, never silently marked PASS.
 
 **Phase 8B-6 final acceptance remains PENDING** until 8B-6C and any agreed deferred-case decisions are documented.
+
+## User-requested deferral of endurance and transition testing (2026-10-11)
+
+After reporting all three 8B-6B network/data/Dirty Tracking checks normal, the user explicitly requested **moving long-duration stability/ghosting testing to the final Phase 8 gate** because the six-day Dashboard forecast is not yet implemented. This is an approved sequencing change, **not** a successful 8B-6C test. 8B-6A and 8B-6B retain their recorded physical PASS reports. Move C1/C2 and any naturally observable C3/C4 into the final full-feature Phase 8 regression after 8C is accepted. No SSD1683 driver or firmware changed due to the deferral.
+
+Next: Phase 8C-1 real seven-date weather data acquisition (today plus next six); no extra data source or unvalidated certificate workaround. See updated `ROADMAP.md`.
