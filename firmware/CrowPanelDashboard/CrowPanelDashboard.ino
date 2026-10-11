@@ -23,6 +23,7 @@
 #include "PageRenderer.h"
 #include "Phase8A1Preview.h"
 #include "Phase8CalendarPresentation.h"
+#include "Phase8MarketPresentation.h"
 #include "SecureHttpClient.h"
 #include "SystemPages.h"
 #include "TimeService.h"
@@ -54,6 +55,15 @@
      (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
      (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
 #error "Phase 8B-2 NTP test must be the only enabled preview mode."
+#endif
+
+// 8B-3 real public Binance market test; all test flags are exclusive.
+#if defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1) && \
+    ((defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)) || \
+     (defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
+     (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
+     (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
+#error "Phase 8B-3 market test must be the only enabled preview mode."
 #endif
 
 CrowEPD579 display;
@@ -111,6 +121,16 @@ SecureHttpClient secureHttpClient(
     TlsTrustAnchors::DIGICERT_GLOBAL_ROOT_G2
 );
 MarketDataService marketDataService(secureHttpClient);
+
+#if defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)
+static Phase8CalendarHeader phase8B3DisplayedCalendar = {
+    "--:--", "-- ---", "WAITING"
+};
+static Phase8MarketPrices phase8B3DisplayedMarkets = {"--", "--", "--"};
+static bool phase8B3Ready = false;
+static bool phase8B3HasPolled = false;
+static uint32_t phase8B3LastPollMs = 0;
+#endif
 
 SecureHttpClient weatherSecureHttpClient(
     TlsTrustAnchors::ISRG_ROOT_X1
@@ -2116,6 +2136,38 @@ void setup() {
   return;
 #endif
 
+  // Phase 8B-3: isolated NTP + three public, TLS-verified futures prices.
+  // The header weather and six-day forecast are unchanged STATIC fixtures.
+#if defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)
+  Serial.println("EDP Phase 8B-3: NTP + BINANCE USDT PERPETUAL PRICES");
+  Serial.println("Weather/forecast/Wi-Fi ICON are MOCK; no WeatherService poll.");
+  if (!Phase8CalendarPresentation::selfCheck() ||
+      !Phase8MarketPresentation::selfCheck()) {
+    Serial.println("FAIL: 8B-3 calendar or price formatter self-check.");
+    return;
+  }
+  Serial.println("PASS: 8B-3 calendar and price formatting self-checks.");
+
+  if (!Phase8A1Preview::renderWithCalendarAndMarkets(
+          graphics, phase8B3DisplayedCalendar, phase8B3DisplayedMarkets) ||
+      !display.maintenanceRefresh(frameBuffer)) {
+    display.sleep();
+    Serial.println("FAIL: 8B-3 startup placeholder maintenance refresh.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  Serial.println("PASS: 8B-3 WAITING / -- placeholders displayed.");
+
+  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("FAIL: 8B-3 Wi-Fi start. Check local ignored config.h.");
+    return;
+  }
+  phase8B3Ready = true;
+  Serial.println("Awaiting NTP; market polling starts after valid local time.");
+  return;
+#endif
+
   const esp_sleep_wakeup_cause_t wakeCause =
       esp_sleep_get_wakeup_cause();
   if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
@@ -2191,6 +2243,130 @@ void setup() {
 }
 
 void loop() {
+#if defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)
+  if (!phase8B3Ready) {
+    delay(1000);
+    return;
+  }
+  wifiManager.tick();
+  if (!startTimeServiceWhenConnected()) {
+    Serial.println("FAIL: 8B-3 NTP service start.");
+    delay(1000);
+    return;
+  }
+  timeService.tick();
+
+  // Copy the last physically displayed state, then stage all potential
+  // changes together. One successful refresh commits one coherent frame.
+  Phase8CalendarHeader nextCalendar = phase8B3DisplayedCalendar;
+  Phase8MarketPrices nextMarkets = phase8B3DisplayedMarkets;
+
+  if (timeService.isSynchronized()) {
+    struct tm local{};
+    if (!timeService.getLocalTime(local) ||
+        !Phase8CalendarPresentation::fromLocalTm(local, nextCalendar)) {
+      Serial.println("FAIL: 8B-3 NTP local-time formatting.");
+      delay(1000);
+      return;
+    }
+  }
+
+  const uint32_t now = millis();
+  if (timeService.isSynchronized() && wifiManager.isConnected() &&
+      (!phase8B3HasPolled ||
+       static_cast<uint32_t>(now - phase8B3LastPollMs) >=
+           MARKET_POLL_INTERVAL_MS)) {
+    phase8B3HasPolled = true;
+    phase8B3LastPollMs = now;
+    Serial.println("8B-3: polling three existing USD-M perpetual symbols.");
+    for (size_t i = 0; i < marketDataService.trackedSymbolCount(); ++i) {
+      const char* symbol = marketDataService.trackedSymbol(i);
+      if (symbol == nullptr) continue;
+
+      char* dest = nullptr;
+      if (strcmp(symbol, "ETHUSDT") == 0) dest = nextMarkets.eth;
+      else if (strcmp(symbol, "BTCUSDT") == 0) dest = nextMarkets.btc;
+      else if (strcmp(symbol, "HYPEUSDT") == 0) dest = nextMarkets.hype;
+      else {
+        Serial.println("FAIL: 8B-3 unexpected tracked symbol.");
+        continue;
+      }
+
+      const bool fetched = marketDataService.fetchLatest(symbol);
+      if (!fetched) {
+        Serial.print("Market fetch failed, retaining last valid: ");
+        Serial.print(symbol);
+        Serial.print(" ");
+        Serial.println(marketDataService.lastError(symbol));
+      }
+
+      const MarketPriceValue* value =
+          marketDataService.lastValidValue(symbol);
+      if (value == nullptr) {
+        strcpy(dest, "--");
+        continue;
+      }
+
+      char formatted[Phase8MarketPrices::DISPLAY_CAPACITY]{};
+      if (!Phase8MarketPresentation::formatPrice(
+              symbol, value->price, formatted, sizeof(formatted))) {
+        // Never render a clipped/misleading value. Full source is retained.
+        strcpy(dest, "--");
+        Serial.print("Price not representable in 34px column: ");
+        Serial.println(symbol);
+        continue;
+      }
+
+      strcpy(dest, formatted);
+      Serial.print(fetched ? "Market fetched " : "Market preserved ");
+      Serial.print(symbol);
+      Serial.print(" raw=");
+      Serial.print(value->price);
+      Serial.print(" shown=");
+      Serial.println(dest);
+    }
+  }
+
+  const bool calendarChanged =
+      !Phase8CalendarPresentation::equal(
+          phase8B3DisplayedCalendar, nextCalendar);
+  const bool marketChanged =
+      !Phase8MarketPresentation::equal(
+          phase8B3DisplayedMarkets, nextMarkets);
+  if (calendarChanged || marketChanged) {
+    if (!Phase8A1Preview::renderWithCalendarAndMarkets(
+            graphics, nextCalendar, nextMarkets)) {
+      Serial.println("FAIL: 8B-3 composed frame (no physical change).");
+      delay(1000);
+      return;
+    }
+    if (!display.begin()) {
+      Serial.println("FAIL: 8B-3 display wake.");
+      delay(1000);
+      return;
+    }
+    if (!display.restoreFrameStateForPartial(previousFrameBuffer) ||
+        !display.displayPartialFrame(frameBuffer)) {
+      display.sleep();
+      Serial.println("FAIL: 8B-3 partial refresh; displayed state not committed.");
+      delay(1000);
+      return;
+    }
+
+    memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+    display.sleep();
+    phase8B3DisplayedCalendar = nextCalendar;
+    phase8B3DisplayedMarkets = nextMarkets;
+    Serial.print("PASS: 8B-3 coalesced partial refresh (clock=");
+    Serial.print(calendarChanged ? "changed" : "same");
+    Serial.print(", prices=");
+    Serial.print(marketChanged ? "changed" : "same");
+    Serial.println(").");
+  }
+
+  delay(100);
+  return;
+#endif
 #if defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)
   if (!phase8B2Ready) {
     delay(1000);

@@ -40,3 +40,11 @@
 // Only changed calendar text triggers the existing partial-refresh sequence.
 // Requires real WIFI_SSID and WIFI_PASSWORD in the ignored local config.h.
 // #define EDP_PHASE8B2_CLOCK_TEST 1
+
+// Phase 8B-3 isolated LIVE NTP + Binance USDT-M perpetual market test.
+// Exactly ONE preview/test flag may be 1. Keep WIFI credentials local.
+// Weather (SUNNY/26.9 C), six-day forecast and drawn Wi-Fi icon are MOCK;
+// the NTP calendar and three ETH/BTC/HYPE prices are actually LIVE.
+// Prices are rounded only for 34px display, never modified in service data.
+// The three symbols are polled together every 60s using existing verified TLS.
+// #define EDP_PHASE8B3_MARKET_TEST 1
