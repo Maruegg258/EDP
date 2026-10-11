@@ -4,6 +4,7 @@
 #include <cstring>
 #include "Icons.h"
 #include "WeatherIconSelector.h"
+#include "WeatherIconAssets.h"
 #include "DashboardFont34.h"
 #include "DashboardFont17.h"
 #include "DashboardFont14.h"
@@ -67,17 +68,24 @@ void drawSectionDivider(GraphicsBW& g, int16_t y) {
   drawDiamond(g, 776, y);
 }
 
-bool drawHeader(GraphicsBW& g, const Phase8CalendarHeader& calendar) {
-  // Static current-weather example: sunny daytime. Same 32x32 slot as Rev-D2.
-  if (!g.drawBitmap(
-          WeatherIconSelector::select(WeatherCondition::CLEAR, true),
-          22, 25, true)) {
+bool drawHeader(GraphicsBW& g, const Phase8CalendarHeader& calendar,
+                const Phase8CurrentWeather& weather) {
+  // Only current weather is dynamic here; fixed Rev-D2 geometry unchanged.
+  if (weather.icon == nullptr || weather.icon->width != 32 ||
+      weather.icon->height != 32 ||
+      weather.icon->data == nullptr ||
+      strlen(weather.label) == 0 || strlen(weather.label) > 10 ||
+      strlen(weather.temperature) == 0 ||
+      g.textWidth(DashboardFont17::FONT, weather.label, 1) > 120 ||
+      g.textWidth(DashboardFont14::FONT, weather.temperature, 1) > 110) {
     return false;
   }
 
-  if (!g.drawText(DashboardFont17::FONT, "SUNNY", 69, 27, 1, true) ||
+  if (!g.drawBitmap(*weather.icon, 22, 25, true) ||
+      !g.drawText(DashboardFont17::FONT,
+                  weather.label, 69, 27, 1, true) ||
       !g.drawText(DashboardFont14::FONT,
-                  "26.9 C", 69, 48, 1, true)) {
+                  weather.temperature, 69, 48, 1, true)) {
     return false;
   }
 
@@ -219,9 +227,10 @@ bool drawSixDayForecast(GraphicsBW& g) {
 
 namespace Phase8A1Preview {
 
-bool renderWithCalendarAndMarkets(GraphicsBW& g,
-                                  const Phase8CalendarHeader& calendar,
-                                  const Phase8MarketPrices& prices) {
+bool renderWithCalendarMarketsWeather(GraphicsBW& g,
+                                      const Phase8CalendarHeader& calendar,
+                                      const Phase8MarketPrices& prices,
+                                      const Phase8CurrentWeather& weather) {
   if (g.width() != WIDTH || g.height() != 272) {
     return false;
   }
@@ -239,13 +248,23 @@ bool renderWithCalendarAndMarkets(GraphicsBW& g,
   }
 
   g.clear(true);
-  if (!drawHeader(g, calendar) ||
+  if (!drawHeader(g, calendar, weather) ||
       !drawMarkets(g, prices) || !drawSixDayForecast(g)) {
     return false;
   }
   drawSectionDivider(g, HEADER_DIVIDER_Y);
   drawSectionDivider(g, FORECAST_DIVIDER_Y);
   return true;
+}
+
+bool renderWithCalendarAndMarkets(GraphicsBW& g,
+                                  const Phase8CalendarHeader& calendar,
+                                  const Phase8MarketPrices& prices) {
+  // Earlier Phase 8A and 8B-3 checks retain exactly their SUNNY fixture.
+  static const Phase8CurrentWeather fixture = {
+      &WeatherIconAssets::CLEAR_DAY, "SUNNY", "26.9 C"
+  };
+  return renderWithCalendarMarketsWeather(g, calendar, prices, fixture);
 }
 
 bool renderWithCalendar(GraphicsBW& g,

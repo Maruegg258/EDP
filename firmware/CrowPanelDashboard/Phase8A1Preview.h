@@ -3,6 +3,7 @@
 #include "GraphicsBW.h"
 #include "Phase8CalendarPresentation.h"
 #include "Phase8MarketPresentation.h"
+#include "Phase8WeatherPresentation.h"
 
 // Render-only Phase 8A composition. No Wi-Fi, polling, or physical refresh.
 // The accepted static fixture remains available as a regression baseline.
@@ -13,4 +14,8 @@ bool renderWithCalendar(GraphicsBW& graphics,
 bool renderWithCalendarAndMarkets(GraphicsBW& graphics,
                                   const Phase8CalendarHeader& calendar,
                                   const Phase8MarketPrices& prices);
+bool renderWithCalendarMarketsWeather(GraphicsBW& graphics,
+                                      const Phase8CalendarHeader& calendar,
+                                      const Phase8MarketPrices& prices,
+                                      const Phase8CurrentWeather& weather);
 }  // namespace Phase8A1Preview
