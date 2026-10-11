@@ -18,4 +18,8 @@ bool renderWithCalendarMarketsWeather(GraphicsBW& graphics,
                                       const Phase8CalendarHeader& calendar,
                                       const Phase8MarketPrices& prices,
                                       const Phase8CurrentWeather& weather);
+bool renderWithCalendarMarketsWeatherWifi(
+    GraphicsBW& graphics, const Phase8CalendarHeader& calendar,
+    const Phase8MarketPrices& prices, const Phase8CurrentWeather& weather,
+    const Bitmap1bpp& wifi);
 }  // namespace Phase8A1Preview

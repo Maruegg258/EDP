@@ -69,7 +69,8 @@ void drawSectionDivider(GraphicsBW& g, int16_t y) {
 }
 
 bool drawHeader(GraphicsBW& g, const Phase8CalendarHeader& calendar,
-                const Phase8CurrentWeather& weather) {
+                const Phase8CurrentWeather& weather,
+                const Bitmap1bpp& wifi) {
   // Only current weather is dynamic here; fixed Rev-D2 geometry unchanged.
   if (weather.icon == nullptr || weather.icon->width != 32 ||
       weather.icon->height != 32 ||
@@ -77,7 +78,8 @@ bool drawHeader(GraphicsBW& g, const Phase8CalendarHeader& calendar,
       strlen(weather.label) == 0 || strlen(weather.label) > 10 ||
       strlen(weather.temperature) == 0 ||
       g.textWidth(DashboardFont17::FONT, weather.label, 1) > 120 ||
-      g.textWidth(DashboardFont14::FONT, weather.temperature, 1) > 110) {
+      g.textWidth(DashboardFont14::FONT, weather.temperature, 1) > 110 ||
+      wifi.width != 32 || wifi.height != 24 || wifi.data == nullptr) {
     return false;
   }
 
@@ -125,7 +127,7 @@ bool drawHeader(GraphicsBW& g, const Phase8CalendarHeader& calendar,
                   timeX, 25, 1, true) ||
       !g.drawText(DashboardFont17::FONT, weekday,
                   dayX, 34, 1, true) ||
-      !g.drawBitmap(Icons::WIFI_STRONG, 738, 25, true)) {
+      !g.drawBitmap(wifi, 738, 25, true)) {
     return false;
   }
 
@@ -227,10 +229,10 @@ bool drawSixDayForecast(GraphicsBW& g) {
 
 namespace Phase8A1Preview {
 
-bool renderWithCalendarMarketsWeather(GraphicsBW& g,
-                                      const Phase8CalendarHeader& calendar,
-                                      const Phase8MarketPrices& prices,
-                                      const Phase8CurrentWeather& weather) {
+bool renderWithCalendarMarketsWeatherWifi(
+    GraphicsBW& g, const Phase8CalendarHeader& calendar,
+    const Phase8MarketPrices& prices, const Phase8CurrentWeather& weather,
+    const Bitmap1bpp& wifi) {
   if (g.width() != WIDTH || g.height() != 272) {
     return false;
   }
@@ -248,13 +250,21 @@ bool renderWithCalendarMarketsWeather(GraphicsBW& g,
   }
 
   g.clear(true);
-  if (!drawHeader(g, calendar, weather) ||
+  if (!drawHeader(g, calendar, weather, wifi) ||
       !drawMarkets(g, prices) || !drawSixDayForecast(g)) {
     return false;
   }
   drawSectionDivider(g, HEADER_DIVIDER_Y);
   drawSectionDivider(g, FORECAST_DIVIDER_Y);
   return true;
+}
+
+bool renderWithCalendarMarketsWeather(
+    GraphicsBW& g, const Phase8CalendarHeader& calendar,
+    const Phase8MarketPrices& prices, const Phase8CurrentWeather& weather) {
+  // Preserve the accepted Phase 8B-4 mock STRONG Wi-Fi icon.
+  return renderWithCalendarMarketsWeatherWifi(
+      g, calendar, prices, weather, Icons::WIFI_STRONG);
 }
 
 bool renderWithCalendarAndMarkets(GraphicsBW& g,
