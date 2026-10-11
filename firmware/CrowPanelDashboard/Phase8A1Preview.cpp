@@ -179,6 +179,17 @@ bool drawMarkets(GraphicsBW& g, const Phase8MarketPrices& prices) {
   return true;
 }
 
+bool drawUnavailableForecast(GraphicsBW& g) {
+  // Six real daily forecasts are NOT available in WeatherService yet.
+  // Never show Phase 8A's fictional Monday-Saturday sample in live mode.
+  static constexpr char CAPTION[] = "6-DAY FORECAST UNAVAILABLE";
+  const uint16_t width = g.textWidth(DashboardFont17::FONT, CAPTION, 1);
+  return width > 0 && width <= WIDTH - 32 &&
+         g.drawText(DashboardFont17::FONT, CAPTION,
+                    static_cast<int16_t>((WIDTH - width) / 2),
+                    219, 1, true);
+}
+
 bool drawSixDayForecast(GraphicsBW& g) {
   // Six equal columns centered across the 792px screen.
   // Center the 32px icon + weekday as one unit and the 14px summary
@@ -229,10 +240,10 @@ bool drawSixDayForecast(GraphicsBW& g) {
 
 namespace Phase8A1Preview {
 
-bool renderWithCalendarMarketsWeatherWifi(
+static bool renderComposition(
     GraphicsBW& g, const Phase8CalendarHeader& calendar,
     const Phase8MarketPrices& prices, const Phase8CurrentWeather& weather,
-    const Bitmap1bpp& wifi) {
+    const Bitmap1bpp& wifi, bool allowStaticForecastFixture) {
   if (g.width() != WIDTH || g.height() != 272) {
     return false;
   }
@@ -251,12 +262,28 @@ bool renderWithCalendarMarketsWeatherWifi(
 
   g.clear(true);
   if (!drawHeader(g, calendar, weather, wifi) ||
-      !drawMarkets(g, prices) || !drawSixDayForecast(g)) {
+      !drawMarkets(g, prices) ||
+      !(allowStaticForecastFixture
+            ? drawSixDayForecast(g)
+            : drawUnavailableForecast(g))) {
     return false;
   }
   drawSectionDivider(g, HEADER_DIVIDER_Y);
   drawSectionDivider(g, FORECAST_DIVIDER_Y);
   return true;
+}
+
+bool renderWithCalendarMarketsWeatherWifi(
+    GraphicsBW& g, const Phase8CalendarHeader& calendar,
+    const Phase8MarketPrices& prices, const Phase8CurrentWeather& weather,
+    const Bitmap1bpp& wifi) {
+  return renderComposition(g, calendar, prices, weather, wifi, true);
+}
+
+bool renderLive(GraphicsBW& g, const Phase8DashboardFrame& frame) {
+  if (frame.wifi == nullptr) return false;
+  return renderComposition(g, frame.calendar, frame.markets, frame.weather,
+                           *frame.wifi, false);
 }
 
 bool renderWithCalendarMarketsWeather(

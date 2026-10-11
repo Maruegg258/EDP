@@ -4,11 +4,14 @@
 #include "Phase8CalendarPresentation.h"
 #include "Phase8MarketPresentation.h"
 #include "Phase8WeatherPresentation.h"
+#include "Phase8DashboardFrame.h"
 
 // Render-only Phase 8A composition. No Wi-Fi, polling, or physical refresh.
 // The accepted static fixture remains available as a regression baseline.
 namespace Phase8A1Preview {
 bool render(GraphicsBW& graphics);
+// Final live Dashboard always uses truthful unavailable daily forecast text.
+bool renderLive(GraphicsBW& graphics, const Phase8DashboardFrame& frame);
 bool renderWithCalendar(GraphicsBW& graphics,
                         const Phase8CalendarHeader& calendar);
 bool renderWithCalendarAndMarkets(GraphicsBW& graphics,
