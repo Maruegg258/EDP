@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-11  
 **Branch:** `phase8a1-static-prototype`  
-**Status:** Isolated source implementation committed; independent GitHub readback/source checks completed. **Arduino IDE ESP32-S3 compile and physical CrowPanel validation are pending.**
+**Status:** Isolated source implementation committed; GitHub readback/source checks completed. Standalone C++11 `Phase8WeatherPresentation.cpp` host compilation and its `selfCheck()` PASS with minimal stub weather/bitmap/icon interfaces (`-Wall -Wextra -Werror -pedantic`). **Arduino IDE ESP32-S3 full-firmware compilation and physical CrowPanel validation remain pending.**
 
 ## Implementation boundary
 
@@ -87,6 +87,7 @@ PASS: 8B-4 coalesced partial refresh (clock=changed, prices=changed, weather=cha
 
 ### Physical acceptance focus
 
+- [x] Native C++11 host build and `Phase8WeatherPresentation::selfCheck()` pass using minimal hardware-type stubs (checks 16 condition categories × day/night, labels, temperatures and failure preservation; does not compile the full Arduino sketch).
 - [ ] Arduino IDE compile, upload, serial self-check PASS and actual Open-Meteo weather fetch.
 - [ ] Compare current weather icon/temperature/description with the Serial output; confirm day/night icon (sun versus crescent when CLEAR), crisp 17px/14px and no collision with the central date.
 - [ ] Verify NTP time, date, ETH/BTC/HYPE prices still update normally.
