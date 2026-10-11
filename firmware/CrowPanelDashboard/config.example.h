@@ -48,3 +48,12 @@
 // Prices are rounded only for 34px display, never modified in service data.
 // The three symbols are polled together every 60s using existing verified TLS.
 // #define EDP_PHASE8B3_MARKET_TEST 1
+
+// Phase 8B-4 isolated live NTP + BTC/ETH/HYPE + Open-Meteo CURRENT weather.
+// All previous preview/test flags must be disabled. Retain working local
+// WIFI_SSID, WIFI_PASSWORD, WEATHER_LATITUDE, WEATHER_LONGITUDE.
+// Weather current condition, 1-decimal Celsius and day/night icon are LIVE.
+// Bottom 6-day forecast and top-right Wi-Fi strength graphic remain MOCK.
+// Market polls every 60s, weather every 30min; one application-owned partial
+// refresh for visible changes, verified HTTPS roots, no new network service.
+// #define EDP_PHASE8B4_WEATHER_TEST 1

@@ -24,6 +24,7 @@
 #include "Phase8A1Preview.h"
 #include "Phase8CalendarPresentation.h"
 #include "Phase8MarketPresentation.h"
+#include "Phase8WeatherPresentation.h"
 #include "SecureHttpClient.h"
 #include "SystemPages.h"
 #include "TimeService.h"
@@ -64,6 +65,21 @@
      (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
      (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
 #error "Phase 8B-3 market test must be the only enabled preview mode."
+#endif
+
+// 8B-4 isolated live-current-weather test; never run two test modes at once.
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) && \
+    ((defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || \
+     (defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)) || \
+     (defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
+     (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
+     (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
+#error "Phase 8B-4 weather test must be the only enabled preview mode."
+#endif
+
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) && \
+    (!defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE))
+#error "8B-4 requires WEATHER_LATITUDE and WEATHER_LONGITUDE in ignored local config.h."
 #endif
 
 CrowEPD579 display;
@@ -122,7 +138,7 @@ SecureHttpClient secureHttpClient(
 );
 MarketDataService marketDataService(secureHttpClient);
 
-#if defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)
+#if (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
 static Phase8CalendarHeader phase8B3DisplayedCalendar = {
     "--:--", "-- ---", "WAITING"
 };
@@ -130,6 +146,12 @@ static Phase8MarketPrices phase8B3DisplayedMarkets = {"--", "--", "--"};
 static bool phase8B3Ready = false;
 static bool phase8B3HasPolled = false;
 static uint32_t phase8B3LastPollMs = 0;
+#endif
+
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+static Phase8CurrentWeather phase8B4DisplayedWeather{};
+static bool phase8B4HasPolled = false;
+static uint32_t phase8B4LastPollMs = 0;
 #endif
 
 SecureHttpClient weatherSecureHttpClient(
@@ -2168,6 +2190,42 @@ void setup() {
   return;
 #endif
 
+  // Phase 8B-4: same approved NTP + Binance rendering path plus
+  // current Open-Meteo condition/temperature/day-night; daily strip stays MOCK.
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+  Serial.println("EDP Phase 8B-4: LIVE NTP + CRYPTO + CURRENT WEATHER");
+  Serial.println("Forecast strip and Wi-Fi icon are STATIC MOCKS.");
+  if (!Phase8CalendarPresentation::selfCheck() ||
+      !Phase8MarketPresentation::selfCheck() ||
+      !WeatherIconSelector::selfCheck() ||
+      !Phase8WeatherPresentation::selfCheck()) {
+    Serial.println("FAIL: 8B-4 calendar/market/weather self-checks.");
+    return;
+  }
+  Serial.println("PASS: 8B-4 all presentation/icon self-checks.");
+
+  Phase8WeatherPresentation::setUnavailable(phase8B4DisplayedWeather);
+  if (!Phase8A1Preview::renderWithCalendarMarketsWeather(
+          graphics, phase8B3DisplayedCalendar, phase8B3DisplayedMarkets,
+          phase8B4DisplayedWeather) ||
+      !display.maintenanceRefresh(frameBuffer)) {
+    display.sleep();
+    Serial.println("FAIL: 8B-4 startup placeholder maintenance refresh.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  Serial.println("PASS: 8B-4 WAITING / -- / NO DATA shown.");
+
+  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("FAIL: 8B-4 Wi-Fi start; check ignored local config.h.");
+    return;
+  }
+  phase8B3Ready = true;
+  Serial.println("Waiting for NTP before TLS-verified market/weather polling.");
+  return;
+#endif
+
   const esp_sleep_wakeup_cause_t wakeCause =
       esp_sleep_get_wakeup_cause();
   if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
@@ -2243,7 +2301,7 @@ void setup() {
 }
 
 void loop() {
-#if defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)
+#if (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
   if (!phase8B3Ready) {
     delay(1000);
     return;
@@ -2327,16 +2385,69 @@ void loop() {
     }
   }
 
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+  Phase8CurrentWeather nextWeather = phase8B4DisplayedWeather;
+  if (timeService.isSynchronized() && wifiManager.isConnected() &&
+      (!phase8B4HasPolled ||
+       static_cast<uint32_t>(millis() - phase8B4LastPollMs) >=
+           WEATHER_POLL_INTERVAL_MS)) {
+    phase8B4HasPolled = true;
+    phase8B4LastPollMs = millis();
+    Serial.println("8B-4: polling existing Open-Meteo current weather (30 min).");
+
+    const bool fetched = weatherService.fetchLatest(
+        static_cast<double>(WEATHER_LATITUDE),
+        static_cast<double>(WEATHER_LONGITUDE));
+    if (!fetched) {
+      Serial.print("Weather fetch failed; retaining last valid: ");
+      Serial.println(weatherService.lastError());
+    }
+    const WeatherSnapshot* snapshot = weatherService.lastValidSnapshot();
+    if (snapshot != nullptr) {
+      Phase8CurrentWeather mapped{};
+      if (Phase8WeatherPresentation::fromCurrent(snapshot->current, mapped)) {
+        nextWeather = mapped;
+        Serial.print(fetched ? "Weather fetched: " : "Weather preserved: ");
+        Serial.print(weatherConditionName(snapshot->current.condition));
+        Serial.print(snapshot->current.isDay ? " DAY " : " NIGHT ");
+        Serial.print(nextWeather.label);
+        Serial.print(" ");
+        Serial.println(nextWeather.temperature);
+      } else {
+        Serial.println("FAIL: last-valid weather not displayable; previous UI retained.");
+      }
+    } else {
+      Serial.println("Weather last-valid unavailable; keep NO DATA placeholder.");
+    }
+  }
+
+  // Compare selected artwork pointer too: unchanged temp/label must not
+  // suppress a clear day-to-night bitmap change.
+  const bool weatherChanged =
+      !Phase8WeatherPresentation::equal(phase8B4DisplayedWeather, nextWeather);
+#endif
+
   const bool calendarChanged =
       !Phase8CalendarPresentation::equal(
           phase8B3DisplayedCalendar, nextCalendar);
   const bool marketChanged =
       !Phase8MarketPresentation::equal(
           phase8B3DisplayedMarkets, nextMarkets);
-  if (calendarChanged || marketChanged) {
-    if (!Phase8A1Preview::renderWithCalendarAndMarkets(
-            graphics, nextCalendar, nextMarkets)) {
-      Serial.println("FAIL: 8B-3 composed frame (no physical change).");
+  if (calendarChanged || marketChanged
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+      || weatherChanged
+#endif
+  ) {
+    const bool composed =
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+        Phase8A1Preview::renderWithCalendarMarketsWeather(
+            graphics, nextCalendar, nextMarkets, nextWeather);
+#else
+        Phase8A1Preview::renderWithCalendarAndMarkets(
+            graphics, nextCalendar, nextMarkets);
+#endif
+    if (!composed) {
+      Serial.println("FAIL: Phase 8B composed frame (no physical change).");
       delay(1000);
       return;
     }
@@ -2357,10 +2468,19 @@ void loop() {
     display.sleep();
     phase8B3DisplayedCalendar = nextCalendar;
     phase8B3DisplayedMarkets = nextMarkets;
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+    phase8B4DisplayedWeather = nextWeather;
+    Serial.print("PASS: 8B-4 coalesced partial refresh (clock=");
+#else
     Serial.print("PASS: 8B-3 coalesced partial refresh (clock=");
+#endif
     Serial.print(calendarChanged ? "changed" : "same");
     Serial.print(", prices=");
     Serial.print(marketChanged ? "changed" : "same");
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+    Serial.print(", weather=");
+    Serial.print(weatherChanged ? "changed" : "same");
+#endif
     Serial.println(").");
   }
 
