@@ -264,3 +264,9 @@ The new UI renderer shares the Phase 8A layout and retains the validated static/
 **Hardware result reported by user:** Phase 8B-4 live current weather + approved 11-icon family, real NTP calendar and Binance ETH/BTC/HYPE preview work normally on the physical CrowPanel. Accept this combined isolated preview as the basis for Phase 8B-5. The upper-right Wi-Fi strength and bottom six-day forecast are **still mock**; the normal Phase 7 `Dashboard::render()` and `PageRenderer` are not yet bound to this new UI. Extended failure/overnight/dawn-dusk tests have not been separately reported.
 
 **Next:** Phase 8B-5 will target the real RSSI icon and production application rendering/dirty/Phase 7 navigation paths without altering the accepted 34/17/14px fonts, 32×32 weather assets or SSD1683 maintenance refresh.
+
+## Phase 8B-5A — Dynamic Wi-Fi bitmap (2026-10-11)
+
+The previously visually accepted top-right 32×24 `Icons::WIFI_STRONG` at (738,25) is now a **parameter** only in the opt-in `EDP_PHASE8B5A_WIFI_TEST`. The new graphics entry point reuses existing Phase 4 RSSI grades through the normal `WiFiManager` and displays the disconnected X, very weak, weak, medium or strong icon as needed; visual-equality comparison suppresses redundant icon redraws. Existing static, NTP-only, Crypto and Phase 8B-4 preview entry points still render unchanged fixture symbols.
+
+**Status:** GitHub source implementation/readback completed; physical acceptance pending. The six-day strip remains a static mock, and Phase 7 production Dashboard navigation, DIRTY management, deep sleep and DETAIL actions are not yet migrated (8B-5B). See [PHASE8B5_WIFI.md](PHASE8B5_WIFI.md).
