@@ -314,3 +314,9 @@ The accepted six-column 128px Rev-D2 geometry is now wired to `Phase8SixDayPrese
 The opt-in **`EDP_PHASE8C2_DISPLAY_TEST` draws this once after HTTPS data validation**; upper NTP/crypto shows truthful WAITING/-- placeholders because that mode does not run their services. Old Phase 8A static mock render entry points are unaffected; the 8B-5B normal app still truthfully says unavailable until 8C-3 integrates the new data and visible dirty-state lifecycle.
 
 **Status:** GitHub source readback completed; Arduino compile/hardware visual acceptance pending. See [PHASE8C2_GRAPHICS.md](PHASE8C2_GRAPHICS.md).
+
+## Phase 8C-2 — Real-device forecast layout acceptance (2026-10-11)
+
+The user confirms the six-column one-shot real Open-Meteo forecast layout **renders normally on CrowPanel**. The accepted visual format is a 32×32 icon plus native 17px weekday with centered 14px `MAX/MINC PRECIP%` summary. Historical 8A mock preview remains a separate fixture; regular Phase 8B-5B Dashboard **still shows `6-DAY FORECAST UNAVAILABLE`** until 8C-3 wires the six real days into the application update/dirty lifecycle.
+
+**Evidence:** General on-device PASS, not a separately reviewed screenshot, serial trace or long-duration stability result. **Next:** Phase 8C-3 production data binding and short integration tests; full-system endurance remains the end-of-Phase-8 gate.

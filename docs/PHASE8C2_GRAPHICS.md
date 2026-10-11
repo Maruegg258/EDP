@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-10-11  
 **Branch:** `phase8a1-static-prototype`  
-**Status:** Source implementation committed and GitHub readback/static review PASS. **Arduino ESP32-S3 build, on-panel rendering and visual approval PENDING.** Phase 8C-1 real API data (Serial only) passed on hardware, as reported by the user.
+**Status:** Source implementation and GitHub review PASS. **User reports normal real CrowPanel results for the isolated 8C-2 six-column graphics test (2026-10-11); hardware gate ACCEPTED for tested normal operation.** Detailed Serial transcripts/screenshots were not supplied. Phase 8C-1 real-data contract previously passed.
 
 ## Purpose and inputs
 
@@ -76,3 +76,15 @@ Dates/temperatures in the **example** are only format illustrations. The actual 
 - [ ] No unexpected repeated refresh; next application integration remains pending for **8C-3**.
 
 **8C-3 (NOT IMPLEMENTED)** will supply the six-day forecast to the normal Phase 7 application, reusing the 30-minute weather poll and last-valid semantics, keeping UI/data update separated and coalescing the six-day display's visible dirty state. Full-feature long-duration/overnight endurance stays deferred to the **end of Phase 8** per user request.
+
+## Phase 8C-2 real CrowPanel hardware sign-off — 2026-10-11
+
+**User feedback:** After the Phase 8C-2 single-refresh device test was requested, the user replied **「實際測試正常」**.
+
+**Accepted:** The 8C-2 isolated real-forecast layout is accepted for **reported normal physical panel operation**. The six 128px columns represent **tomorrow through day +6** with existing native 32×32 daytime-representative weather icon, 17px weekday, and 14px summary formatted as nearest-integer max/min °C plus maximum precipitation %. This test does **not** enable dynamic forecast polling inside the Phase 7 normal application.
+
+**Evidence limit:** No specific screenshot, six dated provider values, compilation transcript, precise Serial PASS trace, forced negative-temperature edge case, or duration beyond this one-shot device test was supplied. Accept the overall hardware report without inventing individual proofs or implying the separate app Dirty Tracking has been verified.
+
+**Next — Phase 8C-3:** After entering the normal application, update its existing 30-minute WeatherService poll to obtain the validated seven-date response, stage the owned six-day presentation alongside calendar/current weather/markets/Wi-Fi, compare only visually rendered forecast state, keep last-valid forecasts on transient failure, and commit pending state **only after** successful partial/maintenance refresh or page-return render. Test Dashboard ↔ Weather/Markets, DETAIL DISPLAY CLEAN, Deep Sleep and repeated weather updates, while retaining the accepted SSD1683 maintenance sequence and certificate validation. No code modifications were made by this 8C-2 hardware acceptance checkpoint.
+
+**Final endurance:** The user explicitly postponed multi-hour ghosting/overnight transitions until all Phase 8 Dashboard functionality is finished. Keep that gate pending.

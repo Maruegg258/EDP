@@ -94,3 +94,7 @@ A failed response logs `FAIL: 8C-1 7-day fetch/validation: ...` and retries no f
 ## Phase 8C-2 graphics follow-on prepared (2026-10-11)
 
 The next isolated checkpoint is now coded: bounded weekday + approved 32×32 condition icon + max/min Celsius and maximum precipitation in six existing 128px columns. It uses genuine `futureDays[6]` from a verified seven-date fetch; normal app/dirty tracking remain untouched until 8C-3. Hardware rendering still pending. See [PHASE8C2_GRAPHICS.md](PHASE8C2_GRAPHICS.md).
+
+## Phase 8C-2 device approval (2026-10-11)
+
+The user reports the exclusive real-six-future-day 8C-2 E-paper display experiment operated normally on the physical CrowPanel. Record the **8C-2 graphics gate PASS** and proceed to 8C-3 production app data/dirty integration. The 8C-1 serial-only data contract and 8C-2 single-frame renderer are accepted separately; neither proves that 30-minute polling, last-valid failure handling or coalesced production forecast refresh has yet been integrated. See [PHASE8C2_GRAPHICS.md](PHASE8C2_GRAPHICS.md).
