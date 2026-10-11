@@ -630,7 +630,9 @@ static bool renderApplicationDashboard(const DashboardState& legacyState) {
 
 static bool applicationDashboardHasPending() {
 #if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
-  return updateCoalescer.hasPendingUpdate() || phase8LiveVisual.hasPending();
+  // Compare actual approved Dashboard pixels: legacy status/raw precision
+  // changes must not force E-paper refresh when the live visual is identical.
+  return phase8LiveVisual.hasPending();
 #else
   return updateCoalescer.hasPendingUpdate();
 #endif
@@ -656,7 +658,10 @@ static UpdateResult flushPendingPartial() {
     return UpdateResult::SKIPPED;
   }
 
-  const DashboardState& state = updateCoalescer.pendingState();
+  const DashboardState& state =
+      updateCoalescer.hasPendingUpdate()
+          ? updateCoalescer.pendingState()
+          : updateCoalescer.displayedState();
 
   if (!display.begin()) {
     Serial.println("FAIL: partial wake/reset timed out.");
@@ -706,7 +711,10 @@ static UpdateResult flushPendingMaintenance() {
     return UpdateResult::SKIPPED;
   }
 
-  const DashboardState& state = updateCoalescer.pendingState();
+  const DashboardState& state =
+      updateCoalescer.hasPendingUpdate()
+          ? updateCoalescer.pendingState()
+          : updateCoalescer.displayedState();
 
   if (!renderApplicationDashboard(state)) {
     Serial.println("FAIL: maintenance frame rendering failed.");
@@ -754,21 +762,19 @@ static bool establishBaseline(const DashboardState& state) {
     return false;
   }
 
-  if (!display.begin()) {
-    Serial.println("FAIL: baseline display begin/reset timed out.");
-    return false;
-  }
-
 #if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
-  // Approved 8B-2..5A startup uses verified fast-clear/white/partial
-  // maintenance path. No new periodic Full Refresh.
-  display.sleep();
+  // Accepted Phase 8B test baselines call maintenanceRefresh directly:
+  // it manages its own controller start and the verified clear/white/partial.
   if (!display.maintenanceRefresh(frameBuffer)) {
     display.sleep();
     Serial.println("FAIL: modern baseline maintenance refresh timed out.");
     return false;
   }
 #else
+  if (!display.begin()) {
+    Serial.println("FAIL: baseline display begin/reset timed out.");
+    return false;
+  }
   if (!display.displayFullFrame(frameBuffer)) {
     Serial.println("FAIL: baseline full refresh timed out.");
     return false;
@@ -783,7 +789,10 @@ static bool establishBaseline(const DashboardState& state) {
 
   const bool established = updateCoalescer.establishDisplayed(state);
 #if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
-  if (established) phase8LiveVisual.establishDisplayed(phase8LiveVisual.displayed());
+  if (established) {
+    // Rendered boot placeholder is now the physically displayed baseline.
+    phase8LiveVisual.establishDisplayed(phase8LiveVisual.displayed());
+  }
 #endif
   display.sleep();
 
