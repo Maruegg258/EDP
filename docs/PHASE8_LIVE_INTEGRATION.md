@@ -146,3 +146,7 @@ A reproducible physical regression protocol is in [PHASE8B6_REGRESSION.md](PHASE
 ## Phase 8B-6A device regression sign-off (2026-10-11)
 
 The user explicitly confirms that **all three** short regression procedures operate normally on the actual CrowPanel: page switching, DETAIL DISPLAY CLEAN with the three subsequent minute partial updates, and STANDBY/deep sleep/wake. This supports normal 8B-6A acceptance. Do not infer a physically observed midnight rollover, forced RSSI boundary, Wi-Fi/TLS failure recovery or multi-hour ghosting performance. Phase 8B-6B network/regression and 8B-6C endurance remain pending; no firmware source is changed by this sign-off.
+
+## Phase 8B-6B real-device network/recovery sign-off (2026-10-11)
+
+The user replied **「實際測試三項都正常」** to the 8B-6B set: temporary Wi-Fi disconnect/last-valid+clock handling, subsequent Wi-Fi reconnect/data updates, and service polling/visual dirty observation. Mark the 8B-6B normal-use physical gate PASS on the accepted feature-branch firmware. This broad outcome is not a detailed packet or E-paper refresh event log and does not individually validate every RSSI threshold or service timestamp. The next gate is 8B-6C 1–2-hour E-paper/dual-controller-seam endurance with post-maintenance partials, optionally real local midnight and sunrise/sunset if actually observed. Keep untested transitions explicitly pending/deferred; do not alter SSD1683 or verified TLS merely to provoke them.

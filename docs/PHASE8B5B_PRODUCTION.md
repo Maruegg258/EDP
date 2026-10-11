@@ -115,3 +115,7 @@ The source audit did **not** establish real midnight, failure-injection or long-
 ## Phase 8B-6A accepted on device (2026-10-11)
 
 The user confirmed all three requested on-panel short regression tests are normal: UP/DOWN page navigation, DETAIL DISPLAY CLEAN followed by three minute partials, and STANDBY/Deep Sleep wake. Mark 8B-6A normal hardware gate PASS. Long-run ghosting, deliberate Wi-Fi outage/reconnect, a full 30-minute weather repoll and real midnight/date/weekday rollover remain unverified. The accepted 8B-5B firmware and dual-controller refresh sequence are unchanged. See [PHASE8B6_REGRESSION.md](PHASE8B6_REGRESSION.md).
+
+## Phase 8B-6B Wi-Fi/data regression acceptance (2026-10-11)
+
+The user reports **all three Phase 8B-6B practical checks normal on the CrowPanel**: Wi-Fi interruption with last-valid/time display, recovery/reconnection with data resumes, and market/weather polling plus visible-diff/Dirty Tracking. The 8B-6B normal hardware gate is accepted; unprovided per-event Serial timestamps, precise 30-minute poll timing and exhaustive RSSI/timing edge cases are not independently certified. 8B-6C endurance, center seam and optional true midnight/day-night boundary remain pending. Firmware and TLS remain unchanged.

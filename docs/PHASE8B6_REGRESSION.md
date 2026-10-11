@@ -86,7 +86,7 @@ The user is USB-C powered, so **battery current measurement is outside this gate
 | Previous 8B-5B normal live Dashboard | **PASS (user reported)** | Hardware result reported 2026-10-11 |
 | 8B-6 source architecture/refresh audit | **PASS (source review only)** | GitHub branch inspected; no firmware modified |
 | 8B-6A short navigation + clean + standby | **PASS — user report 2026-10-11** | Three requested practical tasks normal: A2 page navigation; A4 DISPLAY CLEAN + 3 minute updates; A5/A6 standby/deep-sleep wake; basic DETAIL menu interaction. A1 individual diagnostic log and A3 held-open menu not separately established |
-| 8B-6B Wi-Fi + 30-minute weather poll | **PENDING** | Request B1–B4; optional tests may be deferred |
+| 8B-6B Wi-Fi disconnect/recovery + poll/dirty observation | **PASS — user report 2026-10-11** | Three assigned tasks reported normal: Wi-Fi interruption and last-valid state (B1), reconnect/resumed data (B2), visible update/poll observation (B3/B4 scope). No per-event serial timestamps or exact RSSI threshold/fetch cadence evidence supplied |
 | 8B-6C long-run + real midnight/day-night | **PENDING** | Request C1–C4; mark unobserved events DEFERRED, never PASS |
 
 **Do not close 8B-6 by assuming that every test is automatically covered by the earlier general 8B-5B report.** After each physical test report, record exactly which IDs passed/failed/deferred in this file and `ROADMAP.md`, with firmware/code changes only if evidence shows an actual defect. If a regression appears, start from the accepted 8B-5B HEAD `546c9de0697ebb656a2cbcda34bb5c08cb1165b1` and isolate the smallest reproducible difference before committing a fix.
@@ -106,3 +106,17 @@ The user explicitly reported **「實際測試三項都正常」** after being a
 The 8B-6A **three-task hardware regression gate is accepted**. Because this was a combined outcome statement rather than individual serial/photo transcripts, do not claim the user separately instrumented every sub-assertion. The earlier 8B-5B acceptance established normal live startup, but **A1 detailed startup logs** were not resubmitted here; **A3 deliberately leaving DETAIL open for 1–2 minutes** was not explicitly reported. These may be followed up if later behavior calls for it.
 
 **No firmware changes, driver changes, recompilation or reflashing are required by this sign-off.** Continue with the existing accepted opt-in `EDP_PHASE8B5B_APP_TEST=1` firmware. **Next: 8B-6B**, optional, controlled test-device Wi-Fi interruption and recovery (B1–B2), visible-diff/RSSI level checks (B3), and one normal 30-minute weather poll (B4). Observe but do not manipulate NTP certificate validation or backend price/weather sources. A separate 8B-6C endurance/cross-midnight gate remains open.
+
+## 8B-6B physical test outcome — 2026-10-11
+
+**User result:** Following the three explicitly requested Phase 8B-6B procedures, the user reports **「實際測試三項都正常」**.
+
+1. **Wi-Fi temporarily disconnected (B1):** The previously described test checks the upper-right disconnected symbol, preserves last-valid BTC/ETH/HYPE and current-weather values, and observes the minute clock — **PASS for user-reported normal behavior**.
+2. **Wi-Fi restored (B2):** The previously described test checks reconnection icon and subsequent live market/weather updates over their normal service polling periods — **PASS for user-reported normal behavior**.
+3. **Polling / Dirty Tracking (B3–B4):** The previously described test checks market minute polling, approximately 30-minute weather polling and absence of redundant updates from unchanged visible/RSSI state — **PASS for user-reported normal behavior**.
+
+**Evidence boundary:** The user reported three normal outcomes but did not supply separate serial output, timestamped polling samples, RSSI grade-by-grade photos, or measurements showing independently suppressed physical refresh events. Thus this is the **8B-6B three-task device acceptance**, not a separately instrumented proof of every low-level timing or retry edge case. No network source/HTTPS certificate change or artificial price/weather data was required.
+
+**No code changes:** Continue using the accepted Phase 8B-5B firmware `EDP_PHASE8B5B_APP_TEST=1` on the feature branch. Do not recompile or reflash simply to record this acceptance. Next is **8B-6C**: leave Dashboard running for 1–2 hours with minute-level E-paper updates and inspect crispness/dual-controller seam (C1), inspect 3–5 partials after a maintenance cleanup (C2), and, only if convenient and actually observed, test midnight date/weekday transition (C3) and real weather day/night icon transition (C4). Unobserved C3/C4 may be explicitly deferred, never silently marked PASS.
+
+**Phase 8B-6 final acceptance remains PENDING** until 8B-6C and any agreed deferred-case decisions are documented.
