@@ -216,3 +216,11 @@ See [PHASE8_WEATHER_ICONS.md](PHASE8_WEATHER_ICONS.md) for artwork provenance, c
 **Approved visual baseline:** native 34px clock/prices; 17px date/weekday/market labels; 14px weather values; text-only, centered ETH/BTC/HYPE market groups; 32×32 Rev-B reference-style weather symbols in upper current-weather + six forecast slots; six compact summaries formatted `25-29/ 10%`; divider y=77/181. Original sample values are still fixtures, not real data. Do not rebuild the fonts or change the dual-controller maintenance sequence when beginning Phase 8B.
 
 **Remaining boundaries:** The one-shot static preview still has no network or production poll; it is not merged into `main`. This acceptance does not cover a real-time Dashboard, actual six-day Open-Meteo values, long-running refresh, or multi-page integration. Recommended next Phase 8B-1: inspect current live service and presentation/state interfaces before connecting dynamic values incrementally through application-owned dirty/coalesced update logic.
+
+## Phase 8B-1 — Live-data interface audit and handoff (2026-10-11)
+
+Before changing the visually accepted Phase 8A static Dashboard, GitHub production interfaces were reviewed. The normal application continues to call `Dashboard::render(const DashboardState&)` and `PageRenderer::render(PageId::DASHBOARD,...)`, which draw the older layout; the approved Rev-D2/8A-2D layout is still a separate one-shot `Phase8A1Preview::render(GraphicsBW&)` based on hard-coded values.
+
+Phase 8B-1 records the intended safe integration seam and a one-widget-at-a-time acceptance sequence. It does **not** enable live data in the new static preview or alter the confirmed `main` firmware. In particular, the existing `DashboardState` and dirty-coalescer know the `HH:MM` clock, current weather, RSSI icon, prices and status, but not the additional date/weekday or six forecast daily entries. Those new visible fields require owned state/dirty integration (or an equivalent rigorously tested application-owned visible-diff mechanism); otherwise date rollover or forecast/icon-only changes could fail to refresh.
+
+See [PHASE8_LIVE_INTEGRATION.md](PHASE8_LIVE_INTEGRATION.md) for the complete audited contract, renderer/refresh routing, absence and error policies, risk matrix and staged hardware tests. Status: **audit passed, implementation deferred to 8B-2**.

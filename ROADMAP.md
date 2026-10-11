@@ -255,7 +255,7 @@ Scope decisions (2026-10-08):
 
 ## Phase 8 — UI refinement
 
-**Status: In progress — Phase 8A isolated static visual design and Weather Icon integration accepted on real CrowPanel hardware (2026-10-11); Phase 8B live-data binding and production integration remain pending.**
+**Status: In progress — Phase 8A isolated static Dashboard accepted on hardware; Phase 8B-1 production interface audit completed (2026-10-11). Live UI binding, new daily forecast and full production regression pending.**
 
 **Goal:** Improve readability and visual quality without sacrificing E-paper stability.
 
@@ -309,7 +309,19 @@ Phase 8A-2 — Weather Icon System (feature branch; complete for isolated static
 
 **Phase 8A visual-design closeout (2026-10-11):** The final opt-in 792×272 preview now has accepted JetBrains Mono Medium 34/17/14px text, the Rev-D2 three-market text-only layout, centered six-slot forecast row, and the user-approved 11-weather-icon family. Rev-B Gallery and Rev-D2/8A-2D combined-page display have been tested on hardware. Keep the feature-branch renderer and its assets stable as the Phase 8B visual reference; do not treat Phase 8A acceptance as evidence that the live Dashboard has been integrated or verified.
  
-**Next proposed Phase 8B-1:** Review current GitHub production Dashboard/Clock/Weather/Market/Wi-Fi state interfaces and design the minimal application-owned data-to-UI presentation boundary. Only after that, begin one-widget-at-a-time integration while preserving dirty/coalesced update behavior, verified maintenance refresh sequence and Phase 7 navigation.
+Phase 8B — Live Dashboard integration (isolated feature branch):
+
+- [x] **8B-1 interface audit and design (2026-10-11):** Read current `TimeService`, `MarketDataService`, `WeatherService`, `WiFiManager`, `DashboardState`, `DashboardStateSnapshot`, dirty/coalescer, `Dashboard::render()`, `PageRenderer`, Phase 8A static preview and all application display paths. Identify existing reusable data and state contracts, missing calendar and six-day daily data, dynamic-price width constraints and integration risks. Record a bounded integration contract in `docs/PHASE8_LIVE_INTEGRATION.md`. No firmware behavior changed.
+- [ ] **8B-2 presentation model + clock/calendar slice:** Extract the accepted Phase 8A layout from its fixture-only preview into a reusable graphics-only Dashboard composition with owned, bounded presentation data. Adapt actual local time/date/weekday (Taipei timezone) without introducing another display-refresh owner. Keep the accepted one-shot fixture mode as a regression reference. Compile and hardware-check this single slice before connecting other fields.
+- [ ] **8B-3 Crypto price slice:** Feed existing BTC/ETH/HYPE last-valid market states into the 34px market row; enforce text-width limits and a deterministic placeholder/precision policy; test magnitude, decimal length, failure recovery and price changes with approved spacing.
+- [ ] **8B-4 current weather slice:** Feed the current temperature and condition into the 14px/17px header with the approved 32px weather-icon selector; ensure day/night icon transitions contribute to visible dirty state.
+- [ ] **8B-5 Wi-Fi + application display integration:** Reuse RSSI-to-icon staging and implement correct dirty/coalesced routing for the new Dashboard through startup, incremental flush, page switch and Phase 7 DISPLAY CLEAN. Keep WEATHER/MARKETS pages, DETAIL menu, deep sleep and refresh sequence unchanged.
+- [ ] **8B-6 integration device regression:** Test unchanged suppression, minute rollover/date change, combined weather/crypto/wifi updates, last-valid recovery, page/DETAIL transitions, dual-controller seam, and extended partial refresh before accepting live Dashboard.
+- [ ] **Phase 8C separate extension:** Request/validate/present real six-day daily forecasts; until then, do not show six fictional daily predictions in a live production UI.
+
+**8B integration guardrails:** Existing production `Dashboard::render()` still draws the old Phase 7 dashboard; Phase 8A uses an opt-in mock renderer. No live production wiring has been accepted as of 8B-1. The calendar/day forecast are absent from the present `DashboardState` dirty/snapshot ownership; an independent visual update cannot silently bypass that mechanism. `DashboardWidgetState` text values must outlive rendering and fit fixed capacities. Audit all display entry points before switching the renderer: baseline, partial/maintenance flush, page transition, DETAIL DISPLAY CLEAN. No change to the SSD1683 maintenance sequence, TLS validation or system services.
+
+See [Phase 8B-1 interface audit and integration contract](docs/PHASE8_LIVE_INTEGRATION.md) for exact types, risks, sequencing and acceptance tests.
 
 See [Phase 8 weather icon notes](docs/PHASE8_WEATHER_ICONS.md) for mapping and Gallery test instructions. Phase 8B live-data integration remains pending.
 
