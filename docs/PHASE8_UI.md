@@ -224,3 +224,9 @@ Before changing the visually accepted Phase 8A static Dashboard, GitHub producti
 Phase 8B-1 records the intended safe integration seam and a one-widget-at-a-time acceptance sequence. It does **not** enable live data in the new static preview or alter the confirmed `main` firmware. In particular, the existing `DashboardState` and dirty-coalescer know the `HH:MM` clock, current weather, RSSI icon, prices and status, but not the additional date/weekday or six forecast daily entries. Those new visible fields require owned state/dirty integration (or an equivalent rigorously tested application-owned visible-diff mechanism); otherwise date rollover or forecast/icon-only changes could fail to refresh.
 
 See [PHASE8_LIVE_INTEGRATION.md](PHASE8_LIVE_INTEGRATION.md) for the complete audited contract, renderer/refresh routing, absence and error policies, risk matrix and staged hardware tests. Status: **audit passed, implementation deferred to 8B-2**.
+
+## Phase 8B-2 — Owned calendar header and NTP-only preview (2026-10-11)
+
+The accepted `Phase8A1Preview` graphic composition now accepts an owned calendar header with true `HH:MM`, `DD MMM` and full weekday values, while its original static regression entry point still draws `12:59`, `10 OCT`, `SUNDAY`. An opt-in `EDP_PHASE8B2_CLOCK_TEST` test exercises `TimeService`/Wi-Fi NTP only and renders via the existing maintenance baseline and previous/current RAM partial-refresh application sequence when all displayed header strings change. Crypto/weather/forecast/Wi-Fi pictogram remain hard-coded placeholders.
+
+**Status:** Test code committed and source readback PASS; Arduino build and real-device confirmation pending. Production Dashboard, dirty coalescer, page navigation, deep sleep, WeatherService, MarketDataService and driver unchanged. See [PHASE8B2_CALENDAR.md](PHASE8B2_CALENDAR.md) for testing and remaining risks.

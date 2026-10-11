@@ -74,3 +74,9 @@ The existing `enterStandbyDeepSleep()` must continue rendering its moon and powe
 Checked at the above branch HEAD: `CrowPanelDashboard.ino`, `Dashboard.cpp/.h`, `PageRenderer.cpp/.h`, `DashboardState.h`, `WidgetStates.h`, `DashboardStateSnapshot.cpp/.h`, `DashboardStateCompare.cpp/.h`, `WidgetStateCompare.cpp`, `DashboardUpdateCoalescer.cpp/.h`, `DashboardDirty.h`, `TimeService.cpp/.h`, `MarketDataService.h`, `WeatherService.h`, `WeatherWidgetMapper.cpp`, `WeatherSnapshotCompare.h`, `WiFiManager.h`, `Phase8A1Preview.cpp/.h`, `WeatherIconSelector.cpp/.h`, `MarketPage.cpp`, `WeatherPage.cpp`, `DashboardFont14.h`, `DashboardFont34.h`, `PageModel.h`, plus repository `ROADMAP.md`.
 
 **No runtime or hardware behavior was tested or changed by this documentation-only 8B-1 checkpoint.**
+
+## Phase 8B-2 implemented test slice (2026-10-11)
+
+The first coding checkpoint now exists on the isolated Phase 8 feature branch: `Phase8CalendarPresentation` owns and validates `HH:MM` / `DD MMM` / weekday, `Phase8A1Preview` accepts a header parameter but preserves the immutable static fallback, and `EDP_PHASE8B2_CLOCK_TEST` runs the existing Wi-Fi/NTP stack without querying weather/markets. The test mode alone owns its last-physically-displayed calendar state and issues partial refreshes on real visible changes.
+
+**Do not treat this test-only state as the production dirty/coalescer migration.** That remains the next integration gate. Detailed setup and diagnostics: [PHASE8B2_CALENDAR.md](PHASE8B2_CALENDAR.md). New ESP32 compilation and hardware acceptance remain pending.
