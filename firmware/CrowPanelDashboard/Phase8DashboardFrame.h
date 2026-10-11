@@ -3,6 +3,7 @@
 #include "Phase8CalendarPresentation.h"
 #include "Phase8MarketPresentation.h"
 #include "Phase8WeatherPresentation.h"
+#include "Phase8SixDayPresentation.h"
 
 // Phase 8B-5B, fixed-size, owned, visible-only Dashboard presentation.
 // No services, network, E-paper driver or temporary string pointers.
@@ -10,6 +11,7 @@ struct Phase8DashboardFrame {
   Phase8CalendarHeader calendar;
   Phase8MarketPrices markets;
   Phase8CurrentWeather weather;
+  Phase8SixDayForecast forecast;  // six future days, or honest unavailable
   const Bitmap1bpp* wifi;
 };
 

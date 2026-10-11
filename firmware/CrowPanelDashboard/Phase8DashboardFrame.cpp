@@ -12,6 +12,7 @@ void setUnavailable(Phase8DashboardFrame& frame) {
   strcpy(frame.calendar.weekday, "WAITING");
   Phase8MarketPresentation::setUnavailable(frame.markets);
   Phase8WeatherPresentation::setUnavailable(frame.weather);
+  Phase8SixDayPresentation::setUnavailable(frame.forecast);
   frame.wifi = &Icons::WIFI_DISCONNECTED;
 }
 
@@ -19,6 +20,7 @@ bool equal(const Phase8DashboardFrame& a, const Phase8DashboardFrame& b) {
   return Phase8CalendarPresentation::equal(a.calendar, b.calendar) &&
          Phase8MarketPresentation::equal(a.markets, b.markets) &&
          Phase8WeatherPresentation::equal(a.weather, b.weather) &&
+         Phase8SixDayPresentation::equal(a.forecast, b.forecast) &&
          a.wifi == b.wifi;
 }
 
@@ -65,8 +67,37 @@ bool selfCheck() {
   update.weather = night;
   if (!state.stage(update) || !state.hasPending() ||
       state.latest().weather.icon == clear.icon) return false;
+  if (!state.commitPending() ||
+      state.displayed().weather.icon != night.icon) return false;
+
+  // 8C-3: a six-day change is its own visible dirty dimension.
+  Phase8DashboardFrame daily = state.displayed();
+  daily.forecast.available = true;
+  for (size_t index = 0; index < Phase8SixDayForecast::COUNT; ++index) {
+    Phase8SixDayColumn& day = daily.forecast.days[index];
+    day.icon = clear.icon;  // approved 32x32 immutable weather bitmap
+    strcpy(day.weekday, "MON");
+    strcpy(day.summary, "29/25C 80%");
+  }
+  if (!state.stage(daily) || !state.hasPending() ||
+      state.displayed().forecast.available) return false;
+
+  // Failed panel update: no commit; last displayed stays unavailable.
+  if (!state.stage(daily) || !state.hasPending() ||
+      state.displayed().forecast.available) return false;
+  if (!state.commitPending() ||
+      !state.displayed().forecast.available ||
+      state.hasPending()) return false;
+
+  // The identical rendered forecast should not generate a new dirty frame.
+  if (!state.stage(daily) || state.hasPending()) return false;
+  strcpy(daily.forecast.days[2].summary, "30/25C 80%");
+  if (!state.stage(daily) || !state.hasPending() ||
+      strcmp(state.displayed().forecast.days[2].summary,
+             "29/25C 80%") != 0) return false;
   return state.commitPending() &&
-         state.displayed().weather.icon == night.icon;
+         strcmp(state.displayed().forecast.days[2].summary,
+                "30/25C 80%") == 0;
 }
 
 }  // namespace Phase8DashboardFrameCompare
@@ -90,6 +121,17 @@ bool Phase8DashboardVisualState::stage(
     const Phase8DashboardFrame& frame) {
   if (!_hasDisplayed || frame.weather.icon == nullptr ||
       frame.wifi == nullptr) return false;
+  if (frame.forecast.available) {
+    for (size_t i = 0; i < Phase8SixDayForecast::COUNT; ++i) {
+      const Phase8SixDayColumn& day = frame.forecast.days[i];
+      if (day.icon == nullptr || day.icon->data == nullptr ||
+          day.icon->width != 32 || day.icon->height != 32 ||
+          day.weekday[3] != 0 || day.summary[0] == 0 ||
+          day.summary[sizeof(day.summary) - 1] != 0) {
+        return false;
+      }
+    }
+  }
   _pending = frame;
   _hasPending = !Phase8DashboardFrameCompare::equal(_displayed, _pending);
   return true;

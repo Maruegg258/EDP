@@ -46,5 +46,6 @@ bool Dashboard::render(const DashboardState& state) {
 }
 
 bool Dashboard::renderLive(const Phase8DashboardFrame& frame) {
-  return Phase8A1Preview::renderLive(_graphics, frame);
+  return Phase8A1Preview::renderWithSixDayForecast(
+      _graphics, frame, frame.forecast);
 }
