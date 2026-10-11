@@ -24,6 +24,7 @@
 #include "Phase8A1Preview.h"
 #include "Phase8CalendarPresentation.h"
 #include "Phase8MarketPresentation.h"
+#include "Phase8DashboardFrame.h"
 #include "Phase8WeatherPresentation.h"
 #include "SecureHttpClient.h"
 #include "SystemPages.h"
@@ -97,6 +98,21 @@
 #error "8B-5A requires WEATHER_LATITUDE and WEATHER_LONGITUDE in ignored local config.h."
 #endif
 
+// Phase 8B-5B production-app integration remains explicitly opt-in until
+// user hardware acceptance. Unlike previews, this RUNS Phase 7 navigation.
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1)) && \
+    ((defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1)) || (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || \
+     (defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)) || \
+     (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
+     (defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
+     (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
+#error "8B-5B application mode must not be combined with isolated preview flags."
+#endif
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1)) && \
+    (!defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE))
+#error "8B-5B live Dashboard needs WEATHER_LATITUDE/LONGITUDE in ignored config.h."
+#endif
+
 CrowEPD579 display;
 
 #if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
@@ -141,6 +157,16 @@ bool hasRenderedMarketPageState = false;
 
 WiFiManager wifiManager;
 TimeService timeService;
+
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+static Phase8DashboardVisualState phase8LiveVisual{};
+static WiFiConnectionState phase8LastWifiConnection =
+    WiFiConnectionState::DISCONNECTED;
+static const Bitmap1bpp* phase8LastSampledWifi = &Icons::WIFI_DISCONNECTED;
+static bool phase8WifiSampled = false;
+static uint32_t phase8WifiLastSampleMs = 0;
+static constexpr uint32_t PHASE8_WIFI_SAMPLE_MS = 60000UL;
+#endif
 
 #if defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)
 static Phase8CalendarHeader phase8B2Displayed = {
@@ -593,11 +619,38 @@ static bool stageStateAsWidgetEvents(
              updateCoalescer.stageStatus(target.status));
 }
 
+static bool renderApplicationDashboard(const DashboardState& legacyState) {
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+  // The verified native typography/layout, now owned by the normal app.
+  return dashboard.renderLive(phase8LiveVisual.latest());
+#else
+  return dashboard.render(legacyState);
+#endif
+}
+
+static bool applicationDashboardHasPending() {
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+  return updateCoalescer.hasPendingUpdate() || phase8LiveVisual.hasPending();
+#else
+  return updateCoalescer.hasPendingUpdate();
+#endif
+}
+
+static bool commitApplicationDashboard() {
+  // Both snapshots advance only after the actual panel has been updated.
+  if (updateCoalescer.hasPendingUpdate() &&
+      !updateCoalescer.commitPending()) return false;
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+  if (!phase8LiveVisual.commitPending()) return false;
+#endif
+  return true;
+}
+
 static UpdateResult flushPendingPartial() {
   Serial.print("Partial flush pending dirty: ");
   printDirtyMask(updateCoalescer.pendingDirty());
 
-  if (!updateCoalescer.hasPendingUpdate()) {
+  if (!applicationDashboardHasPending()) {
     Serial.println("SKIP: no coalesced dashboard changes to refresh.");
     delay(4000);
     return UpdateResult::SKIPPED;
@@ -615,7 +668,7 @@ static UpdateResult flushPendingPartial() {
     return UpdateResult::FAILED;
   }
 
-  if (!dashboard.render(state)) {
+  if (!renderApplicationDashboard(state)) {
     Serial.println("FAIL: partial frame rendering failed.");
     return UpdateResult::FAILED;
   }
@@ -631,7 +684,7 @@ static UpdateResult flushPendingPartial() {
       CrowEPD579::FRAMEBUFFER_BYTES
   );
 
-  const bool committed = updateCoalescer.commitPending();
+  const bool committed = commitApplicationDashboard();
   display.sleep();
 
   if (!committed) {
@@ -647,7 +700,7 @@ static UpdateResult flushPendingMaintenance() {
   Serial.print("Maintenance flush pending dirty: ");
   printDirtyMask(updateCoalescer.pendingDirty());
 
-  if (!updateCoalescer.hasPendingUpdate()) {
+  if (!applicationDashboardHasPending()) {
     Serial.println("SKIP: no coalesced dashboard changes; maintenance not required.");
     delay(4000);
     return UpdateResult::SKIPPED;
@@ -655,7 +708,7 @@ static UpdateResult flushPendingMaintenance() {
 
   const DashboardState& state = updateCoalescer.pendingState();
 
-  if (!dashboard.render(state)) {
+  if (!renderApplicationDashboard(state)) {
     Serial.println("FAIL: maintenance frame rendering failed.");
     return UpdateResult::FAILED;
   }
@@ -671,7 +724,7 @@ static UpdateResult flushPendingMaintenance() {
       CrowEPD579::FRAMEBUFFER_BYTES
   );
 
-  const bool committed = updateCoalescer.commitPending();
+  const bool committed = commitApplicationDashboard();
   display.sleep();
 
   if (!committed) {
@@ -696,7 +749,7 @@ static bool expectUpdateResult(const char* label,
 }
 
 static bool establishBaseline(const DashboardState& state) {
-  if (!dashboard.render(state)) {
+  if (!renderApplicationDashboard(state)) {
     Serial.println("FAIL: baseline frame rendering failed.");
     return false;
   }
@@ -706,10 +759,21 @@ static bool establishBaseline(const DashboardState& state) {
     return false;
   }
 
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+  // Approved 8B-2..5A startup uses verified fast-clear/white/partial
+  // maintenance path. No new periodic Full Refresh.
+  display.sleep();
+  if (!display.maintenanceRefresh(frameBuffer)) {
+    display.sleep();
+    Serial.println("FAIL: modern baseline maintenance refresh timed out.");
+    return false;
+  }
+#else
   if (!display.displayFullFrame(frameBuffer)) {
     Serial.println("FAIL: baseline full refresh timed out.");
     return false;
   }
+#endif
 
   memcpy(
       previousFrameBuffer,
@@ -718,6 +782,9 @@ static bool establishBaseline(const DashboardState& state) {
   );
 
   const bool established = updateCoalescer.establishDisplayed(state);
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+  if (established) phase8LiveVisual.establishDisplayed(phase8LiveVisual.displayed());
+#endif
   display.sleep();
 
   if (!established) {
@@ -1519,6 +1586,73 @@ static void runProductionWeatherPollIfDue() {
 #endif
 }
 
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+static bool stagePhase8LiveDashboardFromServices() {
+  // Stage a complete visual candidate, not raw API state. All service polls
+  // and all refresh decisions stay owned by the existing application loop.
+  Phase8DashboardFrame next = phase8LiveVisual.latest();
+
+  if (timeService.isSynchronized()) {
+    struct tm local{};
+    if (!timeService.getLocalTime(local) ||
+        !Phase8CalendarPresentation::fromLocalTm(local, next.calendar)) {
+      Serial.println("FAIL: Phase 8 live calendar conversion.");
+      return false;
+    }
+  }
+
+  struct PriceTarget {
+    const char* symbol;
+    char* text;
+  };
+  PriceTarget prices[] = {
+      {"ETHUSDT", next.markets.eth},
+      {"BTCUSDT", next.markets.btc},
+      {"HYPEUSDT", next.markets.hype}
+  };
+  for (auto& entry : prices) {
+    const MarketPriceValue* value =
+        marketDataService.lastValidValue(entry.symbol);
+    if (value == nullptr) continue; // retain previous/-- placeholder
+    char candidate[Phase8MarketPrices::DISPLAY_CAPACITY]{};
+    if (Phase8MarketPresentation::formatPrice(
+            entry.symbol, value->price, candidate, sizeof(candidate))) {
+      strcpy(entry.text, candidate);
+    } // Never replace last valid with a clipped/invalid price.
+  }
+
+  const WeatherSnapshot* weatherSnapshot =
+      weatherService.lastValidSnapshot();
+  if (weatherSnapshot != nullptr) {
+    Phase8CurrentWeather candidate{};
+    if (Phase8WeatherPresentation::fromCurrent(
+            weatherSnapshot->current, candidate)) {
+      next.weather = candidate;
+    } // Preserve the previous visible weather if conversion fails.
+  }
+
+  const uint32_t now = millis();
+  const WiFiConnectionState link = wifiManager.state();
+  if (!phase8WifiSampled || link != phase8LastWifiConnection ||
+      static_cast<uint32_t>(now - phase8WifiLastSampleMs) >=
+          PHASE8_WIFI_SAMPLE_MS) {
+    phase8WifiSampled = true;
+    phase8LastWifiConnection = link;
+    phase8WifiLastSampleMs = now;
+    phase8LastSampledWifi = wifiManager.isConnected()
+        ? wifiIconForRssi(wifiManager.rssi())
+        : &Icons::WIFI_DISCONNECTED;
+  }
+  next.wifi = phase8LastSampledWifi;
+
+  if (!phase8LiveVisual.stage(next)) {
+    Serial.println("FAIL: Phase 8 live visual state staging.");
+    return false;
+  }
+  return true;
+}
+#endif
+
 static bool stageLiveClockIfMinuteChanged(bool& minuteChanged) {
   minuteChanged = false;
 
@@ -1571,7 +1705,7 @@ static bool flushLiveDashboardIfNeeded() {
     return true;
   }
 
-  if (!updateCoalescer.hasPendingUpdate()) {
+  if (!applicationDashboardHasPending()) {
     return true;
   }
 
@@ -1613,6 +1747,10 @@ static bool flushVisiblePageChangeIfNeeded() {
       ? "DASHBOARD DETAIL"
       : PageModel::pageName(targetPage));
 
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+  // PageRenderer may paint Dashboard only; Weather/Markets remain Phase 7.
+  pageRenderer.useLiveDashboardFrame(&phase8LiveVisual.latest());
+#endif
   const bool rendered = dashboardMenuVisible
       ? systemPages.renderMenu(dashboardActionMenu.selected())
       : pageRenderer.render(
@@ -1646,8 +1784,8 @@ static bool flushVisiblePageChangeIfNeeded() {
 
   if (targetPage == PageId::DASHBOARD &&
       navigationState.mode == NavigationMode::PAGE &&
-      updateCoalescer.hasPendingUpdate()) {
-    if (!updateCoalescer.commitPending()) {
+      applicationDashboardHasPending()) {
+    if (!commitApplicationDashboard()) {
       display.sleep();
       Serial.println(
           "FAIL: dashboard state commit after page switch failed."
@@ -1934,7 +2072,7 @@ static bool runDisplayClean() {
           : updateCoalescer.displayedState();
 
   // Never clean the menu framebuffer: rebuild the actual Dashboard.
-  if (!dashboard.render(latestDashboard)) {
+  if (!renderApplicationDashboard(latestDashboard)) {
     Serial.println("DISPLAY CLEAN failed: Dashboard render.");
     return false;
   }
@@ -1951,10 +2089,7 @@ static bool runDisplayClean() {
          frameBuffer,
          CrowEPD579::FRAMEBUFFER_BYTES);
 
-  bool committed = true;
-  if (updateCoalescer.hasPendingUpdate()) {
-    committed = updateCoalescer.commitPending();
-  }
+  const bool committed = commitApplicationDashboard();
 
   display.sleep();
 
@@ -2374,6 +2509,20 @@ void setup() {
   initialState.eth.price = "--";
   initialState.hype.price = "--";
 
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+  Serial.println("EDP Phase 8B-5B: normal Phase 7 app with approved live Dashboard.");
+  Serial.println("Six-day forecast: UNAVAILABLE, not mock daily predictions.");
+  if (!Phase8CalendarPresentation::selfCheck() ||
+      !Phase8MarketPresentation::selfCheck() ||
+      !Phase8WeatherPresentation::selfCheck() ||
+      !WeatherIconSelector::selfCheck() ||
+      !Phase8DashboardFrameCompare::selfCheck()) {
+    Serial.println("FAIL: Phase 8B-5B live presentation self-checks.");
+    return;
+  }
+  Serial.println("PASS: Phase 8B-5B owned state and presentation self-checks.");
+#endif
+
   Serial.println("Establishing live dashboard baseline...");
   if (!establishBaseline(initialState)) {
     return;
@@ -2765,6 +2914,17 @@ void loop() {
     }
   }
 
+#if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
+  // 8B-5B coalesces fresh service snapshots BEFORE deciding whether to
+  // render the currently visible page; no second poll/refresh owner.
+  runPhase5B3MarketPollIfDue();
+  runProductionWeatherPollIfDue();
+  if (!stagePhase8LiveDashboardFromServices()) {
+    delay(1000);
+    return;
+  }
+#endif
+
   if (!flushVisiblePageChangeIfNeeded()) {
     Serial.println("FAIL: visible page refresh failed.");
     delay(1000);
@@ -2775,8 +2935,10 @@ void loop() {
     Serial.println("FAIL: live dashboard refresh failed.");
   }
 
+#if !(defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
   runPhase5B3MarketPollIfDue();
   runProductionWeatherPollIfDue();
+#endif
 
   delay(20);
 }

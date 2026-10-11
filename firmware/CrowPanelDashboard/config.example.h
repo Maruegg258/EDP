@@ -68,3 +68,13 @@
 // six-day forecast remains illustrative MOCK data. Phase 8B-5B production
 // Dashboard/Dirty/PageRenderer integration is deliberately NOT included.
 // #define EDP_PHASE8B5A_WIFI_TEST 1
+
+// Phase 8B-5B: opt-in NORMAL Phase 7 application with the visually accepted
+// modern Phase 8 dashboard. Unlike the 8B-5A isolated test this re-enables
+// UP/DOWN page navigation, DETAIL MENU, DISPLAY CLEAN, standby / deep sleep.
+// The six daily forecast fixtures are replaced by "6-DAY FORECAST UNAVAILABLE"
+// until real six-day daily data is integrated in Phase 8C. Existing TLS,
+// service polling and the verified maintenance/partial refresh are reused.
+// Requires local WIFI credentials and WEATHER_LATITUDE/LONGITUDE.
+// Turn ALL previous EDP_PHASE8* test/preview flags off before enabling.
+// #define EDP_PHASE8B5B_APP_TEST 1
