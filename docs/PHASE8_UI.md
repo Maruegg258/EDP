@@ -200,3 +200,11 @@ An independent `WeatherIconSelector` maps the existing `WeatherCondition` enum (
 Compile/upload via Arduino IDE. The Gallery displays all eleven symbols at **real physical size**, four columns and three rows, with approved 17px uppercase captions. No Wi-Fi/API calls or background E-paper refresh are started. Source/header equality, static mapping coverage and Gallery text bounds pass; **Arduino compile, upload, and real panel approval are pending**. The UI layout and production renderer will only be changed after actual visual feedback.
 
 See [PHASE8_WEATHER_ICONS.md](PHASE8_WEATHER_ICONS.md) for the full icon/condition mapping and acceptance tests.
+
+## Phase 8A-2D — Icon family applied to accepted static Dashboard (2026-10-11)
+
+The previously hardware-approved Rev-D2 layout now uses the eleven-icon Rev-B weather family through `WeatherIconSelector::select()` **only inside the opt-in static prototype**. Current header is CLEAR_DAY; the six forecast fixtures use CLEAR_DAY, PARTLY_DAY, OVERCAST, DRIZZLE, RAIN and THUNDER, left to right (MON–SAT). Every icon remains native 32×32 at exactly its previously approved x/y location. The 34/17/14px JetBrains Mono fonts, ETH/BTC/HYPE text-only row, `25-29/ 10%` six-day text, Wi-Fi drawing, divider positions and refresh path are unchanged.
+
+**Status:** Commit/source verification complete; new combined-page compile and physical validation **pending**. Set local `#define EDP_PHASE8A1_PREVIEW 1`, disable `EDP_PHASE8_WEATHER_ICON_TEST` and `EDP_PHASE8_FONT_TEST`, compile/upload, inspect full screen and provide hardware feedback. The condition labels and all weather/market values remain static mock data. Existing `WeatherService` and production `WeatherWidgetMapper` are not yet bound to this renderer.
+
+See [PHASE8_WEATHER_ICONS.md](PHASE8_WEATHER_ICONS.md) for artwork provenance, classification, checks and the exact icon/day fixtures.

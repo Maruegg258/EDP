@@ -116,4 +116,29 @@ Pull latest `phase8a1-static-prototype`, Compile → Upload via Arduino IDE, the
 
 The user reports **all eleven reference-style 32×32 Weather Icon Gallery images display correctly and their appearance is OK** on the actual Elecrow CrowPanel. Mark Phase 8A-2 Rev-B artwork as **visually approved**. Do not infer other test results that were not separately reported: this approval does not demonstrate dynamic WMO/day-night icon switching, production refresh durability, or multi-day forecasts.
 
-**Next checkpoint is 8A-2D (not yet implemented):** Place the accepted `WeatherIconAssets` into the existing static Rev-D2 Dashboard current-weather and six-day forecast 32×32 slots, retaining exact panel layout anchors and the existing one-shot maintenance refresh. Keep static fixtures clearly distinct from live weather states. Test the integrated full-frame preview on-device before adopting any icon mapping into production `WeatherWidgetMapper` or starting Phase 8B data binding. No weather service, driver or normal application flow is changed by this documentation-only approval commit.
+**Next checkpoint at the time of this acceptance:** Integrate approved icons into the isolated Rev-D2 static Dashboard (8A-2D). Implementation and its pending hardware test are recorded below; this historical approval is not evidence for the later integrated page.
+
+## Phase 8A-2D — Approved icons integrated into static Dashboard (2026-10-11)
+
+**Implementation:** The user approved all eleven reference-style Rev-B Gallery icons on real CrowPanel hardware. The **opt-in static** `Phase8A1Preview.cpp` now uses the existing provider-neutral `WeatherIconSelector::select(WeatherCondition, bool isDay)` helper for the seven 32×32 artwork slots previously occupied by `drawOutlineSun()`. The old one-off outline-sun helper was removed from this static renderer; the original Rev-D2 mock layout is preserved.
+
+Current-weather header (unchanged x=22,y=25): `WeatherCondition::CLEAR`, `isDay=true`, rendering `CLEAR_DAY`, consistent with the fixed `SUNNY` header label.
+
+Six **illustrative** daytime daily forecasts (same previous measured centering and icon y=200):
+
+| Day | Mock condition | Approved 32×32 icon |
+| --- | --- | --- |
+| MON | CLEAR | CLEAR_DAY |
+| TUE | PARTLY_CLOUDY | PARTLY_DAY |
+| WED | OVERCAST | OVERCAST |
+| THU | DRIZZLE | DRIZZLE |
+| FRI | RAIN | RAIN |
+| SAT | THUNDERSTORM | THUNDER |
+
+The unchanged `25-29/ 10%` sample on every day is **dummy text**; the differing icons are also fixed visual samples, not weather predictions. Daily conditions intentionally use daytime/representative icons because `WeatherDailyValue` does not have a day/night `isDay` field.
+
+**Layout and code boundaries:** Preserve the exact current 32×32 icon box and the existing weekday labels (17px), small values (14px), top clock and market prices (34px), all x/y anchors, 128px bottom-column pitch, diamond dividers y=77 and y=181, fixed Wi-Fi graphic, and 792×272 panel mapping. No `WeatherService`, `WeatherWidgetMapper`, `Icons.h`, `CrowEPD579`, `GraphicsBW`, application refresh scheduler, TLS handling, navigation or other production code was changed. The gallery remains usable in its own diagnostic mode.
+
+**Verification at commit:** Source-level content/geometry review and GitHub readback only. No Arduino IDE compile/upload or whole-page on-panel validation of this integration is asserted yet. The previous **Gallery-only** Rev-B hardware acceptance remains valid but does not automatically prove this combined Dashboard page.
+
+**Next hardware test:** Use the existing `EDP_PHASE8A1_PREVIEW` flag (not the Gallery flag), upload, and visually check the new icon family in the header and six-day strip with the previously approved typography and market layout. Confirm line sharpness, spacing, controller seam and lack of clipping/ghosting. After explicit user approval, schedule Phase 8B live-data binding.
