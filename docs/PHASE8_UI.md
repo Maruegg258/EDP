@@ -236,3 +236,9 @@ The accepted `Phase8A1Preview` graphic composition now accepts an owned calendar
 The user uploaded the Phase 8B-2 calendar preview and reported that the **actual panel test is normal**. Accept the isolated NTP-driven `HH:MM` / `DD MMM` / full English weekday composition as the new working live-header baseline. The UI remains a test mode, with weather, Wi-Fi graphic, crypto and six-day values still static mocks. No physical midnight rollover or sustained outage/endurance test is claimed by this feedback.
 
 **Next checkpoint:** Phase 8B-3 feeds real BTC/ETH/HYPE prices into the same accepted composition. Phase 8B-2 is accepted but not merged into production `main`.
+
+## Phase 8B-3 — Live Binance perpetual prices in approved market row (2026-10-11)
+
+The same 34px ETH/BTC/HYPE market row accepted in Phase 8A now supports three **owned dynamic price strings** through `Phase8A1Preview::renderWithCalendarAndMarkets()`. `renderWithCalendar()` continues the validated 8B-2 calendar + mock prices, and `render()` continues the original all-static Phase 8A proof. The new optional `EDP_PHASE8B3_MARKET_TEST` uses existing verified TLS and Binance USDⓈ-M futures `MarketDataService` to poll three markets every 60 seconds and combine price/time changes in one application-owned partial refresh.
+
+**At the code checkpoint:** Host C++11 formatter self-check PASS and source readback PASS; **Arduino ESP32-S3 compile and real-device appearance pending**. All weather/forecast values and the Wi-Fi drawing remain static samples. The production PageRenderer, data services and driver are unchanged. See [PHASE8B3_MARKETS.md](PHASE8B3_MARKETS.md).
