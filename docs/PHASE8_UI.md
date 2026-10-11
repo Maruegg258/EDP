@@ -258,3 +258,9 @@ The isolated Phase 8B-4 test mode adds `WeatherService::lastValidSnapshot()->cur
 The new UI renderer shares the Phase 8A layout and retains the validated static/8B-2/8B-3 modes; there is no change to normal production. Weather remains on the existing 30-minute poll while markets poll at 60 seconds, with no separate physical refresh owner.
 
 **Status:** Code/source checks committed. Arduino compilation and physical panel verification **pending**. Six-day forecast and Wi-Fi RSSI icon remain visual fixtures. See [PHASE8B4_WEATHER.md](PHASE8B4_WEATHER.md).
+
+## Phase 8B-4 — On-panel acceptance (2026-10-11)
+
+**Hardware result reported by user:** Phase 8B-4 live current weather + approved 11-icon family, real NTP calendar and Binance ETH/BTC/HYPE preview work normally on the physical CrowPanel. Accept this combined isolated preview as the basis for Phase 8B-5. The upper-right Wi-Fi strength and bottom six-day forecast are **still mock**; the normal Phase 7 `Dashboard::render()` and `PageRenderer` are not yet bound to this new UI. Extended failure/overnight/dawn-dusk tests have not been separately reported.
+
+**Next:** Phase 8B-5 will target the real RSSI icon and production application rendering/dirty/Phase 7 navigation paths without altering the accepted 34/17/14px fonts, 32×32 weather assets or SSD1683 maintenance refresh.

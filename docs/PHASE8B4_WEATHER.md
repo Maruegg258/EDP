@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-11  
 **Branch:** `phase8a1-static-prototype`  
-**Status:** Isolated source implementation committed; GitHub readback/source checks completed. Standalone C++11 `Phase8WeatherPresentation.cpp` host compilation and its `selfCheck()` PASS with minimal stub weather/bitmap/icon interfaces (`-Wall -Wextra -Werror -pedantic`). **Arduino IDE ESP32-S3 full-firmware compilation and physical CrowPanel validation remain pending.**
+**Status:** Isolated source implementation committed; GitHub static/source checks and standalone host C++11 weather presentation self-check completed; **the user confirms a successful real CrowPanel Phase 8B-4 test (2026-10-11)**. Normal integrated display operation accepted; extended failure, daily transition and refresh endurance tests remain pending.
 
 ## Implementation boundary
 
@@ -96,3 +96,13 @@ PASS: 8B-4 coalesced partial refresh (clock=changed, prices=changed, weather=cha
 - [ ] Optional failure and dawn/dusk transition checks can be deferred to Phase 8B-6; **do not claim these are already hardware verified**.
 
 **Scope not covered:** Real six-day daily forecast (`WeatherSnapshot::DAILY_RESPONSE_COUNT=2` currently), live RSSI icon, production Dashboard `DashboardState` migration, PageRenderer, DETAIL page actions, deep sleep or overnight ghosting. These are 8C, 8B-5 and 8B-6. `main` and pre-Phase-8 application behavior remain unchanged.
+
+## Phase 8B-4 real-device acceptance (2026-10-11)
+
+The user replied **「實際測試正常」** after being asked to compile, upload and test the isolated `EDP_PHASE8B4_WEATHER_TEST=1` Dashboard. Mark **Phase 8B-4 physical device checkpoint PASS for normal observed operation**: existing NTP and three perpetual price fields continue to coexist with a live Open-Meteo current-weather presentation (bounded 17px condition label, 14px Celsius temperature, and approved 32×32 weather icon) in the accepted Phase 8A layout.
+
+**Evidence boundary:** The confirmation establishes that the tested version operates normally, but it does not separately document observed day-to-night glyph changes, a second 30-minute weather poll, API/TLS outage and last-valid recovery, deliberate Wi-Fi disconnect, pixel ghosting over many hours, or midnight/date transitions. These are **still pending** for Phase 8B-6. The test does not integrate a production `DashboardState`/app-owned coalescer migration, real daily six-day forecast, or RSSI icon binding.
+
+**Handoff to 8B-5:** Preserve the accepted 8B-4 visual/data behavior and immutable static/8B-2/8B-3 reference modes. First bind actual Wi-Fi RSSI/connection glyph into the upper-right fixed slot, then consolidate production `Dashboard::render()`, `PageRenderer`, baseline, application partial/maintenance refresh and Phase 7 DETAIL DISPLAY CLEAN/navigation through one shared approved composition and owned visible-diff/dirty-state lifecycle. Never modify the dual SSD1683 maintenance-refresh sequence or introduce a periodic full refresh. Keep six daily fields explicitly mock/unavailable until the Phase 8C daily data contract is implemented and accepted.
+
+**Git scope:** Documentation-only test acceptance commit; no firmware source or `main` branch changes.
