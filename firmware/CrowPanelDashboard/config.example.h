@@ -57,3 +57,14 @@
 // Market polls every 60s, weather every 30min; one application-owned partial
 // refresh for visible changes, verified HTTPS roots, no new network service.
 // #define EDP_PHASE8B4_WEATHER_TEST 1
+
+// Phase 8B-5A (FIRST GATE of Phase 8B-5):
+// Opt-in live NTP, BTC/ETH/HYPE, current Open-Meteo weather and Wi-Fi RSSI.
+// Requires ignored local Wi-Fi credentials AND weather latitude/longitude.
+// All other EDP_PHASE8* preview/test flags must be commented out.
+// RSSI mapping: >=-60 strong; >=-70 medium; >=-80 weak; else very weak;
+// disconnected/connecting shows X. Sample 60s plus immediate state changes.
+// Still an ISOLATED experimental page. No buttons/navigation in this mode;
+// six-day forecast remains illustrative MOCK data. Phase 8B-5B production
+// Dashboard/Dirty/PageRenderer integration is deliberately NOT included.
+// #define EDP_PHASE8B5A_WIFI_TEST 1

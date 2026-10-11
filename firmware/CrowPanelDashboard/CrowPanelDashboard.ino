@@ -82,6 +82,21 @@
 #error "8B-4 requires WEATHER_LATITUDE and WEATHER_LONGITUDE in ignored local config.h."
 #endif
 
+// 8B-5A opt-in Wi-Fi bitmap test: no two preview flags may be active.
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1)) && \
+    ((defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || \
+     (defined(EDP_PHASE8B2_CLOCK_TEST) && (EDP_PHASE8B2_CLOCK_TEST == 1)) || \
+     (defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)) || \
+     (defined(EDP_PHASE8A1_PREVIEW) && (EDP_PHASE8A1_PREVIEW == 1)) || \
+     (defined(EDP_PHASE8_WEATHER_ICON_TEST) && (EDP_PHASE8_WEATHER_ICON_TEST == 1)))
+#error "Phase 8B-5A Wi-Fi test must be the only enabled preview mode."
+#endif
+
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1)) && \
+    (!defined(WEATHER_LATITUDE) || !defined(WEATHER_LONGITUDE))
+#error "8B-5A requires WEATHER_LATITUDE and WEATHER_LONGITUDE in ignored local config.h."
+#endif
+
 CrowEPD579 display;
 
 #if defined(EDP_PHASE8_FONT_TEST) && (EDP_PHASE8_FONT_TEST == 1)
@@ -138,7 +153,7 @@ SecureHttpClient secureHttpClient(
 );
 MarketDataService marketDataService(secureHttpClient);
 
-#if (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+#if (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
 static Phase8CalendarHeader phase8B3DisplayedCalendar = {
     "--:--", "-- ---", "WAITING"
 };
@@ -148,10 +163,19 @@ static bool phase8B3HasPolled = false;
 static uint32_t phase8B3LastPollMs = 0;
 #endif
 
-#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
 static Phase8CurrentWeather phase8B4DisplayedWeather{};
 static bool phase8B4HasPolled = false;
 static uint32_t phase8B4LastPollMs = 0;
+#endif
+
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
+static const Bitmap1bpp* phase8B5DisplayedWifi = &Icons::WIFI_DISCONNECTED;
+static const Bitmap1bpp* phase8B5SampledWifi = &Icons::WIFI_DISCONNECTED;
+static bool phase8B5HasSampled = false;
+static uint32_t phase8B5LastSampleMs = 0;
+static WiFiConnectionState phase8B5LastConnection = WiFiConnectionState::DISCONNECTED;
+static constexpr uint32_t PHASE8B5_WIFI_SAMPLE_MS = 60000UL;
 #endif
 
 SecureHttpClient weatherSecureHttpClient(
@@ -2226,6 +2250,69 @@ void setup() {
   return;
 #endif
 
+  // Phase 8B-5A: accepted 8B-4 NTP/market/weather fields with live
+  // Wi-Fi RSSI/connection bitmap only; production navigation remains isolated.
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
+  Serial.println("EDP Phase 8B-5A: LIVE NTP + CRYPTO + WEATHER + WIFI");
+  Serial.println("Bottom six-day forecast remains STATIC MOCK; normal pages unchanged.");
+  if (!Phase8CalendarPresentation::selfCheck() ||
+      !Phase8MarketPresentation::selfCheck() ||
+      !WeatherIconSelector::selfCheck() ||
+      !Phase8WeatherPresentation::selfCheck()) {
+    Serial.println("FAIL: 8B-5A inherited presentation self-check.");
+    return;
+  }
+
+  // Reuse the exact Phase 4 RSSI grade mapping, including boundary values.
+  const struct {
+    int32_t rssi;
+    const Bitmap1bpp* expected;
+  } wifiCases[] = {
+      {-50, &Icons::WIFI_STRONG},
+      {-60, &Icons::WIFI_STRONG},
+      {-61, &Icons::WIFI_MEDIUM},
+      {-70, &Icons::WIFI_MEDIUM},
+      {-71, &Icons::WIFI_WEAK},
+      {-80, &Icons::WIFI_WEAK},
+      {-81, &Icons::WIFI_VERY_WEAK}
+  };
+  for (const auto& sample : wifiCases) {
+    const Bitmap1bpp* icon = wifiIconForRssi(sample.rssi);
+    if (icon != sample.expected || icon->width != 32 ||
+        icon->height != 24 || icon->data == nullptr) {
+      Serial.println("FAIL: 8B-5A RSSI grade self-check.");
+      return;
+    }
+  }
+  if (Icons::WIFI_DISCONNECTED.width != 32 ||
+      Icons::WIFI_DISCONNECTED.height != 24 ||
+      Icons::WIFI_DISCONNECTED.data == nullptr) {
+    Serial.println("FAIL: 8B-5A disconnected Wi-Fi bitmap.");
+    return;
+  }
+  Serial.println("PASS: 8B-5A weather, market, NTP and Wi-Fi RSSI self-checks.");
+
+  Phase8WeatherPresentation::setUnavailable(phase8B4DisplayedWeather);
+  if (!Phase8A1Preview::renderWithCalendarMarketsWeatherWifi(
+          graphics, phase8B3DisplayedCalendar, phase8B3DisplayedMarkets,
+          phase8B4DisplayedWeather, *phase8B5DisplayedWifi) ||
+      !display.maintenanceRefresh(frameBuffer)) {
+    display.sleep();
+    Serial.println("FAIL: 8B-5A startup frame or E-paper maintenance.");
+    return;
+  }
+  memcpy(previousFrameBuffer, frameBuffer, CrowEPD579::FRAMEBUFFER_BYTES);
+  display.sleep();
+  Serial.println("PASS: 8B-5A WAITING / -- / NO DATA / Wi-Fi disconnected baseline.");
+
+  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("FAIL: 8B-5A Wi-Fi begin; check ignored local config.h.");
+    return;
+  }
+  phase8B3Ready = true;
+  return;
+#endif
+
   const esp_sleep_wakeup_cause_t wakeCause =
       esp_sleep_get_wakeup_cause();
   if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
@@ -2301,7 +2388,7 @@ void setup() {
 }
 
 void loop() {
-#if (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+#if (defined(EDP_PHASE8B3_MARKET_TEST) && (EDP_PHASE8B3_MARKET_TEST == 1)) || (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
   if (!phase8B3Ready) {
     delay(1000);
     return;
@@ -2385,7 +2472,7 @@ void loop() {
     }
   }
 
-#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
   Phase8CurrentWeather nextWeather = phase8B4DisplayedWeather;
   if (timeService.isSynchronized() && wifiManager.isConnected() &&
       (!phase8B4HasPolled ||
@@ -2427,6 +2514,36 @@ void loop() {
       !Phase8WeatherPresentation::equal(phase8B4DisplayedWeather, nextWeather);
 #endif
 
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
+  // Sample RSSI once per minute, but observe Wi-Fi connection transitions
+  // immediately. Keep sampled candidate separate from physically committed
+  // artwork so failed refresh is retried without losing the changed icon.
+  const uint32_t wifiNow = millis();
+  const WiFiConnectionState currentConnection = wifiManager.state();
+  if (!phase8B5HasSampled ||
+      currentConnection != phase8B5LastConnection ||
+      static_cast<uint32_t>(wifiNow - phase8B5LastSampleMs) >=
+          PHASE8B5_WIFI_SAMPLE_MS) {
+    phase8B5HasSampled = true;
+    phase8B5LastSampleMs = wifiNow;
+    phase8B5LastConnection = currentConnection;
+    phase8B5SampledWifi = wifiManager.isConnected()
+        ? wifiIconForRssi(wifiManager.rssi())
+        : &Icons::WIFI_DISCONNECTED;
+
+    Serial.print("8B-5A Wi-Fi icon sampled: ");
+    if (wifiManager.isConnected()) {
+      Serial.print(wifiManager.rssi());
+      Serial.print(" dBm -> ");
+      Serial.println(wifiSignalLevelName(wifiManager.rssi()));
+    } else {
+      Serial.println("DISCONNECTED / CONNECTING");
+    }
+  }
+  const Bitmap1bpp* nextWifi = phase8B5SampledWifi;
+  const bool wifiChanged = (phase8B5DisplayedWifi != nextWifi);
+#endif
+
   const bool calendarChanged =
       !Phase8CalendarPresentation::equal(
           phase8B3DisplayedCalendar, nextCalendar);
@@ -2434,12 +2551,18 @@ void loop() {
       !Phase8MarketPresentation::equal(
           phase8B3DisplayedMarkets, nextMarkets);
   if (calendarChanged || marketChanged
-#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
       || weatherChanged
+#endif
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
+      || wifiChanged
 #endif
   ) {
     const bool composed =
-#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
+        Phase8A1Preview::renderWithCalendarMarketsWeatherWifi(
+            graphics, nextCalendar, nextMarkets, nextWeather, *nextWifi);
+#elif (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
         Phase8A1Preview::renderWithCalendarMarketsWeather(
             graphics, nextCalendar, nextMarkets, nextWeather);
 #else
@@ -2468,7 +2591,11 @@ void loop() {
     display.sleep();
     phase8B3DisplayedCalendar = nextCalendar;
     phase8B3DisplayedMarkets = nextMarkets;
-#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
+    phase8B4DisplayedWeather = nextWeather;
+    phase8B5DisplayedWifi = nextWifi;
+    Serial.print("PASS: 8B-5A coalesced partial refresh (clock=");
+#elif (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
     phase8B4DisplayedWeather = nextWeather;
     Serial.print("PASS: 8B-4 coalesced partial refresh (clock=");
 #else
@@ -2477,9 +2604,13 @@ void loop() {
     Serial.print(calendarChanged ? "changed" : "same");
     Serial.print(", prices=");
     Serial.print(marketChanged ? "changed" : "same");
-#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1))
+#if (defined(EDP_PHASE8B4_WEATHER_TEST) && (EDP_PHASE8B4_WEATHER_TEST == 1)) || (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
     Serial.print(", weather=");
     Serial.print(weatherChanged ? "changed" : "same");
+#endif
+#if (defined(EDP_PHASE8B5A_WIFI_TEST) && (EDP_PHASE8B5A_WIFI_TEST == 1))
+    Serial.print(", wifi=");
+    Serial.print(wifiChanged ? "changed" : "same");
 #endif
     Serial.println(").");
   }
