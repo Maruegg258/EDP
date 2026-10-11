@@ -242,3 +242,11 @@ The user uploaded the Phase 8B-2 calendar preview and reported that the **actual
 The same 34px ETH/BTC/HYPE market row accepted in Phase 8A now supports three **owned dynamic price strings** through `Phase8A1Preview::renderWithCalendarAndMarkets()`. `renderWithCalendar()` continues the validated 8B-2 calendar + mock prices, and `render()` continues the original all-static Phase 8A proof. The new optional `EDP_PHASE8B3_MARKET_TEST` uses existing verified TLS and Binance USDⓈ-M futures `MarketDataService` to poll three markets every 60 seconds and combine price/time changes in one application-owned partial refresh.
 
 **At the code checkpoint:** Host C++11 formatter self-check PASS and source readback PASS; **Arduino ESP32-S3 compile and real-device appearance pending**. All weather/forecast values and the Wi-Fi drawing remain static samples. The production PageRenderer, data services and driver are unchanged. See [PHASE8B3_MARKETS.md](PHASE8B3_MARKETS.md).
+
+## Phase 8B-3 — CrowPanel device sign-off (2026-10-11)
+
+The user reports the **real Phase 8B-3 on-panel test is normal**. Accept the isolated NTP date/time and live Binance USDⓈ-M perpetual ETH/BTC/HYPE price row as the next working visual and data-binding checkpoint. The existing fixed-size price layout, font assets, calendar and app-owned partial update route should be preserved for 8B-4.
+
+The current weather/header value and six-day forecast remain **mock**; the drawn Wi-Fi strength icon also remains mock. This approval does not represent the eventual production `DashboardState`/`DashboardUpdateCoalescer` migration or prove deliberate outage/rollover/extended ghosting scenarios.
+
+**Next:** Phase 8B-4 live current condition, temperature and day/night weather icon only. See [PHASE8B3_MARKETS.md](PHASE8B3_MARKETS.md) for acceptance scope.

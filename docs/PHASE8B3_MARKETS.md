@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-11  
 **Branch:** `phase8a1-static-prototype`  
-**Status:** Code committed, static review and a C++11 host formatter-equivalent check PASS; **ESP32-S3 Arduino compilation and real-device appearance pending**.
+**Status:** Phase 8B-3 isolated NTP + live Binance perpetual Dashboard is **accepted after a user-reported successful CrowPanel test (2026-10-11)**. Earlier code-level checks passed. Extended failure, rollover and endurance scenarios remain unverified.
 
 ## Approved scope
 
@@ -82,3 +82,13 @@ PASS: 8B-3 coalesced partial refresh (clock=changed, prices=changed).
 - [ ] On user approval, mark 8B-3 hardware gate PASS and proceed to 8B-4 live current weather.
 
 **Scope warning:** The normal `Dashboard`, `PageRenderer`, `DashboardUpdateCoalescer`, `WeatherService`, `MarketDataService`, `CrowEPD579`, secure HTTP client, existing Phase 7 page buttons and deep-sleep actions were not modified in Phase 8B-3. No change to the E-paper maintenance-refresh sequence or periodic full-refresh policy.
+
+## Phase 8B-3 — Hardware acceptance (2026-10-11)
+
+**Actual device feedback:** The user reports **「實際測試正常」** after the Phase 8B-3 real-price test. Mark the combined **NTP date/time/weekday plus live ETH/BTC/HYPE prices** preview **PASS for this device checkpoint**, following separate prior 8B-2 calendar acceptance. The 34px ETH/BTC/HYPE row and already accepted calendar/header layout remain the feature-branch baseline.
+
+**Evidence boundary:** The general successful test confirms the tested firmware/display behavior, not every suggested optional test. The user did not separately provide a photo, serial timestamps, manually induced HTTPS/Wi-Fi failure/recovery, no-change suppression logs, extreme-value data, midnight transition or long-duration ghosting record. Preserve those as later regression checks rather than marking them all individually verified.
+
+**Next step:** Phase 8B-4 current weather: re-use the validated `WeatherService` snapshot, map live condition + day/night with `WeatherIconSelector`, format the actual temperature/label within the accepted 32px/17px/14px header, and track visual changes with the same application-owned coalesced refresh in an isolated test mode. Retain live calendar and all three prices. Six-day forecast values and Wi-Fi strength graphic stay **explicit mock samples** pending Phase 8C and 8B-5. Do not change normal Phase 7 `Dashboard`, `PageRenderer`, `DashboardUpdateCoalescer`, TLS verification, or SSD1683 refresh on the basis of this acceptance alone.
+
+**Git record:** Documentation-only hardware acceptance. No firmware bytes are changed by this checkpoint.
