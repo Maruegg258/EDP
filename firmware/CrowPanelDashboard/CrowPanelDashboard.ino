@@ -4,6 +4,7 @@
 #include "esp_sleep.h"
 #include "driver/gpio.h"
 
+#include "ApplicationResultTypes.h"
 #include "ButtonManager.h"
 #include "CrowEPD579.h"
 #include "Dashboard.h"
@@ -284,18 +285,6 @@ SecureHttpClient weatherSecureHttpClient(
     TlsTrustAnchors::ISRG_ROOT_X1
 );
 WeatherService weatherService(weatherSecureHttpClient);
-
-enum class UpdateResult {
-  FAILED,
-  SKIPPED,
-  REFRESHED
-};
-
-enum class WeatherStageResult {
-  FAILED,
-  UNCHANGED,
-  CHANGED
-};
 
 static void printDirtyMask(DashboardDirtyMask dirty) {
   Serial.print("0x");
