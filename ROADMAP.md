@@ -267,6 +267,17 @@ Planned work:
 - Multiple dashboard pages if useful
 - Refresh-frequency tuning
 
+## Enterprise Wi-Fi extension — pre-long-duration test
+
+**Status: Code staged; compilation and hardware authentication not yet verified (2026-10-12).**
+
+- [x] Preserve WPA-Personal path while adding optional 802.1X PEAP / TTLS selectable from local config.h.
+- [x] Require trusted EAP server CA PEM in Enterprise configuration; do not use an insecure fallback.
+- [ ] Obtain approved RADIUS trust anchor and confirm EAP method / server identity with office network administrator.
+- [ ] Compile with installed Arduino-ESP32 version; validate Enterprise connection, IP, reconnect and NTP/HTTPS services on hardware.
+- [ ] Confirm EAP server-name validation options and network policies before considering this production-ready.
+- [ ] Complete dashboard long-duration test only after network connectivity is verified.
+
 ## Phase 9 — Reliability and release hardening
 
 **Goal:** Turn the prototype into a dependable always-on device.
