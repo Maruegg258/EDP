@@ -216,6 +216,22 @@ MarketPageState lastRenderedMarketPageState{};
 bool hasRenderedMarketPageState = false;
 
 WiFiManager wifiManager;
+
+// All existing boot modes share one opt-in Enterprise/Personal selection.
+static bool beginConfiguredWiFi() {
+#if defined(WIFI_USE_ENTERPRISE) && (WIFI_USE_ENTERPRISE == 1)
+#if !defined(WIFI_EAP_IDENTITY) || !defined(WIFI_EAP_USERNAME) || \
+    !defined(WIFI_EAP_PASSWORD) || !defined(WIFI_EAP_SERVER_NAME)
+#error "Set WIFI_EAP_IDENTITY, USERNAME, PASSWORD, SERVER_NAME in local config.h"
+#endif
+  return wifiManager.beginEnterprisePeap(
+      WIFI_SSID, WIFI_EAP_IDENTITY, WIFI_EAP_USERNAME,
+      WIFI_EAP_PASSWORD, WIFI_EAP_CA_PEM, WIFI_EAP_SERVER_NAME);
+#else
+  return wifiManager.begin(WIFI_SSID, WIFI_PASSWORD);
+#endif
+}
+
 TimeService timeService;
 
 #if (defined(EDP_PHASE8B5B_APP_TEST) && (EDP_PHASE8B5B_APP_TEST == 1))
@@ -2413,7 +2429,7 @@ void setup() {
   display.sleep();
   Serial.println("PASS: 8B-2 WAITING baseline displayed via maintenanceRefresh().");
 
-  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+  if (!beginConfiguredWiFi()) {
     Serial.println("FAIL: Wi-Fi manager could not start; verify local config.h.");
     return;
   }
@@ -2445,7 +2461,7 @@ void setup() {
   display.sleep();
   Serial.println("PASS: 8B-3 WAITING / -- placeholders displayed.");
 
-  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+  if (!beginConfiguredWiFi()) {
     Serial.println("FAIL: 8B-3 Wi-Fi start. Check local ignored config.h.");
     return;
   }
@@ -2481,7 +2497,7 @@ void setup() {
   display.sleep();
   Serial.println("PASS: 8B-4 WAITING / -- / NO DATA shown.");
 
-  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+  if (!beginConfiguredWiFi()) {
     Serial.println("FAIL: 8B-4 Wi-Fi start; check ignored local config.h.");
     return;
   }
@@ -2545,7 +2561,7 @@ void setup() {
   display.sleep();
   Serial.println("PASS: 8B-5A WAITING / -- / NO DATA / Wi-Fi disconnected baseline.");
 
-  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+  if (!beginConfiguredWiFi()) {
     Serial.println("FAIL: 8B-5A Wi-Fi begin; check ignored local config.h.");
     return;
   }
@@ -2566,7 +2582,7 @@ void setup() {
     return;
   }
   Serial.println("PASS: 8C-2 weekday, temperature, precipitation and icon self-check.");
-  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+  if (!beginConfiguredWiFi()) {
     Serial.println("FAIL: 8C-2 Wi-Fi begin.");
     return;
   }
@@ -2584,7 +2600,7 @@ void setup() {
     return;
   }
   Serial.println("PASS: 8C-1 date/leap/year and WMO self-check.");
-  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+  if (!beginConfiguredWiFi()) {
     Serial.println("FAIL: 8C-1 Wi-Fi begin.");
     return;
   }
@@ -2682,7 +2698,7 @@ void setup() {
     return;
   }
 
-  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+  if (!beginConfiguredWiFi()) {
     Serial.println("FAIL: Wi-Fi manager could not start. Check config.h.");
     return;
   }
