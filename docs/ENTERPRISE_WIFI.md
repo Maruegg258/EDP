@@ -152,6 +152,34 @@ The diagnostic permits **one application-managed attempt**, then pauses on first
 
 The open production-release security issue persists: hardware previously reported `PEAP certificate time validity check: DISABLED`; after connectivity diagnosis, review how to provide trusted pre-network time or alternative approved trust model without disabling CA/hostname verification.
 
+## One-shot PEAP hardware result (2026-10-12; compiled and uploaded)
+
+User's CrowPanel ESP32-S3 Serial output using `EDP_PEAP_DIAGNOSTICS=1`:
+
+```text
+PEAP pre-auth UTC: 1970-01-01 00:00:09
+PEAP certificate time validity check: DISABLED
+PEAP diag: one application attempt (Arduino driver may retry internally).
+PEAP diag: supplied CA PEM parse OK (not server verified).
+PEAP diag: CA setup API OK (NOT live chain validation).
+PEAP diag: expected DNS-name setup OK (NOT a peer match).
+PEAP diag: PEAP method setup OK; initiating association.
+Wi-Fi connection attempt #1
+Wi-Fi state: CONNECTING
+PEAP STA disconnected: reason 23 (802_1X_AUTH_FAILED)
+PEAP diag: DISCONNECTED at +536 ms; TLS vs Phase 2 UNKNOWN.
+PEAP STA disconnected: reason 23 (802_1X_AUTH_FAILED)
+PEAP diag: DISCONNECTED at +1482 ms; TLS vs Phase 2 UNKNOWN.
+```
+
+**Accepted observations:** latest branch code compiled/uploaded and safe diagnostics ran. Supplied local PEM parses as an X.509 certificate; ESP-IDF accepts the CA, expected RADIUS name, and EAP-PEAP method configuration. The network authentication **FAILED** with reason 23 and no recorded GOT_IP. The two disconnect callbacks belong to one application connection attempt; they may include Arduino-internal first-connect retry and do not prove separate application attempts. No `STA_ASSOCIATED` event appears in this excerpt; that does not independently establish the exact EAP or association handshake boundary.
+
+**Do NOT overinterpret:** parsing local PEM is **not** verification of the RADIUS peer's live certificate chain; acceptance of a configured expected DNS name is **not** a successful peer name match. Reason 23 may reflect an AP/RADIUS rejection at any relevant EAP authentication stage. Timings of +536/+1482 ms are insufficient to differentiate CA/hostname rejection, PEAP Phase 2 rejection, unsupported policy, and device enrollment restrictions. Time-check currently reported `DISABLED` is a distinct production security defect; a 1970 RTC is not evidenced as the immediate cause of a validity-date check rejection.
+
+**Recommended evidence before firmware changes:** authorized RADIUS logs for the affected test window identifying *reason category* (certificate/TLS trust, inner method/identity/credentials, or policy/device authorization) without sharing secrets; the approved SSID's live RADIUS certificate DNS name and root/intermediate CA chain; PEAP Phase 2 method and outer/inner identity formatting requirements. If corporate administrators cannot supply logs, do not make repeated changes to insecure certificate trust. Consider an isolated, permitted WPA2-Enterprise laboratory network with RADIUS logs to validate the EDP PEAP implementation separately from the corporate SSID. Verbose WPA/inner EAP packet capture risks leaking challenge-response material and must not be enabled in a public repo or shared indiscriminately.
+
+**Firmware decision:** no additional firmware edits from this result; preserve Phase 8 UI/driver and only return to a targeted code change when a specific failure mechanism is supported by evidence.
+
 ## API references
 
 - Arduino-ESP32 3.3.11 `WiFiSTA.h` / `STA.cpp`: `WiFi.begin(ssid, WPA2_AUTH_PEAP, identity, username, password, caPem)`.
