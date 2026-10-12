@@ -2053,7 +2053,19 @@ void setup() {
     return;
   }
 
+#if defined(WIFI_USE_ENTERPRISE) && WIFI_USE_ENTERPRISE
+#if !defined(WIFI_EAP_IDENTITY) || !defined(WIFI_EAP_USERNAME) || !defined(WIFI_EAP_PASSWORD) || !defined(WIFI_EAP_CA_PEM)
+#error "Enterprise Wi-Fi requires WIFI_EAP_IDENTITY, WIFI_EAP_USERNAME, WIFI_EAP_PASSWORD and WIFI_EAP_CA_PEM in local config.h"
+#endif
+#ifndef WIFI_EAP_TTLS
+#define WIFI_EAP_TTLS 0
+#endif
+  if (!wifiManager.beginEnterprise(WIFI_SSID, WIFI_EAP_IDENTITY,
+                                   WIFI_EAP_USERNAME, WIFI_EAP_PASSWORD,
+                                   WIFI_EAP_CA_PEM, WIFI_EAP_TTLS != 0)) {
+#else
   if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+#endif
     Serial.println("FAIL: Wi-Fi manager could not start. Check config.h.");
     return;
   }
