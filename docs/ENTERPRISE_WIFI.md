@@ -79,6 +79,18 @@ Disable isolated preview/test flags. Continue to provide local `WEATHER_LATITUDE
 
 **What to collect next:** Compile, upload, and capture the first 1–3 PEAP attempt state lines, the `PEAP STA disconnected: reason N (NAME)` events, any `PEAP connection timed out` messages, and a DHCP/NTP result if connected. Redact any infrastructure IP/hostname/SSID; never share the account credentials. If certificate validation, inner EAP, or server-name matching remains unsuccessful, troubleshoot those separately. Do not set `client.setInsecure()`, skip the EAP CA, or disable domain-name matching.
 
+## Second hardware observation — reason 23 (2026-10-12)
+
+The user compiled/uploaded the PEAP retry fix. The second live Serial trace shows `PEAP STA disconnected: reason 23 (802_1X_AUTH_FAILED)` twice during the first application-managed attempt. The previous `sta is connecting, cannot set config` error was **not observed in this trace**. **This does not identify which EAP stage failed or whether the office network accepted the credentials.** Two disconnect events do not necessarily mean two separate app-level PEAP attempts (the Arduino STA core may perform a first-connect retry).
+
+Review of the current project `TimeService` confirms SNTP starts **only after Wi-Fi becomes connected**, while the EAP server TLS verification is performed **during Wi-Fi authentication**. On a cold boot with an unset RTC, this may interact with certificate validity time checks. Also keep investigating trusted CA chain, expected RADIUS server name, inner PEAP method, and office device policy rather than assuming the password is wrong.
+
+A temporary **Serial-only** diagnostic was committed in `WiFiManager::beginEnterprisePeap()` to log:
+- `PEAP pre-auth UTC: YYYY-MM-DD HH:MM:SS`
+- `PEAP certificate time validity check: ENABLED/DISABLED` (as reported by `esp_eap_client_get_disable_time_check()`), or an error status.
+
+This does **not** modify the clock, CA, expected server name, EAP authentication method, retries, or display refresh. Compile and confirm on hardware before relying on either diagnostic. Do not expose the actual username/password in log output, and avoid repeated resets after reason 23, to reduce account-lockout risk.
+
 ## API references
 
 - Arduino-ESP32 3.3.11 `WiFiSTA.h` / `STA.cpp`: `WiFi.begin(ssid, WPA2_AUTH_PEAP, identity, username, password, caPem)`.
