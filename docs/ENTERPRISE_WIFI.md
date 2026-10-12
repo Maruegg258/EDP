@@ -118,6 +118,40 @@ Read-only macOS Sequoia `log show` output from an already working office connect
 
 **Safe next checks:** On the Mac, inspect local read-only `security dump-trust-settings` output for a certificate with the relevant EAP trust override (mask unrelated personal details). Ask the network administrator for the office SSID's expected RADIUS DNS name, root/intermediate CA chain and PEAP Phase 2 method, and whether a personally provisioned ESP32 device/account is permitted. Do not edit Keychain trust, remove EAP CA/domain validation, or repeatedly send credentials to the office network as a diagnostic workaround. The prior `PEAP certificate time validity check: DISABLED` remains a separate production-release security gap, not a proven cause of this reason 23.
 
+## Phase 8 PEAP diagnostic — optional single-attempt safe telemetry (2026-10-12)
+
+**Implementation staged on `phase8a1-static-prototype`; Arduino 3.3.11 compilation and hardware validation PENDING.** This responds to ESP32 `reason 23 (802_1X_AUTH_FAILED)` and the Mac's per-leaf EAP `TrustAsRoot` / expired-certificate trust exceptions. It does **not** copy Mac trust overrides or weaken ESP-IDF's CA/domain-name checks.
+
+Add **only** to ignored local `firmware/CrowPanelDashboard/config.h` alongside the existing approved `WIFI_USE_ENTERPRISE 1` configuration:
+
+```cpp
+#define EDP_PEAP_DIAGNOSTICS 1
+```
+
+Expected safe Serial lines at 115200 baud may include:
+
+```text
+PEAP diag: one application attempt (Arduino driver may retry internally).
+PEAP diag: supplied CA PEM parse OK (not server verified).
+PEAP diag: CA setup API OK (NOT live chain validation).
+PEAP diag: expected DNS-name setup OK (NOT a peer match).
+PEAP diag: PEAP method setup OK; initiating association.
+PEAP diag: STA_ASSOCIATED at +... ms (NOT PEAP success).
+PEAP STA disconnected: reason 23 (802_1X_AUTH_FAILED)
+PEAP diag: DISCONNECTED at +... ms; TLS vs Phase 2 UNKNOWN.
+PEAP diag: one-shot observation ended; no application retry.
+```
+
+These lines are examples, not confirmed test results. In a successful connection the `GOT_IP` marker indicates a working STA connection. `STA_ASSOCIATED` means 802.11 association only and does **not** prove TLS/PEAP success. `esp_eap_client_set_ca_cert` and `set_domain_name` returning `ESP_OK` mean **settings accepted**, not a successful live-server signature/name check.
+
+This mode optionally parses the **local public CA PEM** with mbedTLS before connecting. It does not print the cert, identities, passwords, RADIUS name, private enterprise traffic, MSCHAP challenges, EAPOL packets or key material. If CA PEM cannot be parsed, it stops before sending credentials. The normal non-diagnostic Personal/Enterprise paths keep their existing behavior, except for the additional but disabled diagnostic code.
+
+The diagnostic permits **one application-managed attempt**, then pauses on first 60-second timeout rather than automatically sending further network attempts; the prebuilt Arduino STA core may still make internal first-connection retries before that timeout. A fresh reset is required to repeat; avoid repeated attempts and respect office access policies. If compilation succeeds, upload **once**, and share only the `PEAP diag:` / sanitized disconnect reason lines. Avoid dumping verbose WPA Supplicant logs or raw 802.1X packets, because they may expose sensitive organization authentication data.
+
+**Hard limit:** The public Arduino-ESP32 Wi-Fi STA events do **not** expose which internal EAP stage rejected authentication. Neither a `reason 23` event nor the above safe telemetry can, by itself, distinguish TLS/server-certificate rejection from inner PEAP Phase 2 rejection or access-policy restrictions. More precise root-cause evidence would need authorized RADIUS authentication logs (preferable) or a separately reviewed, securely handled custom ESP-IDF build with `CONFIG_ESP_WIFI_DEBUG_PRINT` at compile time; that debug facility may expose sensitive authentication information and is not enabled here. A simple runtime `esp_log_level_set()` cannot generate messages that were compiled out.
+
+The open production-release security issue persists: hardware previously reported `PEAP certificate time validity check: DISABLED`; after connectivity diagnosis, review how to provide trusted pre-network time or alternative approved trust model without disabling CA/hostname verification.
+
 ## API references
 
 - Arduino-ESP32 3.3.11 `WiFiSTA.h` / `STA.cpp`: `WiFi.begin(ssid, WPA2_AUTH_PEAP, identity, username, password, caPem)`.
