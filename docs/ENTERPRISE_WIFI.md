@@ -64,6 +64,21 @@ Disable isolated preview/test flags. Continue to provide local `WEATHER_LATITUDE
 
 **Not changed:** SSD1683 driver, verified maintenance refresh behavior, weather/market/clock services, button/standby behavior, Dashboard typography/widgets, original certificate-validation policy for outgoing HTTPS.
 
+## First on-panel PEAP connection test — troubleshooting (2026-10-12)
+
+**Hardware observation:** The firmware compiled and uploaded to ESP32-S3. Serial showed `Wi-Fi connection attempt #1` and `#2` without a confirmed IP; on subsequent attempts, ESP-IDF logged `wifi:sta is connecting, cannot set config` and Arduino PEAP connection setup failed. This is a confirmed **reconfiguration/retry overlap**, not proof that RADIUS accepted or rejected credentials, or that the CA/server-name checks passed.
+
+**Root cause in EDP:** `WiFiManager::startConnection()` repeated `WiFi.begin(... PEAP ...)` on every retry. Arduino-ESP32 3.3.11's `STAClass::connect(...)` calls `esp_wifi_set_config()`, which is rejected if the STA is still connecting. The Arduino STA library also has its own automatic reconnect enabled by default, potentially overlapping the application manager's retry loop.
+
+**Pending compile + hardware verification** — conservative incremental fix submitted:
+- For **Enterprise only**, disable Arduino's automatic STA reconnect and let the application manager control reconnect attempts. The Arduino core may still have an internal first-connect retry; do not interpret the limit below as a strict network-server attempt count.
+- Perform CA, expected server DNS name, PEAP method, identity/password setup and `WiFi.begin()` **only on first attempt**. Subsequent connection attempts call `WiFi.reconnect()`, avoiding the `esp_wifi_set_config()` reconfiguration path.
+- Allow at least **60 seconds** for PEAP setup instead of the Personal Wi-Fi 15-second window, followed by a 10-second retry delay. The verified Personal-mode defaults remain unchanged.
+- Log **numeric and named Wi-Fi STA disconnection reasons** only (no SSID, usernames, passwords or enterprise hostname). Do not enable dumps that expose credentials.
+- While the first office-network authentication diagnosis is pending, pause application-controlled PEAP attempts after **three consecutive unsuccessful connection attempts** to reduce risk of account lockout. Any IP-connected success resets the consecutive counter. After the pause, troubleshoot and **reset** to retry. Long-duration reliability behavior will be revisited after PEAP authentication passes.
+
+**What to collect next:** Compile, upload, and capture the first 1–3 PEAP attempt state lines, the `PEAP STA disconnected: reason N (NAME)` events, any `PEAP connection timed out` messages, and a DHCP/NTP result if connected. Redact any infrastructure IP/hostname/SSID; never share the account credentials. If certificate validation, inner EAP, or server-name matching remains unsuccessful, troubleshoot those separately. Do not set `client.setInsecure()`, skip the EAP CA, or disable domain-name matching.
+
 ## API references
 
 - Arduino-ESP32 3.3.11 `WiFiSTA.h` / `STA.cpp`: `WiFi.begin(ssid, WPA2_AUTH_PEAP, identity, username, password, caPem)`.
