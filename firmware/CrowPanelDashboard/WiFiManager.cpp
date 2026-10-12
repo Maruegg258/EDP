@@ -69,7 +69,7 @@ bool WiFiManager::beginEnterprisePeap(const char* ssid, const char* identity,
       [](arduino_event_id_t event, arduino_event_info_t info) {
         (void)event;
         const auto reason = info.wifi_sta_disconnected.reason;
-        Serial.printf("PEAP STA disconnected: reason %u (%s)\\n",
+        Serial.printf("PEAP STA disconnected: reason %u (%s)\n",
                       static_cast<unsigned>(reason),
                       WiFi.STA.disconnectReasonName(
                           static_cast<wifi_err_reason_t>(reason)));
