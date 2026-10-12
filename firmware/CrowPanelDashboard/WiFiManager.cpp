@@ -6,6 +6,7 @@
 #if defined(CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT) && CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT
 #include "esp_eap_client.h"
 #include "esp_err.h"
+#include <mbedtls/x509_crt.h>
 #endif
 
 WiFiManager::WiFiManager(uint32_t reconnectIntervalMs,
@@ -24,6 +25,7 @@ WiFiManager::WiFiManager(uint32_t reconnectIntervalMs,
       _connectionAttempts(0),
       _state(WiFiConnectionState::DISCONNECTED),
       _started(false),
+      _peapDiagnostics(false),
       _peapAttemptsSinceSuccess(0) {
 }
 
@@ -41,7 +43,8 @@ bool WiFiManager::begin(const char* ssid, const char* password) {
 
 bool WiFiManager::beginEnterprisePeap(const char* ssid, const char* identity,
                                       const char* username, const char* password,
-                                      const char* caPem, const char* serverName) {
+                                      const char* caPem, const char* serverName,
+                                      bool diagnostics) {
 #if defined(CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT) && CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT
   // Match Arduino-ESP32 STA size constraints; fail before transmitting credentials.
   if (!ssid || !ssid[0] || strlen(ssid) > 32 ||
@@ -61,6 +64,7 @@ bool WiFiManager::beginEnterprisePeap(const char* ssid, const char* identity,
   _password = password;
   _caPem = caPem;
   _serverName = serverName;
+  _peapDiagnostics = diagnostics;
   // Serial-only diagnostic: PEAP server TLS validation happens before
   // the dashboard can synchronize NTP. Do not disable certificate checks.
   const time_t preAuthEpoch = time(nullptr);
@@ -81,21 +85,56 @@ bool WiFiManager::beginEnterprisePeap(const char* ssid, const char* identity,
     Serial.printf("PEAP certificate time check status unavailable: %s\n",
                   esp_err_to_name(timeCheckStatus));
   }
+  if (_peapDiagnostics) {
+    Serial.println("PEAP diag: one application attempt (Arduino driver may retry internally).");
+    // Validate only the supplied CA PEM encoding, not the live server chain.
+    mbedtls_x509_crt ca;
+    mbedtls_x509_crt_init(&ca);
+    const int parsed = mbedtls_x509_crt_parse(
+        &ca, reinterpret_cast<const unsigned char*>(_caPem),
+        strlen(_caPem) + 1);
+    mbedtls_x509_crt_free(&ca);
+    if (parsed != 0) {
+      Serial.printf("PEAP diag: supplied CA PEM parse FAILED: %d\n", parsed);
+      return false;
+    }
+    Serial.println("PEAP diag: supplied CA PEM parse OK (not server verified).");
+  }
+
   // The Arduino STA core auto-reconnects by default using connect(),
   // which may rewrite station configuration while PEAP is still running.
   // This manager owns Enterprise retries; Personal mode is unchanged.
   WiFi.setAutoReconnect(false);
   WiFi.mode(WIFI_STA);
   WiFi.onEvent(
-      [](arduino_event_id_t event, arduino_event_info_t info) {
+      [this](arduino_event_id_t event, arduino_event_info_t info) {
         (void)event;
         const auto reason = info.wifi_sta_disconnected.reason;
         Serial.printf("PEAP STA disconnected: reason %u (%s)\n",
                       static_cast<unsigned>(reason),
                       WiFi.STA.disconnectReasonName(
                           static_cast<wifi_err_reason_t>(reason)));
+        if (_peapDiagnostics) {
+          Serial.printf("PEAP diag: DISCONNECTED at +%lu ms; TLS vs Phase 2 UNKNOWN.\n",
+                        static_cast<unsigned long>(millis() - _attemptStartedMs));
+        }
       },
       ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  if (_peapDiagnostics) {
+    WiFi.onEvent(
+        [this](arduino_event_id_t, arduino_event_info_t) {
+          // 802.11 association is NOT evidence of a valid PEAP/TLS server.
+          Serial.printf("PEAP diag: STA_ASSOCIATED at +%lu ms (NOT PEAP success).\n",
+                        static_cast<unsigned long>(millis() - _attemptStartedMs));
+        },
+        ARDUINO_EVENT_WIFI_STA_CONNECTED);
+    WiFi.onEvent(
+        [this](arduino_event_id_t, arduino_event_info_t) {
+          Serial.printf("PEAP diag: GOT_IP at +%lu ms (link operational).\n",
+                        static_cast<unsigned long>(millis() - _attemptStartedMs));
+        },
+        ARDUINO_EVENT_WIFI_STA_GOT_IP);
+  }
   _started = true;
   _state = WiFiConnectionState::DISCONNECTED;
   _connectionAttempts = 0;
@@ -147,17 +186,26 @@ bool WiFiManager::startConnection(uint32_t now) {
       _state = WiFiConnectionState::DISCONNECTED;
       return false;
     }
+    if (_peapDiagnostics) {
+      Serial.println("PEAP diag: CA setup API OK (NOT live chain validation).");
+    }
     err = esp_eap_client_set_domain_name(_serverName);
     if (err != ESP_OK) {
       Serial.printf("FAIL: PEAP server name: %s\n", esp_err_to_name(err));
       _state = WiFiConnectionState::DISCONNECTED;
       return false;
     }
+    if (_peapDiagnostics) {
+      Serial.println("PEAP diag: expected DNS-name setup OK (NOT a peer match).");
+    }
     err = esp_eap_client_set_eap_methods(ESP_EAP_TYPE_PEAP);
     if (err != ESP_OK) {
       Serial.printf("FAIL: PEAP-only method setup: %s\n", esp_err_to_name(err));
       _state = WiFiConnectionState::DISCONNECTED;
       return false;
+    }
+    if (_peapDiagnostics) {
+      Serial.println("PEAP diag: PEAP method setup OK; initiating association.");
     }
     if (WiFi.begin(_ssid, WPA2_AUTH_PEAP, _identity, _username,
                    _password, _caPem) == WL_CONNECT_FAILED) {
@@ -206,11 +254,20 @@ void WiFiManager::tick() {
       WiFi.disconnect();
       _state = WiFiConnectionState::DISCONNECTED;
       _lastAttemptMs = now;
+      if (_peapDiagnostics) {
+        _started = false;
+        Serial.println("PEAP diag: one-shot observation ended; no application retry.");
+      }
     }
     return;
   }
 
   if (now - _lastAttemptMs >= _reconnectIntervalMs) {
+    if (_peapDiagnostics && _authMode == AuthMode::ENTERPRISE_PEAP) {
+      _started = false;
+      Serial.println("PEAP diag: one-shot observation ended; no application retry.");
+      return;
+    }
     // Diagnostic safeguard for office accounts: after three consecutive
     // unsuccessful PEAP connection attempts, wait for a manual reset.
     // Resets on every successful IP connection; Personal mode unaffected.
