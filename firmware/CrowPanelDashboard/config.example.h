@@ -6,6 +6,22 @@
 #define WIFI_SSID "YOUR_WIFI_SSID"
 #define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
 
+// Optional PEAP (802.1X) login, ONLY in ignored LOCAL config.h.
+// Requires permission to attach a personal device to this network.
+// #define WIFI_USE_ENTERPRISE 1
+// #define WIFI_EAP_IDENTITY "YOUR_OUTER_IDENTITY"
+// #define WIFI_EAP_USERNAME "YOUR_USERNAME"
+// #define WIFI_EAP_PASSWORD "YOUR_ENTERPRISE_PASSWORD"
+// #define WIFI_EAP_SERVER_NAME "EXPECTED_RADIUS_CERT_HOSTNAME"
+//
+// In LOCAL config.h, additionally declare the verified PUBLIC CA PEM as:
+// static const char WIFI_EAP_CA_PEM[] = R"EDPPEM(-----BEGIN CERTIFICATE-----
+// ...base64 content from verified trusted CA...
+// -----END CERTIFICATE-----
+// )EDPPEM";
+// No server leaf certificate pinning; no missing-CA fallback.
+// See docs/ENTERPRISE_WIFI.md before enabling.
+
 // Phase 6 weather location.
 // Keep your real coordinates only in local config.h.
 // Uncomment and replace both values with decimal-degree numbers.
