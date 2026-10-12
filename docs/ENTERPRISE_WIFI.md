@@ -1,6 +1,8 @@
 # Enterprise Wi-Fi (PEAP) — pre-Phase-8 endurance gate
 
-**Status (2026-10-12): code staged on `phase8a1-static-prototype`; Arduino compilation and ESP32-S3 on-device authentication have NOT yet been verified.**
+> **Status (2026-10-12): PAUSED / ARCHIVED experiment.** The active `phase8a1-static-prototype` firmware has been restored to its previously tested **Personal Wi-Fi** implementation, using `WiFiManager::begin(WIFI_SSID, WIFI_PASSWORD)`. PEAP-specific code, local configuration examples and diagnostic modes have been removed from the active firmware. All PEAP instructions and logs below are retained **for historical reference only** and should **not** be followed on the current branch. No Enterprise Wi-Fi functionality is claimed for the current build. The user intends to complete Phase 8 on a trusted personal Wi-Fi/hotspot instead. Reintroduction requires a separate explicit design/security review, especially server certificate validity-date checking and device-network authorization. The code restore has GitHub readback pending; Arduino compile and on-device re-validation remain pending.
+
+**HISTORICAL status before restoration (2026-10-12): code staged on `phase8a1-static-prototype`; Arduino compilation and ESP32-S3 on-device authentication have NOT yet been verified.**
 
 ## Scope and boundaries
 
