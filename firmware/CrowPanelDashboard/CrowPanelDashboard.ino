@@ -225,9 +225,15 @@ static bool beginConfiguredWiFi() {
     !defined(WIFI_EAP_PASSWORD) || !defined(WIFI_EAP_SERVER_NAME)
 #error "Set WIFI_EAP_IDENTITY, USERNAME, PASSWORD, SERVER_NAME in local config.h"
 #endif
+#if defined(EDP_PEAP_DIAGNOSTICS) && (EDP_PEAP_DIAGNOSTICS == 1)
+  constexpr bool PEAP_DIAG_ENABLED = true;
+#else
+  constexpr bool PEAP_DIAG_ENABLED = false;
+#endif
   return wifiManager.beginEnterprisePeap(
       WIFI_SSID, WIFI_EAP_IDENTITY, WIFI_EAP_USERNAME,
-      WIFI_EAP_PASSWORD, WIFI_EAP_CA_PEM, WIFI_EAP_SERVER_NAME);
+      WIFI_EAP_PASSWORD, WIFI_EAP_CA_PEM, WIFI_EAP_SERVER_NAME,
+      PEAP_DIAG_ENABLED);
 #else
   return wifiManager.begin(WIFI_SSID, WIFI_PASSWORD);
 #endif
