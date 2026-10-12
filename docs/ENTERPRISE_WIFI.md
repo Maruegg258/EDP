@@ -91,6 +91,25 @@ A temporary **Serial-only** diagnostic was committed in `WiFiManager::beginEnter
 
 This does **not** modify the clock, CA, expected server name, EAP authentication method, retries, or display refresh. Compile and confirm on hardware before relying on either diagnostic. Do not expose the actual username/password in log output, and avoid repeated resets after reason 23, to reduce account-lockout risk.
 
+## Third hardware observation — time-check ruled out as immediate cause (2026-10-12)
+
+The user compiled/uploaded the **Serial-only diagnostic** to the real CrowPanel ESP32-S3 and reported:
+
+```text
+PEAP pre-auth UTC: 1970-01-01 00:00:09
+PEAP certificate time validity check: DISABLED
+Wi-Fi connection attempt #1
+Wi-Fi state: CONNECTING
+PEAP STA disconnected: reason 23 (802_1X_AUTH_FAILED)
+PEAP STA disconnected: reason 23 (802_1X_AUTH_FAILED)
+```
+
+**Verified on hardware:** the clock is unset prior to Wi-Fi, but the ESP-IDF EAP certificate validity-*date* check reports disabled. Thus a 1970 clock is **not a supported explanation** for this specific failure due to a strict validity-date check, and no clock bootstrap/time-check workaround should be added merely on this evidence. **Not verified:** RADIUS server certificate chain/name actually presented by the SSID, PEAP Phase 2 inner method, outer identity format, whether credentials are authorized for the device, and detailed TLS handshake failure stage. `reason 23` is generic and does not by itself prove a password mismatch or failure of the CA or expected server name checks. The two disconnect events may arise from driver-level retry within one application attempt.
+
+**Release security gate:** the currently reported `DISABLED` certificate validity-date check is **not an acceptable finished security posture** for the project, even if CA-chain and RADIUS-name checks are configured. The production design must obtain a trusted pre-network time source (or another defensible validation strategy), then explicitly enable/verify expiration/not-before checks **before production acceptance**; do not disable trust-anchor or server-name validation to make PEAP work.
+
+**Next safe diagnostic (no firmware change):** Compare the local ignored `WIFI_EAP_IDENTITY`/`WIFI_EAP_USERNAME` formatting with the Mac's accepted enterprise Wi-Fi login (do not publish the actual credential); verify the actual SSID's authorized RADIUS hostname and CA chain using IT/admin-provided configuration or a verified live certificate rather than only a Mac-keychain candidate. Confirm PEAP inner EAP method (e.g. MSCHAPv2) with the administrator. Do not continuously reset/retry against the office credential while the cause is unknown.
+
 ## API references
 
 - Arduino-ESP32 3.3.11 `WiFiSTA.h` / `STA.cpp`: `WiFi.begin(ssid, WPA2_AUTH_PEAP, identity, username, password, caPem)`.
