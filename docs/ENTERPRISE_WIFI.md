@@ -110,6 +110,14 @@ PEAP STA disconnected: reason 23 (802_1X_AUTH_FAILED)
 
 **Next safe diagnostic (no firmware change):** Compare the local ignored `WIFI_EAP_IDENTITY`/`WIFI_EAP_USERNAME` formatting with the Mac's accepted enterprise Wi-Fi login (do not publish the actual credential); verify the actual SSID's authorized RADIUS hostname and CA chain using IT/admin-provided configuration or a verified live certificate rather than only a Mac-keychain candidate. Confirm PEAP inner EAP method (e.g. MSCHAPv2) with the administrator. Do not continuously reset/retry against the office credential while the cause is unknown.
 
+## macOS EAP trust-exception observation (2026-10-12)
+
+Read-only macOS Sequoia `log show` output from an already working office connection repeatedly contained `eapolclient: trust exception applied, trust settings applied` during certificate trust evaluation, including at 08:44:36.525 (local time), immediately before the previously observed successful Mac `EAP-PEAP: successfully authenticated` at 08:44:36.911. Mac Keychain Access previously showed a **candidate** EAP server leaf certificate `jxwl.starlux-airlines.com` with customized trust settings (`Extensible Authentication (EAP): Always Trust`).
+
+**Interpretation:** Mac EAP authentication is applying saved trust exceptions/settings; this makes a *local custom trust-policy difference* between the Mac and a strict ESP32 EAP client a plausible explanation of the ESP32's `reason 23 (802_1X_AUTH_FAILED)`. These logs **do not identify the certificate** that received the exception and do not identify whether the ESP32 rejected the server chain/hostname, failed an inner Phase 2 authentication step, or was denied by network access policy. Neither the Mac's success nor public CA signature verification is proof of the currently presented RADIUS identity.
+
+**Safe next checks:** On the Mac, inspect local read-only `security dump-trust-settings` output for a certificate with the relevant EAP trust override (mask unrelated personal details). Ask the network administrator for the office SSID's expected RADIUS DNS name, root/intermediate CA chain and PEAP Phase 2 method, and whether a personally provisioned ESP32 device/account is permitted. Do not edit Keychain trust, remove EAP CA/domain validation, or repeatedly send credentials to the office network as a diagnostic workaround. The prior `PEAP certificate time validity check: DISABLED` remains a separate production-release security gap, not a proven cause of this reason 23.
+
 ## API references
 
 - Arduino-ESP32 3.3.11 `WiFiSTA.h` / `STA.cpp`: `WiFi.begin(ssid, WPA2_AUTH_PEAP, identity, username, password, caPem)`.
