@@ -22,7 +22,8 @@ WiFiManager::WiFiManager(uint32_t reconnectIntervalMs,
       _attemptStartedMs(0),
       _connectionAttempts(0),
       _state(WiFiConnectionState::DISCONNECTED),
-      _started(false) {
+      _started(false),
+      _peapAttemptsSinceSuccess(0) {
 }
 
 bool WiFiManager::begin(const char* ssid, const char* password) {
@@ -59,10 +60,25 @@ bool WiFiManager::beginEnterprisePeap(const char* ssid, const char* identity,
   _password = password;
   _caPem = caPem;
   _serverName = serverName;
+  // The Arduino STA core auto-reconnects by default using connect(),
+  // which may rewrite station configuration while PEAP is still running.
+  // This manager owns Enterprise retries; Personal mode is unchanged.
+  WiFi.setAutoReconnect(false);
   WiFi.mode(WIFI_STA);
+  WiFi.onEvent(
+      [](arduino_event_id_t event, arduino_event_info_t info) {
+        (void)event;
+        const auto reason = info.wifi_sta_disconnected.reason;
+        Serial.printf("PEAP STA disconnected: reason %u (%s)\\n",
+                      static_cast<unsigned>(reason),
+                      WiFi.STA.disconnectReasonName(
+                          static_cast<wifi_err_reason_t>(reason)));
+      },
+      ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   _started = true;
   _state = WiFiConnectionState::DISCONNECTED;
   _connectionAttempts = 0;
+  _peapAttemptsSinceSuccess = 0;
   if (!startConnection(millis())) {
     _started = false;
     return false;
@@ -86,6 +102,21 @@ bool WiFiManager::startConnection(uint32_t now) {
   ++_connectionAttempts;
 #if defined(CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT) && CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT
   if (_authMode == AuthMode::ENTERPRISE_PEAP) {
+    ++_peapAttemptsSinceSuccess;
+    if (_connectionAttempts > 1) {
+      // Do not repeat WiFi.begin(): it calls esp_wifi_set_config, which
+      // fails with "sta is connecting, cannot set config" during PEAP.
+      // reconnect() only issues esp_wifi_connect() with existing EAP data.
+      if (!WiFi.reconnect()) {
+        Serial.println("PEAP STA reconnect deferred; Wi-Fi driver is not ready.");
+        _state = WiFiConnectionState::DISCONNECTED;
+        return false;
+      }
+      _state = WiFiConnectionState::CONNECTING;
+      return true;
+    }
+
+    // Run full CA/domain/method setup only on the first connection attempt.
     // Preflight EAP security settings: Arduino WiFi.begin does not check
     // every underlying ESP-IDF setup result. Fail closed on setup failure.
     esp_err_t err = esp_eap_client_set_ca_cert(
@@ -132,6 +163,7 @@ void WiFiManager::tick() {
 
   if (wifiStatus == WL_CONNECTED) {
     _state = WiFiConnectionState::CONNECTED;
+    _peapAttemptsSinceSuccess = 0;
     return;
   }
 
@@ -142,7 +174,14 @@ void WiFiManager::tick() {
   }
 
   if (_state == WiFiConnectionState::CONNECTING) {
-    if (now - _attemptStartedMs >= _connectTimeoutMs) {
+    // 802.1X can take longer than the Personal-mode 15-second timeout.
+    const uint32_t timeoutMs =
+        (_authMode == AuthMode::ENTERPRISE_PEAP && _connectTimeoutMs < 60000UL)
+            ? 60000UL : _connectTimeoutMs;
+    if (now - _attemptStartedMs >= timeoutMs) {
+      Serial.println(_authMode == AuthMode::ENTERPRISE_PEAP
+                         ? "PEAP connection timed out; disconnecting before retry."
+                         : "Wi-Fi connection timed out.");
       WiFi.disconnect();
       _state = WiFiConnectionState::DISCONNECTED;
       _lastAttemptMs = now;
@@ -151,6 +190,16 @@ void WiFiManager::tick() {
   }
 
   if (now - _lastAttemptMs >= _reconnectIntervalMs) {
+    // Diagnostic safeguard for office accounts: after three consecutive
+    // unsuccessful PEAP connection attempts, wait for a manual reset.
+    // Resets on every successful IP connection; Personal mode unaffected.
+    if (_authMode == AuthMode::ENTERPRISE_PEAP &&
+        _peapAttemptsSinceSuccess >= 3) {
+      Serial.println("PEAP paused after 3 failed attempts. Check EAP logs / CA "
+                     "and server name; reset device to retry.");
+      _started = false;
+      return;
+    }
     startConnection(now);
   }
 }
