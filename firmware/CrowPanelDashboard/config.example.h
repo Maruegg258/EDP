@@ -21,6 +21,13 @@
 // )EDPPEM";
 // No server leaf certificate pinning; no missing-CA fallback.
 // See docs/ENTERPRISE_WIFI.md before enabling.
+//
+// Optional Enterprise PEAP SAFE event diagnostic (local config.h only).
+// Captures CA parse, 802.11 association, DHCP/online, disconnection timing.
+// Does NOT dump EAP packets, certificates, credentials or TLS keys.
+// Does NOT distinguish TLS/Phase 2 failure from reason 23 alone.
+// One 60-second app-controlled attempt only; Arduino core may retry internally.
+// #define EDP_PEAP_DIAGNOSTICS 1
 
 // Phase 6 weather location.
 // Keep your real coordinates only in local config.h.
