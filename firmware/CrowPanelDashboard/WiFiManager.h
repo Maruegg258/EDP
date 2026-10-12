@@ -45,4 +45,6 @@ private:
 
   WiFiConnectionState _state;
   bool _started;
+  // Bound consecutive Enterprise retries during credential/certificate diagnosis.
+  uint8_t _peapAttemptsSinceSuccess;
 };
