@@ -17,7 +17,8 @@ public:
   // PEAP with required CA + expected RADIUS server name.
   bool beginEnterprisePeap(const char* ssid, const char* identity,
                            const char* username, const char* password,
-                           const char* caPem, const char* serverName);
+                           const char* caPem, const char* serverName,
+                           bool diagnostics = false);
   void tick();
 
   WiFiConnectionState state() const;
@@ -45,6 +46,7 @@ private:
 
   WiFiConnectionState _state;
   bool _started;
+  bool _peapDiagnostics;
   // Bound consecutive Enterprise retries during credential/certificate diagnosis.
   uint8_t _peapAttemptsSinceSuccess;
 };
