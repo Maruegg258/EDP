@@ -2,6 +2,7 @@
 
 #include <WiFi.h>
 #include <cstring>
+#include <time.h>
 #if defined(CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT) && CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT
 #include "esp_eap_client.h"
 #include "esp_err.h"
@@ -60,6 +61,26 @@ bool WiFiManager::beginEnterprisePeap(const char* ssid, const char* identity,
   _password = password;
   _caPem = caPem;
   _serverName = serverName;
+  // Serial-only diagnostic: PEAP server TLS validation happens before
+  // the dashboard can synchronize NTP. Do not disable certificate checks.
+  const time_t preAuthEpoch = time(nullptr);
+  struct tm preAuthUtc {};
+  if (gmtime_r(&preAuthEpoch, &preAuthUtc) != nullptr) {
+    Serial.printf("PEAP pre-auth UTC: %04d-%02d-%02d %02d:%02d:%02d\\n",
+                  preAuthUtc.tm_year + 1900, preAuthUtc.tm_mon + 1,
+                  preAuthUtc.tm_mday, preAuthUtc.tm_hour,
+                  preAuthUtc.tm_min, preAuthUtc.tm_sec);
+  }
+  bool certTimeCheckDisabled = false;
+  const esp_err_t timeCheckStatus =
+      esp_eap_client_get_disable_time_check(&certTimeCheckDisabled);
+  if (timeCheckStatus == ESP_OK) {
+    Serial.printf("PEAP certificate time validity check: %s\\n",
+                  certTimeCheckDisabled ? "DISABLED" : "ENABLED");
+  } else {
+    Serial.printf("PEAP certificate time check status unavailable: %s\\n",
+                  esp_err_to_name(timeCheckStatus));
+  }
   // The Arduino STA core auto-reconnects by default using connect(),
   // which may rewrite station configuration while PEAP is still running.
   // This manager owns Enterprise retries; Personal mode is unchanged.
